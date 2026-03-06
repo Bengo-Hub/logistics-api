@@ -26,7 +26,7 @@
 ### 2. System Analysis (Architecture, Integrations, Design)
 - Architecture:
   - Gateway/API (REST + gRPC streaming), Dispatch Engine, Routing Service (OSRM/Maps), Telemetry Stream, Workflows/Saga, Notification Adapter, Integration Layer; PostgreSQL + Redis; Ent migrations; outbox to NATS/Kafka; OTel + Prometheus/Grafana; Docker/Helm/ArgoCD.
-  - **Auth-Service SSO Integration:** ✅ **COMPLETED** - Complete Go service implementation with `shared/auth-client` v0.1.0 library for production-ready JWT validation using JWKS from auth-service. All protected `/v1/{tenant}` routes require valid Bearer tokens. OpenAPI 3.0 spec updated with BearerAuth security scheme. Service scaffolding complete with HTTP server, configuration, logging, health endpoints, middleware, and infrastructure (PostgreSQL, Redis, NATS). **Deployment:** Uses monorepo `replace` directives with versioned dependency (`v0.1.0`). Go workspace (`go.work`) handles local development automatically. Each service has independent DevOps workflows and can be deployed separately while sharing the auth library. See `shared/auth-client/DEPLOYMENT.md` and `shared/auth-client/TAGGING.md` for details.
+  - **Auth-Service SSO Integration:** ✅ **COMPLETED** - Complete Go service implementation with `shared/auth-client` v0.1.0 library for production-ready JWT validation using JWKS from auth-service. All protected `/v1/{tenant}` routes require valid Bearer tokens. OpenAPI 3.0 spec updated with BearerAuth security scheme. Service scaffolding complete with HTTP server, configuration, logging, health endpoints, middleware, and infrastructure (PostgreSQL, Redis, NATS). **Deployment:** Uses monorepo `replace` directives with versioned dependency (`v0.1.0`). Go workspace (`go.work`) handles local development automatically. Each service has independent DevOps workflows and can be deployed separately while sharing the auth library. See `shared/auth-client/DEPLOYMENT.md` and `shared/auth-client/TAGGING.md` for details. **DevOps alignment:** logistics-api, logistics-ui, and rider-app use the same pattern as auth-api/notifications-api: sync-secrets job, verify-secrets step, centralized devops-k8s (apps/logistics-api, apps/logistics-ui, apps/rider-app), GIT_COMMIT_ID image tags, and centralized update_helm_values script.
 - API surface:
   - `/v1/{tenant}/tasks|routes|fleet|carriers|proof`; bulk CSV import/export; public tracking `/v1/track/{code}`; webhooks (`logistics.task.*`, `logistics.rider.offline`, `logistics.carrier.failure`); provider registry `/integrations/providers` with encrypted configs; `/locks/access-windows|events`; `/incidents`; `/weather/forecasts`; safety `/telemetry/driver-events` and driver scorecards; route alternatives endpoints.
 - Provider configuration & secrets:
@@ -150,13 +150,17 @@ Each sprint is documented in detail with tasks, dependencies, acceptance criteri
 - Carbon footprint tracking, sustainability metrics.
 - Marketplace API for external partners to plug-in tasks or capacity dynamically.
 
-### 8. Immediate Next Steps
+### 8. RBAC and seed (MVP)
+- **Current:** No local Role/Permission model; RBAC is delegated to **auth-api JWT**. The API validates Bearer tokens and enforces tenant/user context from auth-api claims.
+- **When Ent + seed exist:** Seed script MUST create permissions for resources **tasks**, **riders**, **fleet** with the MVP action set (add, read, read_own, change, change_own, delete, manage, manage_own) and seed core data (tenants, default fleet/config). Align with auth-api and ordering-backend seed patterns; see shared-docs/mvp-critical-path.md §8.
+
+### 9. Immediate Next Steps
 - Confirm ERD alignment with inventory/POS (shared concepts: warehouse, order IDs).
 - Define contract-first API specs for cafe-backend and POS interactions.
 - Validate mapping provider contracts, start reference implementation (Mapbox + OSRM fallback).
 - Produce threat model (location spoofing, assignment fraud) and commence Sprint 0 after stakeholder approval.
 
-### 9. Glossary & Acronyms (Plain‑English Reference)
+### 10. Glossary & Acronyms (Plain‑English Reference)
 - API (Application Programming Interface): A defined way for software systems to communicate.
 - REST (Representational State Transfer): A simple web API style using URLs and HTTP methods (GET/POST/PUT/DELETE).
 - gRPC (Google Remote Procedure Call): A high‑performance binary protocol over HTTP/2 for service‑to‑service calls.

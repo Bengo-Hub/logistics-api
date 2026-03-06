@@ -5,6 +5,8 @@
 **Target Completion**: 2025-01-24  
 **Progress note (2026-03-06):** Auth-Service SSO (JWT via shared-auth-client) completed. API contract, ERD, threat model, and sprint docs in place. Remaining: full scaffolding, Ent schemas, CI/CD, provider registry.
 
+**RBAC (MVP):** This service has no local Role/Permission schema. Authorization is delegated to **auth-api JWT**: protected routes validate the Bearer token and use claims (tenant_id, user_id, scopes/permissions) from auth-api. When Ent schemas and `cmd/seed` are added (e.g. in 1.2), the seed MUST create permissions for resources **tasks**, **riders**, **fleet** using the MVP action set: add, read, read_own, change, change_own, delete, manage, manage_own (e.g. `tasks:read`, `riders:manage`, `fleet:read_own`). Core data to seed: demo tenant, demo fleet, default config. See shared-docs/mvp-critical-path.md §8.
+
 ## Goals
 
 - Establish project scaffolding, CI/CD, environments, and security baselines.
