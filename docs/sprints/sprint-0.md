@@ -2,7 +2,8 @@
 
 **Status**: In Progress  
 **Start Date**: 2025-01-17  
-**Target Completion**: 2025-01-24
+**Target Completion**: 2025-01-24  
+**Progress note (2026-03-06):** Auth-Service SSO (JWT via shared-auth-client) completed. API contract, ERD, threat model, and sprint docs in place. Remaining: full scaffolding, Ent schemas, CI/CD, provider registry.
 
 ## Goals
 
