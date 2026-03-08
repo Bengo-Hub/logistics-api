@@ -75,15 +75,15 @@ info "Running Trivy filesystem scan"
 trivy fs . --exit-code "$TRIVY_ECODE" --format table || true
 
 info "Building Docker image"
-# Build from workspace root to include shared/auth-client
-# For local builds: docker build -f logistics-service/Dockerfile -t logistics-service:local .
-# For CI builds: build from service directory, but Dockerfile expects workspace root context
-if [[ -d "../shared/auth-client" ]]; then
-  # We're in the service directory, build from parent (workspace root)
-  DOCKER_BUILDKIT=1 docker build -f Dockerfile -t "${IMAGE_REPO}:${GIT_COMMIT_ID}" ..
+# Dockerfile uses online tagged auth-client (no COPY shared). Context must be repo root.
+# From repo root or CI: -f logistics-service/logistics-api/Dockerfile and context .
+# From logistics-api dir: -f Dockerfile and context ../..
+if [[ -d "logistics-service" ]] && [[ -d "logistics-service/logistics-api" ]]; then
+  DOCKER_BUILDKIT=1 docker build -f logistics-service/logistics-api/Dockerfile -t "${IMAGE_REPO}:${GIT_COMMIT_ID}" .
+elif [[ -f "Dockerfile" ]] && [[ -f "go.mod" ]] && [[ "$(basename "$(dirname "$(pwd)")" 2>/dev/null)" == "logistics-service" ]]; then
+  DOCKER_BUILDKIT=1 docker build -f Dockerfile -t "${IMAGE_REPO}:${GIT_COMMIT_ID}" ../..
 else
-  # We're already at workspace root or in CI
-  DOCKER_BUILDKIT=1 docker build -f logistics-service/Dockerfile -t "${IMAGE_REPO}:${GIT_COMMIT_ID}" .
+  DOCKER_BUILDKIT=1 docker build -f logistics-service/logistics-api/Dockerfile -t "${IMAGE_REPO}:${GIT_COMMIT_ID}" .
 fi
 success "Docker build complete"
 
