@@ -1,0 +1,78 @@
+package schema
+
+import (
+	"time"
+
+	"entgo.io/ent"
+	"entgo.io/ent/schema/edge"
+	"entgo.io/ent/schema/field"
+	"entgo.io/ent/schema/index"
+	"github.com/google/uuid"
+)
+
+// FleetMember holds the schema definition for the FleetMember entity.
+type FleetMember struct {
+	ent.Schema
+}
+
+// Fields of the FleetMember.
+func (FleetMember) Fields() []ent.Field {
+	return []ent.Field{
+		field.UUID("id", uuid.UUID{}).
+			Default(uuid.New).
+			Immutable(),
+		field.UUID("tenant_id", uuid.UUID{}),
+		field.UUID("fleet_id", uuid.UUID{}),
+		field.UUID("user_id", uuid.UUID{}).
+			Comment("References User record"),
+		field.String("driver_code").
+			Optional().
+			Unique(),
+		field.String("status").
+			Default("active"),
+		field.UUID("vehicle_id", uuid.UUID{}).
+			Optional().
+			Nillable(),
+		field.Time("joined_at").
+			Default(time.Now),
+		field.Time("suspended_at").
+			Optional().
+			Nillable(),
+		field.JSON("metadata", map[string]any{}).
+			Default(map[string]any{}),
+		field.Time("created_at").
+			Default(time.Now).
+			Immutable(),
+		field.Time("updated_at").
+			Default(time.Now).
+			UpdateDefault(time.Now),
+	}
+}
+
+// Edges of the FleetMember.
+func (FleetMember) Edges() []ent.Edge {
+	return []ent.Edge{
+		edge.From("fleet", Fleet.Type).
+			Ref("members").
+			Field("fleet_id").
+			Unique().
+			Required(),
+		edge.From("user", User.Type).
+			Ref("fleet_memberships").
+			Field("user_id").
+			Unique().
+			Required(),
+		edge.To("vehicle", Vehicle.Type).
+			Field("vehicle_id").
+			Unique(),
+		edge.To("assignments", TaskAssignment.Type),
+	}
+}
+
+// Indexes of the FleetMember.
+func (FleetMember) Indexes() []ent.Index {
+	return []ent.Index{
+		index.Fields("tenant_id", "user_id").Unique(),
+		index.Fields("driver_code").Unique(),
+	}
+}
