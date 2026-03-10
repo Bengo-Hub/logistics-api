@@ -2,9 +2,6 @@ module github.com/bengobox/logistics-service
 
 go 1.24.0
 
-// Use online tagged release (same as ordering-backend) to avoid COPY shared in Docker
-replace github.com/Bengo-Hub/shared-auth-client => github.com/Bengo-Hub/auth-client v0.3.1
-
 require (
 	ariga.io/atlas v0.32.1-0.20250325101103-175b25e1c1b9
 	entgo.io/ent v0.14.5
@@ -82,3 +79,5 @@ require (
 	golang.org/x/tools v0.35.0 // indirect
 	google.golang.org/protobuf v1.36.9 // indirect
 )
+
+replace github.com/Bengo-Hub/shared-auth-client => github.com/Bengo-Hub/auth-client v0.4.0
