@@ -8,7 +8,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 )
 
-const namespace = "LOGISTICS"
+const namespace = ""
 
 // Config aggregates runtime configuration for the logistics service.
 type Config struct {
