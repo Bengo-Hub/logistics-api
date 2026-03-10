@@ -5,9 +5,11 @@
 FROM golang:1.24-alpine AS builder
 WORKDIR /src
 RUN apk add --no-cache git ca-certificates
-COPY logistics-service/logistics-api/go.mod logistics-service/logistics-api/go.sum ./
+
+COPY go.mod go.sum ./
+
 RUN go mod download
-COPY logistics-service/logistics-api .
+COPY . .
 
 RUN CGO_ENABLED=0 go build -o /out/logistics ./cmd/api
 
