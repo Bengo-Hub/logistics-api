@@ -1,6 +1,7 @@
 package router
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -12,9 +13,9 @@ import (
 	"go.uber.org/zap"
 
 	authclient "github.com/Bengo-Hub/shared-auth-client"
+	"github.com/Bengo-Hub/httpware"
 	handlers "github.com/bengobox/logistics-service/internal/http/handlers"
 	"github.com/bengobox/logistics-service/internal/modules/identity"
-	sharedmw "github.com/bengobox/logistics-service/internal/shared/middleware"
 )
 
 func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authclient.AuthMiddleware, idSvc *identity.Service) http.Handler {
@@ -22,10 +23,9 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
-	r.Use(sharedmw.RequestID)
-	r.Use(sharedmw.Tenant)
-	r.Use(sharedmw.Logging(log))
-	r.Use(sharedmw.Recover(log))
+	r.Use(httpware.RequestID)
+	r.Use(httpware.Logging(log))
+	r.Use(httpware.Recover(log))
 	r.Use(middleware.Timeout(30 * time.Second))
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"*"},
@@ -72,6 +72,18 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 		}
 
 		api.Route("/{tenant}", func(tenant chi.Router) {
+			tenant.Use(httpware.TenantV2(httpware.TenantConfig{
+				ClaimsExtractor: func(ctx context.Context) (tenantID, tenantSlug string, isPlatformOwner bool, ok bool) {
+					claims, found := authclient.ClaimsFromContext(ctx)
+					if !found {
+						return "", "", false, false
+					}
+					return claims.TenantID, claims.GetTenantSlug(), claims.IsPlatformOwner, true
+				},
+				URLParamFunc: chi.URLParam,
+				Required:     true,
+			}))
+
 			tenant.Route("/tasks", func(tasks chi.Router) {
 				// Placeholder endpoints - to be implemented
 				tasks.Get("/", func(w http.ResponseWriter, r *http.Request) {
