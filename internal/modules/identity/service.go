@@ -49,10 +49,11 @@ func (s *Service) EnsureUserFromToken(ctx context.Context, authServiceID uuid.UU
 		return nil, fmt.Errorf("identity.Service: sync tenant %q: %w", tenantSlug, err)
 	}
 
-	// 3. Create user
+	// 3. Create user; platform admin (codevertex + superuser) gets admin role (all permissions).
 	email, _ := claims["email"].(string)
 	fullName, _ := claims["name"].(string)
-	
+	role := roleFromClaims(tenantSlug, claims)
+
 	newUsr, err := s.client.User.Create().
 		SetID(uuid.New()).
 		SetAuthServiceUserID(authServiceID).
@@ -62,12 +63,33 @@ func (s *Service) EnsureUserFromToken(ctx context.Context, authServiceID uuid.UU
 		SetStatus("active").
 		SetSyncStatus("synced").
 		SetSyncAt(time.Now()).
+		SetRole(role).
 		Save(ctx)
 
 	if err != nil {
 		return nil, fmt.Errorf("identity.Service: create user: %w", err)
 	}
 
-	log.Printf("  [jit-provisioning] created user %s (AuthID %s) for tenant %s", email, authServiceID, tenantSlug)
+	log.Printf("  [jit-provisioning] created user %s (AuthID %s) for tenant %s role=%s", email, authServiceID, tenantSlug, role)
 	return newUsr, nil
+}
+
+// roleFromClaims returns the service-level role for JIT-created users. Platform admin (codevertex + superuser) gets "admin" (all permissions).
+func roleFromClaims(tenantSlug string, claims map[string]any) string {
+	if tenantSlug == "codevertex" && hasSuperuser(claims) {
+		return "admin"
+	}
+	// Default for riders/other tenants; could be derived from claims["roles"] if needed.
+	return "rider"
+}
+
+func hasSuperuser(claims map[string]any) bool {
+	if roles, ok := claims["roles"].([]interface{}); ok {
+		for _, r := range roles {
+			if s, _ := r.(string); s == "superuser" {
+				return true
+			}
+		}
+	}
+	return false
 }
