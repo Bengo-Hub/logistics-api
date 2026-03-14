@@ -95,6 +95,46 @@ func (_u *FleetMemberUpdate) ClearDriverCode() *FleetMemberUpdate {
 	return _u
 }
 
+// SetIDNumber sets the "id_number" field.
+func (_u *FleetMemberUpdate) SetIDNumber(v string) *FleetMemberUpdate {
+	_u.mutation.SetIDNumber(v)
+	return _u
+}
+
+// SetNillableIDNumber sets the "id_number" field if the given value is not nil.
+func (_u *FleetMemberUpdate) SetNillableIDNumber(v *string) *FleetMemberUpdate {
+	if v != nil {
+		_u.SetIDNumber(*v)
+	}
+	return _u
+}
+
+// ClearIDNumber clears the value of the "id_number" field.
+func (_u *FleetMemberUpdate) ClearIDNumber() *FleetMemberUpdate {
+	_u.mutation.ClearIDNumber()
+	return _u
+}
+
+// SetLicenseNo sets the "license_no" field.
+func (_u *FleetMemberUpdate) SetLicenseNo(v string) *FleetMemberUpdate {
+	_u.mutation.SetLicenseNo(v)
+	return _u
+}
+
+// SetNillableLicenseNo sets the "license_no" field if the given value is not nil.
+func (_u *FleetMemberUpdate) SetNillableLicenseNo(v *string) *FleetMemberUpdate {
+	if v != nil {
+		_u.SetLicenseNo(*v)
+	}
+	return _u
+}
+
+// ClearLicenseNo clears the value of the "license_no" field.
+func (_u *FleetMemberUpdate) ClearLicenseNo() *FleetMemberUpdate {
+	_u.mutation.ClearLicenseNo()
+	return _u
+}
+
 // SetStatus sets the "status" field.
 func (_u *FleetMemberUpdate) SetStatus(v string) *FleetMemberUpdate {
 	_u.mutation.SetStatus(v)
@@ -106,6 +146,46 @@ func (_u *FleetMemberUpdate) SetNillableStatus(v *string) *FleetMemberUpdate {
 	if v != nil {
 		_u.SetStatus(*v)
 	}
+	return _u
+}
+
+// SetIDPassportAttachment sets the "id_passport_attachment" field.
+func (_u *FleetMemberUpdate) SetIDPassportAttachment(v string) *FleetMemberUpdate {
+	_u.mutation.SetIDPassportAttachment(v)
+	return _u
+}
+
+// SetNillableIDPassportAttachment sets the "id_passport_attachment" field if the given value is not nil.
+func (_u *FleetMemberUpdate) SetNillableIDPassportAttachment(v *string) *FleetMemberUpdate {
+	if v != nil {
+		_u.SetIDPassportAttachment(*v)
+	}
+	return _u
+}
+
+// ClearIDPassportAttachment clears the value of the "id_passport_attachment" field.
+func (_u *FleetMemberUpdate) ClearIDPassportAttachment() *FleetMemberUpdate {
+	_u.mutation.ClearIDPassportAttachment()
+	return _u
+}
+
+// SetRiderPhoto sets the "rider_photo" field.
+func (_u *FleetMemberUpdate) SetRiderPhoto(v string) *FleetMemberUpdate {
+	_u.mutation.SetRiderPhoto(v)
+	return _u
+}
+
+// SetNillableRiderPhoto sets the "rider_photo" field if the given value is not nil.
+func (_u *FleetMemberUpdate) SetNillableRiderPhoto(v *string) *FleetMemberUpdate {
+	if v != nil {
+		_u.SetRiderPhoto(*v)
+	}
+	return _u
+}
+
+// ClearRiderPhoto clears the value of the "rider_photo" field.
+func (_u *FleetMemberUpdate) ClearRiderPhoto() *FleetMemberUpdate {
+	_u.mutation.ClearRiderPhoto()
 	return _u
 }
 
@@ -317,8 +397,32 @@ func (_u *FleetMemberUpdate) sqlSave(ctx context.Context) (_node int, err error)
 	if _u.mutation.DriverCodeCleared() {
 		_spec.ClearField(fleetmember.FieldDriverCode, field.TypeString)
 	}
+	if value, ok := _u.mutation.IDNumber(); ok {
+		_spec.SetField(fleetmember.FieldIDNumber, field.TypeString, value)
+	}
+	if _u.mutation.IDNumberCleared() {
+		_spec.ClearField(fleetmember.FieldIDNumber, field.TypeString)
+	}
+	if value, ok := _u.mutation.LicenseNo(); ok {
+		_spec.SetField(fleetmember.FieldLicenseNo, field.TypeString, value)
+	}
+	if _u.mutation.LicenseNoCleared() {
+		_spec.ClearField(fleetmember.FieldLicenseNo, field.TypeString)
+	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(fleetmember.FieldStatus, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.IDPassportAttachment(); ok {
+		_spec.SetField(fleetmember.FieldIDPassportAttachment, field.TypeString, value)
+	}
+	if _u.mutation.IDPassportAttachmentCleared() {
+		_spec.ClearField(fleetmember.FieldIDPassportAttachment, field.TypeString)
+	}
+	if value, ok := _u.mutation.RiderPhoto(); ok {
+		_spec.SetField(fleetmember.FieldRiderPhoto, field.TypeString, value)
+	}
+	if _u.mutation.RiderPhotoCleared() {
+		_spec.ClearField(fleetmember.FieldRiderPhoto, field.TypeString)
 	}
 	if value, ok := _u.mutation.JoinedAt(); ok {
 		_spec.SetField(fleetmember.FieldJoinedAt, field.TypeTime, value)
@@ -549,6 +653,46 @@ func (_u *FleetMemberUpdateOne) ClearDriverCode() *FleetMemberUpdateOne {
 	return _u
 }
 
+// SetIDNumber sets the "id_number" field.
+func (_u *FleetMemberUpdateOne) SetIDNumber(v string) *FleetMemberUpdateOne {
+	_u.mutation.SetIDNumber(v)
+	return _u
+}
+
+// SetNillableIDNumber sets the "id_number" field if the given value is not nil.
+func (_u *FleetMemberUpdateOne) SetNillableIDNumber(v *string) *FleetMemberUpdateOne {
+	if v != nil {
+		_u.SetIDNumber(*v)
+	}
+	return _u
+}
+
+// ClearIDNumber clears the value of the "id_number" field.
+func (_u *FleetMemberUpdateOne) ClearIDNumber() *FleetMemberUpdateOne {
+	_u.mutation.ClearIDNumber()
+	return _u
+}
+
+// SetLicenseNo sets the "license_no" field.
+func (_u *FleetMemberUpdateOne) SetLicenseNo(v string) *FleetMemberUpdateOne {
+	_u.mutation.SetLicenseNo(v)
+	return _u
+}
+
+// SetNillableLicenseNo sets the "license_no" field if the given value is not nil.
+func (_u *FleetMemberUpdateOne) SetNillableLicenseNo(v *string) *FleetMemberUpdateOne {
+	if v != nil {
+		_u.SetLicenseNo(*v)
+	}
+	return _u
+}
+
+// ClearLicenseNo clears the value of the "license_no" field.
+func (_u *FleetMemberUpdateOne) ClearLicenseNo() *FleetMemberUpdateOne {
+	_u.mutation.ClearLicenseNo()
+	return _u
+}
+
 // SetStatus sets the "status" field.
 func (_u *FleetMemberUpdateOne) SetStatus(v string) *FleetMemberUpdateOne {
 	_u.mutation.SetStatus(v)
@@ -560,6 +704,46 @@ func (_u *FleetMemberUpdateOne) SetNillableStatus(v *string) *FleetMemberUpdateO
 	if v != nil {
 		_u.SetStatus(*v)
 	}
+	return _u
+}
+
+// SetIDPassportAttachment sets the "id_passport_attachment" field.
+func (_u *FleetMemberUpdateOne) SetIDPassportAttachment(v string) *FleetMemberUpdateOne {
+	_u.mutation.SetIDPassportAttachment(v)
+	return _u
+}
+
+// SetNillableIDPassportAttachment sets the "id_passport_attachment" field if the given value is not nil.
+func (_u *FleetMemberUpdateOne) SetNillableIDPassportAttachment(v *string) *FleetMemberUpdateOne {
+	if v != nil {
+		_u.SetIDPassportAttachment(*v)
+	}
+	return _u
+}
+
+// ClearIDPassportAttachment clears the value of the "id_passport_attachment" field.
+func (_u *FleetMemberUpdateOne) ClearIDPassportAttachment() *FleetMemberUpdateOne {
+	_u.mutation.ClearIDPassportAttachment()
+	return _u
+}
+
+// SetRiderPhoto sets the "rider_photo" field.
+func (_u *FleetMemberUpdateOne) SetRiderPhoto(v string) *FleetMemberUpdateOne {
+	_u.mutation.SetRiderPhoto(v)
+	return _u
+}
+
+// SetNillableRiderPhoto sets the "rider_photo" field if the given value is not nil.
+func (_u *FleetMemberUpdateOne) SetNillableRiderPhoto(v *string) *FleetMemberUpdateOne {
+	if v != nil {
+		_u.SetRiderPhoto(*v)
+	}
+	return _u
+}
+
+// ClearRiderPhoto clears the value of the "rider_photo" field.
+func (_u *FleetMemberUpdateOne) ClearRiderPhoto() *FleetMemberUpdateOne {
+	_u.mutation.ClearRiderPhoto()
 	return _u
 }
 
@@ -801,8 +985,32 @@ func (_u *FleetMemberUpdateOne) sqlSave(ctx context.Context) (_node *FleetMember
 	if _u.mutation.DriverCodeCleared() {
 		_spec.ClearField(fleetmember.FieldDriverCode, field.TypeString)
 	}
+	if value, ok := _u.mutation.IDNumber(); ok {
+		_spec.SetField(fleetmember.FieldIDNumber, field.TypeString, value)
+	}
+	if _u.mutation.IDNumberCleared() {
+		_spec.ClearField(fleetmember.FieldIDNumber, field.TypeString)
+	}
+	if value, ok := _u.mutation.LicenseNo(); ok {
+		_spec.SetField(fleetmember.FieldLicenseNo, field.TypeString, value)
+	}
+	if _u.mutation.LicenseNoCleared() {
+		_spec.ClearField(fleetmember.FieldLicenseNo, field.TypeString)
+	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(fleetmember.FieldStatus, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.IDPassportAttachment(); ok {
+		_spec.SetField(fleetmember.FieldIDPassportAttachment, field.TypeString, value)
+	}
+	if _u.mutation.IDPassportAttachmentCleared() {
+		_spec.ClearField(fleetmember.FieldIDPassportAttachment, field.TypeString)
+	}
+	if value, ok := _u.mutation.RiderPhoto(); ok {
+		_spec.SetField(fleetmember.FieldRiderPhoto, field.TypeString, value)
+	}
+	if _u.mutation.RiderPhotoCleared() {
+		_spec.ClearField(fleetmember.FieldRiderPhoto, field.TypeString)
 	}
 	if value, ok := _u.mutation.JoinedAt(); ok {
 		_spec.SetField(fleetmember.FieldJoinedAt, field.TypeTime, value)

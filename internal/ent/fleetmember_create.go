@@ -60,6 +60,34 @@ func (_c *FleetMemberCreate) SetNillableDriverCode(v *string) *FleetMemberCreate
 	return _c
 }
 
+// SetIDNumber sets the "id_number" field.
+func (_c *FleetMemberCreate) SetIDNumber(v string) *FleetMemberCreate {
+	_c.mutation.SetIDNumber(v)
+	return _c
+}
+
+// SetNillableIDNumber sets the "id_number" field if the given value is not nil.
+func (_c *FleetMemberCreate) SetNillableIDNumber(v *string) *FleetMemberCreate {
+	if v != nil {
+		_c.SetIDNumber(*v)
+	}
+	return _c
+}
+
+// SetLicenseNo sets the "license_no" field.
+func (_c *FleetMemberCreate) SetLicenseNo(v string) *FleetMemberCreate {
+	_c.mutation.SetLicenseNo(v)
+	return _c
+}
+
+// SetNillableLicenseNo sets the "license_no" field if the given value is not nil.
+func (_c *FleetMemberCreate) SetNillableLicenseNo(v *string) *FleetMemberCreate {
+	if v != nil {
+		_c.SetLicenseNo(*v)
+	}
+	return _c
+}
+
 // SetStatus sets the "status" field.
 func (_c *FleetMemberCreate) SetStatus(v string) *FleetMemberCreate {
 	_c.mutation.SetStatus(v)
@@ -70,6 +98,34 @@ func (_c *FleetMemberCreate) SetStatus(v string) *FleetMemberCreate {
 func (_c *FleetMemberCreate) SetNillableStatus(v *string) *FleetMemberCreate {
 	if v != nil {
 		_c.SetStatus(*v)
+	}
+	return _c
+}
+
+// SetIDPassportAttachment sets the "id_passport_attachment" field.
+func (_c *FleetMemberCreate) SetIDPassportAttachment(v string) *FleetMemberCreate {
+	_c.mutation.SetIDPassportAttachment(v)
+	return _c
+}
+
+// SetNillableIDPassportAttachment sets the "id_passport_attachment" field if the given value is not nil.
+func (_c *FleetMemberCreate) SetNillableIDPassportAttachment(v *string) *FleetMemberCreate {
+	if v != nil {
+		_c.SetIDPassportAttachment(*v)
+	}
+	return _c
+}
+
+// SetRiderPhoto sets the "rider_photo" field.
+func (_c *FleetMemberCreate) SetRiderPhoto(v string) *FleetMemberCreate {
+	_c.mutation.SetRiderPhoto(v)
+	return _c
+}
+
+// SetNillableRiderPhoto sets the "rider_photo" field if the given value is not nil.
+func (_c *FleetMemberCreate) SetNillableRiderPhoto(v *string) *FleetMemberCreate {
+	if v != nil {
+		_c.SetRiderPhoto(*v)
 	}
 	return _c
 }
@@ -331,9 +387,25 @@ func (_c *FleetMemberCreate) createSpec() (*FleetMember, *sqlgraph.CreateSpec) {
 		_spec.SetField(fleetmember.FieldDriverCode, field.TypeString, value)
 		_node.DriverCode = value
 	}
+	if value, ok := _c.mutation.IDNumber(); ok {
+		_spec.SetField(fleetmember.FieldIDNumber, field.TypeString, value)
+		_node.IDNumber = value
+	}
+	if value, ok := _c.mutation.LicenseNo(); ok {
+		_spec.SetField(fleetmember.FieldLicenseNo, field.TypeString, value)
+		_node.LicenseNo = value
+	}
 	if value, ok := _c.mutation.Status(); ok {
 		_spec.SetField(fleetmember.FieldStatus, field.TypeString, value)
 		_node.Status = value
+	}
+	if value, ok := _c.mutation.IDPassportAttachment(); ok {
+		_spec.SetField(fleetmember.FieldIDPassportAttachment, field.TypeString, value)
+		_node.IDPassportAttachment = value
+	}
+	if value, ok := _c.mutation.RiderPhoto(); ok {
+		_spec.SetField(fleetmember.FieldRiderPhoto, field.TypeString, value)
+		_node.RiderPhoto = value
 	}
 	if value, ok := _c.mutation.JoinedAt(); ok {
 		_spec.SetField(fleetmember.FieldJoinedAt, field.TypeTime, value)
@@ -528,6 +600,42 @@ func (u *FleetMemberUpsert) ClearDriverCode() *FleetMemberUpsert {
 	return u
 }
 
+// SetIDNumber sets the "id_number" field.
+func (u *FleetMemberUpsert) SetIDNumber(v string) *FleetMemberUpsert {
+	u.Set(fleetmember.FieldIDNumber, v)
+	return u
+}
+
+// UpdateIDNumber sets the "id_number" field to the value that was provided on create.
+func (u *FleetMemberUpsert) UpdateIDNumber() *FleetMemberUpsert {
+	u.SetExcluded(fleetmember.FieldIDNumber)
+	return u
+}
+
+// ClearIDNumber clears the value of the "id_number" field.
+func (u *FleetMemberUpsert) ClearIDNumber() *FleetMemberUpsert {
+	u.SetNull(fleetmember.FieldIDNumber)
+	return u
+}
+
+// SetLicenseNo sets the "license_no" field.
+func (u *FleetMemberUpsert) SetLicenseNo(v string) *FleetMemberUpsert {
+	u.Set(fleetmember.FieldLicenseNo, v)
+	return u
+}
+
+// UpdateLicenseNo sets the "license_no" field to the value that was provided on create.
+func (u *FleetMemberUpsert) UpdateLicenseNo() *FleetMemberUpsert {
+	u.SetExcluded(fleetmember.FieldLicenseNo)
+	return u
+}
+
+// ClearLicenseNo clears the value of the "license_no" field.
+func (u *FleetMemberUpsert) ClearLicenseNo() *FleetMemberUpsert {
+	u.SetNull(fleetmember.FieldLicenseNo)
+	return u
+}
+
 // SetStatus sets the "status" field.
 func (u *FleetMemberUpsert) SetStatus(v string) *FleetMemberUpsert {
 	u.Set(fleetmember.FieldStatus, v)
@@ -537,6 +645,42 @@ func (u *FleetMemberUpsert) SetStatus(v string) *FleetMemberUpsert {
 // UpdateStatus sets the "status" field to the value that was provided on create.
 func (u *FleetMemberUpsert) UpdateStatus() *FleetMemberUpsert {
 	u.SetExcluded(fleetmember.FieldStatus)
+	return u
+}
+
+// SetIDPassportAttachment sets the "id_passport_attachment" field.
+func (u *FleetMemberUpsert) SetIDPassportAttachment(v string) *FleetMemberUpsert {
+	u.Set(fleetmember.FieldIDPassportAttachment, v)
+	return u
+}
+
+// UpdateIDPassportAttachment sets the "id_passport_attachment" field to the value that was provided on create.
+func (u *FleetMemberUpsert) UpdateIDPassportAttachment() *FleetMemberUpsert {
+	u.SetExcluded(fleetmember.FieldIDPassportAttachment)
+	return u
+}
+
+// ClearIDPassportAttachment clears the value of the "id_passport_attachment" field.
+func (u *FleetMemberUpsert) ClearIDPassportAttachment() *FleetMemberUpsert {
+	u.SetNull(fleetmember.FieldIDPassportAttachment)
+	return u
+}
+
+// SetRiderPhoto sets the "rider_photo" field.
+func (u *FleetMemberUpsert) SetRiderPhoto(v string) *FleetMemberUpsert {
+	u.Set(fleetmember.FieldRiderPhoto, v)
+	return u
+}
+
+// UpdateRiderPhoto sets the "rider_photo" field to the value that was provided on create.
+func (u *FleetMemberUpsert) UpdateRiderPhoto() *FleetMemberUpsert {
+	u.SetExcluded(fleetmember.FieldRiderPhoto)
+	return u
+}
+
+// ClearRiderPhoto clears the value of the "rider_photo" field.
+func (u *FleetMemberUpsert) ClearRiderPhoto() *FleetMemberUpsert {
+	u.SetNull(fleetmember.FieldRiderPhoto)
 	return u
 }
 
@@ -726,6 +870,48 @@ func (u *FleetMemberUpsertOne) ClearDriverCode() *FleetMemberUpsertOne {
 	})
 }
 
+// SetIDNumber sets the "id_number" field.
+func (u *FleetMemberUpsertOne) SetIDNumber(v string) *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetIDNumber(v)
+	})
+}
+
+// UpdateIDNumber sets the "id_number" field to the value that was provided on create.
+func (u *FleetMemberUpsertOne) UpdateIDNumber() *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdateIDNumber()
+	})
+}
+
+// ClearIDNumber clears the value of the "id_number" field.
+func (u *FleetMemberUpsertOne) ClearIDNumber() *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.ClearIDNumber()
+	})
+}
+
+// SetLicenseNo sets the "license_no" field.
+func (u *FleetMemberUpsertOne) SetLicenseNo(v string) *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetLicenseNo(v)
+	})
+}
+
+// UpdateLicenseNo sets the "license_no" field to the value that was provided on create.
+func (u *FleetMemberUpsertOne) UpdateLicenseNo() *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdateLicenseNo()
+	})
+}
+
+// ClearLicenseNo clears the value of the "license_no" field.
+func (u *FleetMemberUpsertOne) ClearLicenseNo() *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.ClearLicenseNo()
+	})
+}
+
 // SetStatus sets the "status" field.
 func (u *FleetMemberUpsertOne) SetStatus(v string) *FleetMemberUpsertOne {
 	return u.Update(func(s *FleetMemberUpsert) {
@@ -737,6 +923,48 @@ func (u *FleetMemberUpsertOne) SetStatus(v string) *FleetMemberUpsertOne {
 func (u *FleetMemberUpsertOne) UpdateStatus() *FleetMemberUpsertOne {
 	return u.Update(func(s *FleetMemberUpsert) {
 		s.UpdateStatus()
+	})
+}
+
+// SetIDPassportAttachment sets the "id_passport_attachment" field.
+func (u *FleetMemberUpsertOne) SetIDPassportAttachment(v string) *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetIDPassportAttachment(v)
+	})
+}
+
+// UpdateIDPassportAttachment sets the "id_passport_attachment" field to the value that was provided on create.
+func (u *FleetMemberUpsertOne) UpdateIDPassportAttachment() *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdateIDPassportAttachment()
+	})
+}
+
+// ClearIDPassportAttachment clears the value of the "id_passport_attachment" field.
+func (u *FleetMemberUpsertOne) ClearIDPassportAttachment() *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.ClearIDPassportAttachment()
+	})
+}
+
+// SetRiderPhoto sets the "rider_photo" field.
+func (u *FleetMemberUpsertOne) SetRiderPhoto(v string) *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetRiderPhoto(v)
+	})
+}
+
+// UpdateRiderPhoto sets the "rider_photo" field to the value that was provided on create.
+func (u *FleetMemberUpsertOne) UpdateRiderPhoto() *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdateRiderPhoto()
+	})
+}
+
+// ClearRiderPhoto clears the value of the "rider_photo" field.
+func (u *FleetMemberUpsertOne) ClearRiderPhoto() *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.ClearRiderPhoto()
 	})
 }
 
@@ -1105,6 +1333,48 @@ func (u *FleetMemberUpsertBulk) ClearDriverCode() *FleetMemberUpsertBulk {
 	})
 }
 
+// SetIDNumber sets the "id_number" field.
+func (u *FleetMemberUpsertBulk) SetIDNumber(v string) *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetIDNumber(v)
+	})
+}
+
+// UpdateIDNumber sets the "id_number" field to the value that was provided on create.
+func (u *FleetMemberUpsertBulk) UpdateIDNumber() *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdateIDNumber()
+	})
+}
+
+// ClearIDNumber clears the value of the "id_number" field.
+func (u *FleetMemberUpsertBulk) ClearIDNumber() *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.ClearIDNumber()
+	})
+}
+
+// SetLicenseNo sets the "license_no" field.
+func (u *FleetMemberUpsertBulk) SetLicenseNo(v string) *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetLicenseNo(v)
+	})
+}
+
+// UpdateLicenseNo sets the "license_no" field to the value that was provided on create.
+func (u *FleetMemberUpsertBulk) UpdateLicenseNo() *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdateLicenseNo()
+	})
+}
+
+// ClearLicenseNo clears the value of the "license_no" field.
+func (u *FleetMemberUpsertBulk) ClearLicenseNo() *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.ClearLicenseNo()
+	})
+}
+
 // SetStatus sets the "status" field.
 func (u *FleetMemberUpsertBulk) SetStatus(v string) *FleetMemberUpsertBulk {
 	return u.Update(func(s *FleetMemberUpsert) {
@@ -1116,6 +1386,48 @@ func (u *FleetMemberUpsertBulk) SetStatus(v string) *FleetMemberUpsertBulk {
 func (u *FleetMemberUpsertBulk) UpdateStatus() *FleetMemberUpsertBulk {
 	return u.Update(func(s *FleetMemberUpsert) {
 		s.UpdateStatus()
+	})
+}
+
+// SetIDPassportAttachment sets the "id_passport_attachment" field.
+func (u *FleetMemberUpsertBulk) SetIDPassportAttachment(v string) *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetIDPassportAttachment(v)
+	})
+}
+
+// UpdateIDPassportAttachment sets the "id_passport_attachment" field to the value that was provided on create.
+func (u *FleetMemberUpsertBulk) UpdateIDPassportAttachment() *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdateIDPassportAttachment()
+	})
+}
+
+// ClearIDPassportAttachment clears the value of the "id_passport_attachment" field.
+func (u *FleetMemberUpsertBulk) ClearIDPassportAttachment() *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.ClearIDPassportAttachment()
+	})
+}
+
+// SetRiderPhoto sets the "rider_photo" field.
+func (u *FleetMemberUpsertBulk) SetRiderPhoto(v string) *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetRiderPhoto(v)
+	})
+}
+
+// UpdateRiderPhoto sets the "rider_photo" field to the value that was provided on create.
+func (u *FleetMemberUpsertBulk) UpdateRiderPhoto() *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdateRiderPhoto()
+	})
+}
+
+// ClearRiderPhoto clears the value of the "rider_photo" field.
+func (u *FleetMemberUpsertBulk) ClearRiderPhoto() *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.ClearRiderPhoto()
 	})
 }
 

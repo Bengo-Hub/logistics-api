@@ -9,8 +9,22 @@ import (
 	"github.com/google/uuid"
 	"github.com/bengobox/logistics-service/internal/ent"
 	"github.com/bengobox/logistics-service/internal/ent/user"
+	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
 	"github.com/bengobox/logistics-service/internal/modules/tenant"
 )
+
+// UpdateRiderProfileRequest defines the fields expected for profile updates.
+type UpdateRiderProfileRequest struct {
+	Phone        string `json:"phone"`
+	VehicleType  string `json:"vehicle_type"`
+	LicenseNo    string `json:"license_no"`
+	LicensePlate string `json:"license_plate"`
+	IDNumber              string `json:"id_number"`
+	IDPassportAttachment  string `json:"id_passport_attachment"`
+	RiderPhoto            string `json:"rider_photo"`
+	ImageLicensePlate     string `json:"image_license_plate"`
+	ImageSideView         string `json:"image_side_view"`
+}
 
 // Service handles identity-related operations using Ent.
 type Service struct {
@@ -92,4 +106,89 @@ func hasSuperuser(claims map[string]any) bool {
 		}
 	}
 	return false
+}
+// GetRiderProfile retrieves the user and their associated fleet/vehicle info.
+func (s *Service) GetRiderProfile(ctx context.Context, authServiceID uuid.UUID) (*ent.User, error) {
+	return s.client.User.Query().
+		Where(user.AuthServiceUserIDEQ(authServiceID)).
+		WithFleetMemberships(func(q *ent.FleetMemberQuery) {
+			q.WithVehicle()
+		}).
+		Only(ctx)
+}
+
+// UpdateRiderProfile updates a rider's contact and KYC details.
+func (s *Service) UpdateRiderProfile(ctx context.Context, authServiceID uuid.UUID, req UpdateRiderProfileRequest) (*ent.User, error) {
+	tx, err := s.client.Tx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	u, err := tx.User.Query().
+		Where(user.AuthServiceUserIDEQ(authServiceID)).
+		Only(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("user not found: %w", err)
+	}
+
+	// 1. Update User Phone
+	err = tx.User.UpdateOne(u).
+		SetPhone(req.Phone).
+		Exec(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("update user phone: %w", err)
+	}
+
+	// 2. Ensure FleetMember exists
+	fm, err := tx.FleetMember.Query().
+		Where(fleetmember.UserIDEQ(u.ID)).
+		Only(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("rider record not found: %w", err)
+	}
+
+	// Update KYC fields
+	err = tx.FleetMember.UpdateOne(fm).
+		SetIDNumber(req.IDNumber).
+		SetLicenseNo(req.LicenseNo).
+		SetIDPassportAttachment(req.IDPassportAttachment).
+		SetRiderPhoto(req.RiderPhoto).
+		SetStatus("pending").
+		Exec(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("update fleet member: %w", err)
+	}
+
+	// 3. Update or Create Vehicle
+	if fm.VehicleID != nil {
+		err = tx.Vehicle.UpdateOneID(*fm.VehicleID).
+			SetVehicleType(req.VehicleType).
+			SetLicensePlate(req.LicensePlate).
+			SetImageLicensePlate(req.ImageLicensePlate).
+			SetImageSideView(req.ImageSideView).
+			SetComplianceStatus("pending").
+			Exec(ctx)
+	} else {
+		v, err := tx.Vehicle.Create().
+			SetTenantID(u.TenantID).
+			SetVehicleType(req.VehicleType).
+			SetLicensePlate(req.LicensePlate).
+			SetImageLicensePlate(req.ImageLicensePlate).
+			SetImageSideView(req.ImageSideView).
+			SetComplianceStatus("pending").
+			Save(ctx)
+		if err == nil {
+			err = tx.FleetMember.UpdateOne(fm).SetVehicleID(v.ID).Exec(ctx)
+		}
+	}
+	if err != nil {
+		return nil, fmt.Errorf("update vehicle: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return s.GetRiderProfile(ctx, authServiceID)
 }

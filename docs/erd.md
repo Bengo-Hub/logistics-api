@@ -16,8 +16,8 @@ Ent schemas model the domain and power migrations.
 | Table | Key Columns | Description |
 |-------|-------------|-------------|
 | `fleets` | `id`, `tenant_id`, `tenant_slug`, `name`, `type`, `status`, `metadata`, `created_at`, `updated_at` | Fleet grouping (internal riders, third-party carriers) keyed by shared tenant slug. |
-| `fleet_members` | `id`, `tenant_id`, `fleet_id`, `user_id`, `driver_code`, `status`, `vehicle_id`, `joined_at`, `suspended_at`, `metadata` | Rider/driver membership. Links to identities from `auth-service` via `user_id`; onboarding flows are initiated from cafe-backend or cafe-frontend, but all rider profiles are owned by logistics-service. |
-| `vehicles` | `id`, `tenant_id`, `fleet_id`, `vehicle_type`, `make`, `model`, `license_plate`, `capacity_json`, `status`, `compliance_status`, `metadata` | Vehicle registry. |
+| `fleet_members` | `id`, `tenant_id`, `fleet_id`, `user_id`, `driver_code`, `id_number`, `license_no`, `status`, `id_passport_attachment`, `rider_photo`, `vehicle_id`, `joined_at`, `suspended_at`, `metadata` | Rider/driver membership. Links to identities from `auth-service` via `user_id`. `id_number`, `license_no`, `id_passport_attachment` (mandatory), and `rider_photo` (mandatory) are for KYC. |
+| `vehicles` | `id`, `tenant_id`, `fleet_id`, `vehicle_type`, `make`, `model`, `license_plate`, `capacity_json`, `status`, `compliance_status`, `image_license_plate`, `image_side_view`, `metadata` | Vehicle registry. `image_license_plate` (mandatory) and `image_side_view` (mandatory) are for compliance. |
 | `vehicle_documents` | `id`, `vehicle_id`, `document_type`, `file_url`, `issued_at`, `expires_at`, `status`, `verified_by`, `verified_at` | Compliance documents. |
 | `rider_shifts` | `id`, `tenant_id`, `fleet_member_id`, `shift_start`, `shift_end`, `status`, `created_at`, `updated_at` | Shift planning and attendance. |
 
@@ -25,7 +25,7 @@ Ent schemas model the domain and power migrations.
 
 | Table | Key Columns | Description |
 |-------|-------------|-------------|
-| `tasks` | `id`, `tenant_id`, `external_reference`, `source_service`, `task_type`, `priority`, `status`, `sla_due_at`, `requested_pickup_at`, `requested_dropoff_at`, `metadata`, `created_at`, `updated_at` | Canonical work orders (deliveries, pickups, returns, transfers). |
+| `tasks` | `id`, `tenant_id`, `external_reference`, `source_service`, `task_type`, `priority`, `status`, `sla_due_at`, `requested_pickup_at`, `requested_dropoff_at`, `metadata`, `created_at`, `updated_at` | Canonical work orders (deliveries, pickups, returns, transfers, ride). |
 | `task_steps` | `id`, `task_id`, `step_type`, `sequence`, `location_name`, `address_json`, `geo_point`, `contact_name`, `contact_phone`, `requires_signature`, `requires_photo`, `metadata` | Ordered steps (pickup/drop-off hubs). |
 | `task_events` | `id`, `task_id`, `event_type`, `actor_id`, `actor_type`, `payload`, `occurred_at` | State transitions (created, assigned, in-progress, completed, failed). |
 | `task_assignments` | `id`, `task_id`, `fleet_member_id`, `assignment_status`, `assigned_at`, `accepted_at`, `declined_at`, `completed_at`, `reason_code`, `metadata` | Mapping tasks to riders/drivers. |
@@ -57,6 +57,14 @@ Ent schemas model the domain and power migrations.
 | `proof_of_delivery` | `id`, `task_id`, `fleet_member_id`, `signature_url`, `photo_url`, `otp_code`, `captured_at`, `metadata` | Delivery confirmation artifacts. |
 | `customer_feedback` | `id`, `task_id`, `rating`, `comments`, `reported_at`, `metadata` | Customer experience capture. |
 | `delivery_incidents` | `id`, `task_id`, `incident_type`, `description`, `reported_by`, `reported_at`, `resolution_status`, `resolved_at`, `metadata` | SLA breaches, damages, escalations. |
+| `kyc_attachments` | `id`, `entity_id`, `entity_type`, `file_url`, `file_size`, `mime_type`, `status`, `captured_at` | (Conceptual) Metadata for KYC files. |
+
+> [!IMPORTANT]
+> **KYC File Requirements**
+> - **Mandatory Fields**: `id_passport_attachment`, `rider_photo`, `image_license_plate`, `image_side_view`.
+> - **File Size**: Max 5MB per file.
+> - **Security**: All files must undergo AV scanning and automatic compression (WebP/JPEG) before storage.
+> - **Upload**: Supported via direct camera capture or gallery upload.
 
 ## Carrier & Marketplace Integrations
 

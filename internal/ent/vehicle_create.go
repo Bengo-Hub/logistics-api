@@ -96,6 +96,34 @@ func (_c *VehicleCreate) SetNillableComplianceStatus(v *string) *VehicleCreate {
 	return _c
 }
 
+// SetImageLicensePlate sets the "image_license_plate" field.
+func (_c *VehicleCreate) SetImageLicensePlate(v string) *VehicleCreate {
+	_c.mutation.SetImageLicensePlate(v)
+	return _c
+}
+
+// SetNillableImageLicensePlate sets the "image_license_plate" field if the given value is not nil.
+func (_c *VehicleCreate) SetNillableImageLicensePlate(v *string) *VehicleCreate {
+	if v != nil {
+		_c.SetImageLicensePlate(*v)
+	}
+	return _c
+}
+
+// SetImageSideView sets the "image_side_view" field.
+func (_c *VehicleCreate) SetImageSideView(v string) *VehicleCreate {
+	_c.mutation.SetImageSideView(v)
+	return _c
+}
+
+// SetNillableImageSideView sets the "image_side_view" field if the given value is not nil.
+func (_c *VehicleCreate) SetNillableImageSideView(v *string) *VehicleCreate {
+	if v != nil {
+		_c.SetImageSideView(*v)
+	}
+	return _c
+}
+
 // SetMetadata sets the "metadata" field.
 func (_c *VehicleCreate) SetMetadata(v map[string]interface{}) *VehicleCreate {
 	_c.mutation.SetMetadata(v)
@@ -351,6 +379,14 @@ func (_c *VehicleCreate) createSpec() (*Vehicle, *sqlgraph.CreateSpec) {
 		_spec.SetField(vehicle.FieldComplianceStatus, field.TypeString, value)
 		_node.ComplianceStatus = value
 	}
+	if value, ok := _c.mutation.ImageLicensePlate(); ok {
+		_spec.SetField(vehicle.FieldImageLicensePlate, field.TypeString, value)
+		_node.ImageLicensePlate = value
+	}
+	if value, ok := _c.mutation.ImageSideView(); ok {
+		_spec.SetField(vehicle.FieldImageSideView, field.TypeString, value)
+		_node.ImageSideView = value
+	}
 	if value, ok := _c.mutation.Metadata(); ok {
 		_spec.SetField(vehicle.FieldMetadata, field.TypeJSON, value)
 		_node.Metadata = value
@@ -562,6 +598,42 @@ func (u *VehicleUpsert) UpdateComplianceStatus() *VehicleUpsert {
 	return u
 }
 
+// SetImageLicensePlate sets the "image_license_plate" field.
+func (u *VehicleUpsert) SetImageLicensePlate(v string) *VehicleUpsert {
+	u.Set(vehicle.FieldImageLicensePlate, v)
+	return u
+}
+
+// UpdateImageLicensePlate sets the "image_license_plate" field to the value that was provided on create.
+func (u *VehicleUpsert) UpdateImageLicensePlate() *VehicleUpsert {
+	u.SetExcluded(vehicle.FieldImageLicensePlate)
+	return u
+}
+
+// ClearImageLicensePlate clears the value of the "image_license_plate" field.
+func (u *VehicleUpsert) ClearImageLicensePlate() *VehicleUpsert {
+	u.SetNull(vehicle.FieldImageLicensePlate)
+	return u
+}
+
+// SetImageSideView sets the "image_side_view" field.
+func (u *VehicleUpsert) SetImageSideView(v string) *VehicleUpsert {
+	u.Set(vehicle.FieldImageSideView, v)
+	return u
+}
+
+// UpdateImageSideView sets the "image_side_view" field to the value that was provided on create.
+func (u *VehicleUpsert) UpdateImageSideView() *VehicleUpsert {
+	u.SetExcluded(vehicle.FieldImageSideView)
+	return u
+}
+
+// ClearImageSideView clears the value of the "image_side_view" field.
+func (u *VehicleUpsert) ClearImageSideView() *VehicleUpsert {
+	u.SetNull(vehicle.FieldImageSideView)
+	return u
+}
+
 // SetMetadata sets the "metadata" field.
 func (u *VehicleUpsert) SetMetadata(v map[string]interface{}) *VehicleUpsert {
 	u.Set(vehicle.FieldMetadata, v)
@@ -767,6 +839,48 @@ func (u *VehicleUpsertOne) SetComplianceStatus(v string) *VehicleUpsertOne {
 func (u *VehicleUpsertOne) UpdateComplianceStatus() *VehicleUpsertOne {
 	return u.Update(func(s *VehicleUpsert) {
 		s.UpdateComplianceStatus()
+	})
+}
+
+// SetImageLicensePlate sets the "image_license_plate" field.
+func (u *VehicleUpsertOne) SetImageLicensePlate(v string) *VehicleUpsertOne {
+	return u.Update(func(s *VehicleUpsert) {
+		s.SetImageLicensePlate(v)
+	})
+}
+
+// UpdateImageLicensePlate sets the "image_license_plate" field to the value that was provided on create.
+func (u *VehicleUpsertOne) UpdateImageLicensePlate() *VehicleUpsertOne {
+	return u.Update(func(s *VehicleUpsert) {
+		s.UpdateImageLicensePlate()
+	})
+}
+
+// ClearImageLicensePlate clears the value of the "image_license_plate" field.
+func (u *VehicleUpsertOne) ClearImageLicensePlate() *VehicleUpsertOne {
+	return u.Update(func(s *VehicleUpsert) {
+		s.ClearImageLicensePlate()
+	})
+}
+
+// SetImageSideView sets the "image_side_view" field.
+func (u *VehicleUpsertOne) SetImageSideView(v string) *VehicleUpsertOne {
+	return u.Update(func(s *VehicleUpsert) {
+		s.SetImageSideView(v)
+	})
+}
+
+// UpdateImageSideView sets the "image_side_view" field to the value that was provided on create.
+func (u *VehicleUpsertOne) UpdateImageSideView() *VehicleUpsertOne {
+	return u.Update(func(s *VehicleUpsert) {
+		s.UpdateImageSideView()
+	})
+}
+
+// ClearImageSideView clears the value of the "image_side_view" field.
+func (u *VehicleUpsertOne) ClearImageSideView() *VehicleUpsertOne {
+	return u.Update(func(s *VehicleUpsert) {
+		s.ClearImageSideView()
 	})
 }
 
@@ -1146,6 +1260,48 @@ func (u *VehicleUpsertBulk) SetComplianceStatus(v string) *VehicleUpsertBulk {
 func (u *VehicleUpsertBulk) UpdateComplianceStatus() *VehicleUpsertBulk {
 	return u.Update(func(s *VehicleUpsert) {
 		s.UpdateComplianceStatus()
+	})
+}
+
+// SetImageLicensePlate sets the "image_license_plate" field.
+func (u *VehicleUpsertBulk) SetImageLicensePlate(v string) *VehicleUpsertBulk {
+	return u.Update(func(s *VehicleUpsert) {
+		s.SetImageLicensePlate(v)
+	})
+}
+
+// UpdateImageLicensePlate sets the "image_license_plate" field to the value that was provided on create.
+func (u *VehicleUpsertBulk) UpdateImageLicensePlate() *VehicleUpsertBulk {
+	return u.Update(func(s *VehicleUpsert) {
+		s.UpdateImageLicensePlate()
+	})
+}
+
+// ClearImageLicensePlate clears the value of the "image_license_plate" field.
+func (u *VehicleUpsertBulk) ClearImageLicensePlate() *VehicleUpsertBulk {
+	return u.Update(func(s *VehicleUpsert) {
+		s.ClearImageLicensePlate()
+	})
+}
+
+// SetImageSideView sets the "image_side_view" field.
+func (u *VehicleUpsertBulk) SetImageSideView(v string) *VehicleUpsertBulk {
+	return u.Update(func(s *VehicleUpsert) {
+		s.SetImageSideView(v)
+	})
+}
+
+// UpdateImageSideView sets the "image_side_view" field to the value that was provided on create.
+func (u *VehicleUpsertBulk) UpdateImageSideView() *VehicleUpsertBulk {
+	return u.Update(func(s *VehicleUpsert) {
+		s.UpdateImageSideView()
+	})
+}
+
+// ClearImageSideView clears the value of the "image_side_view" field.
+func (u *VehicleUpsertBulk) ClearImageSideView() *VehicleUpsertBulk {
+	return u.Update(func(s *VehicleUpsert) {
+		s.ClearImageSideView()
 	})
 }
 

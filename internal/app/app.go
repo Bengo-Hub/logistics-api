@@ -89,18 +89,18 @@ func New(ctx context.Context) (*App, error) {
 	drv := entsql.OpenDB(dialect.Postgres, sqlDB)
 	entClient := ent.NewClient(ent.Driver(drv))
 
-	// Run versioned migrations on startup
+	// Run versioned migrations on startup (within the pod)
 	if err := entClient.Schema.Create(ctx, 
 		schema.WithDir(migrate.Dir),
 	); err != nil {
 		return nil, fmt.Errorf("ent schema create: %w", err)
 	}
-	log.Info("versioned migrations completed")
+	log.Info("versioned migrations completed - run 'go run cmd/seed/main.go' to seed initial data (idempotent)")
 
 	tenantSyncer := tenant.NewSyncer(entClient)
 	identitySvc := identity.NewService(entClient, tenantSyncer)
 
-	chiRouter := router.New(log, healthHandler, authMiddleware, identitySvc)
+	chiRouter := router.New(log, healthHandler, authMiddleware, identitySvc, cfg)
 
 	httpServer := &http.Server{
 		Addr:              fmt.Sprintf("%s:%d", cfg.HTTP.Host, cfg.HTTP.Port),

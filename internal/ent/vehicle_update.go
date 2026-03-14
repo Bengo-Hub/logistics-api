@@ -155,6 +155,46 @@ func (_u *VehicleUpdate) SetNillableComplianceStatus(v *string) *VehicleUpdate {
 	return _u
 }
 
+// SetImageLicensePlate sets the "image_license_plate" field.
+func (_u *VehicleUpdate) SetImageLicensePlate(v string) *VehicleUpdate {
+	_u.mutation.SetImageLicensePlate(v)
+	return _u
+}
+
+// SetNillableImageLicensePlate sets the "image_license_plate" field if the given value is not nil.
+func (_u *VehicleUpdate) SetNillableImageLicensePlate(v *string) *VehicleUpdate {
+	if v != nil {
+		_u.SetImageLicensePlate(*v)
+	}
+	return _u
+}
+
+// ClearImageLicensePlate clears the value of the "image_license_plate" field.
+func (_u *VehicleUpdate) ClearImageLicensePlate() *VehicleUpdate {
+	_u.mutation.ClearImageLicensePlate()
+	return _u
+}
+
+// SetImageSideView sets the "image_side_view" field.
+func (_u *VehicleUpdate) SetImageSideView(v string) *VehicleUpdate {
+	_u.mutation.SetImageSideView(v)
+	return _u
+}
+
+// SetNillableImageSideView sets the "image_side_view" field if the given value is not nil.
+func (_u *VehicleUpdate) SetNillableImageSideView(v *string) *VehicleUpdate {
+	if v != nil {
+		_u.SetImageSideView(*v)
+	}
+	return _u
+}
+
+// ClearImageSideView clears the value of the "image_side_view" field.
+func (_u *VehicleUpdate) ClearImageSideView() *VehicleUpdate {
+	_u.mutation.ClearImageSideView()
+	return _u
+}
+
 // SetMetadata sets the "metadata" field.
 func (_u *VehicleUpdate) SetMetadata(v map[string]interface{}) *VehicleUpdate {
 	_u.mutation.SetMetadata(v)
@@ -321,6 +361,18 @@ func (_u *VehicleUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.ComplianceStatus(); ok {
 		_spec.SetField(vehicle.FieldComplianceStatus, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.ImageLicensePlate(); ok {
+		_spec.SetField(vehicle.FieldImageLicensePlate, field.TypeString, value)
+	}
+	if _u.mutation.ImageLicensePlateCleared() {
+		_spec.ClearField(vehicle.FieldImageLicensePlate, field.TypeString)
+	}
+	if value, ok := _u.mutation.ImageSideView(); ok {
+		_spec.SetField(vehicle.FieldImageSideView, field.TypeString, value)
+	}
+	if _u.mutation.ImageSideViewCleared() {
+		_spec.ClearField(vehicle.FieldImageSideView, field.TypeString)
 	}
 	if value, ok := _u.mutation.Metadata(); ok {
 		_spec.SetField(vehicle.FieldMetadata, field.TypeJSON, value)
@@ -546,6 +598,46 @@ func (_u *VehicleUpdateOne) SetNillableComplianceStatus(v *string) *VehicleUpdat
 	return _u
 }
 
+// SetImageLicensePlate sets the "image_license_plate" field.
+func (_u *VehicleUpdateOne) SetImageLicensePlate(v string) *VehicleUpdateOne {
+	_u.mutation.SetImageLicensePlate(v)
+	return _u
+}
+
+// SetNillableImageLicensePlate sets the "image_license_plate" field if the given value is not nil.
+func (_u *VehicleUpdateOne) SetNillableImageLicensePlate(v *string) *VehicleUpdateOne {
+	if v != nil {
+		_u.SetImageLicensePlate(*v)
+	}
+	return _u
+}
+
+// ClearImageLicensePlate clears the value of the "image_license_plate" field.
+func (_u *VehicleUpdateOne) ClearImageLicensePlate() *VehicleUpdateOne {
+	_u.mutation.ClearImageLicensePlate()
+	return _u
+}
+
+// SetImageSideView sets the "image_side_view" field.
+func (_u *VehicleUpdateOne) SetImageSideView(v string) *VehicleUpdateOne {
+	_u.mutation.SetImageSideView(v)
+	return _u
+}
+
+// SetNillableImageSideView sets the "image_side_view" field if the given value is not nil.
+func (_u *VehicleUpdateOne) SetNillableImageSideView(v *string) *VehicleUpdateOne {
+	if v != nil {
+		_u.SetImageSideView(*v)
+	}
+	return _u
+}
+
+// ClearImageSideView clears the value of the "image_side_view" field.
+func (_u *VehicleUpdateOne) ClearImageSideView() *VehicleUpdateOne {
+	_u.mutation.ClearImageSideView()
+	return _u
+}
+
 // SetMetadata sets the "metadata" field.
 func (_u *VehicleUpdateOne) SetMetadata(v map[string]interface{}) *VehicleUpdateOne {
 	_u.mutation.SetMetadata(v)
@@ -742,6 +834,18 @@ func (_u *VehicleUpdateOne) sqlSave(ctx context.Context) (_node *Vehicle, err er
 	}
 	if value, ok := _u.mutation.ComplianceStatus(); ok {
 		_spec.SetField(vehicle.FieldComplianceStatus, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.ImageLicensePlate(); ok {
+		_spec.SetField(vehicle.FieldImageLicensePlate, field.TypeString, value)
+	}
+	if _u.mutation.ImageLicensePlateCleared() {
+		_spec.ClearField(vehicle.FieldImageLicensePlate, field.TypeString)
+	}
+	if value, ok := _u.mutation.ImageSideView(); ok {
+		_spec.SetField(vehicle.FieldImageSideView, field.TypeString, value)
+	}
+	if _u.mutation.ImageSideViewCleared() {
+		_spec.ClearField(vehicle.FieldImageSideView, field.TypeString)
 	}
 	if value, ok := _u.mutation.Metadata(); ok {
 		_spec.SetField(vehicle.FieldMetadata, field.TypeJSON, value)

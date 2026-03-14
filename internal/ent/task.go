@@ -26,7 +26,7 @@ type Task struct {
 	ExternalReference string `json:"external_reference,omitempty"`
 	// cafe-backend | inventory-service | pos-service
 	SourceService string `json:"source_service,omitempty"`
-	// delivery | pickup | return | transfer
+	// delivery | pickup | return | transfer | ride
 	TaskType string `json:"task_type,omitempty"`
 	// Priority holds the value of the "priority" field.
 	Priority int `json:"priority,omitempty"`

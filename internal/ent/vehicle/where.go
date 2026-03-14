@@ -96,6 +96,16 @@ func ComplianceStatus(v string) predicate.Vehicle {
 	return predicate.Vehicle(sql.FieldEQ(FieldComplianceStatus, v))
 }
 
+// ImageLicensePlate applies equality check predicate on the "image_license_plate" field. It's identical to ImageLicensePlateEQ.
+func ImageLicensePlate(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldEQ(FieldImageLicensePlate, v))
+}
+
+// ImageSideView applies equality check predicate on the "image_side_view" field. It's identical to ImageSideViewEQ.
+func ImageSideView(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldEQ(FieldImageSideView, v))
+}
+
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.Vehicle {
 	return predicate.Vehicle(sql.FieldEQ(FieldCreatedAt, v))
@@ -564,6 +574,156 @@ func ComplianceStatusEqualFold(v string) predicate.Vehicle {
 // ComplianceStatusContainsFold applies the ContainsFold predicate on the "compliance_status" field.
 func ComplianceStatusContainsFold(v string) predicate.Vehicle {
 	return predicate.Vehicle(sql.FieldContainsFold(FieldComplianceStatus, v))
+}
+
+// ImageLicensePlateEQ applies the EQ predicate on the "image_license_plate" field.
+func ImageLicensePlateEQ(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldEQ(FieldImageLicensePlate, v))
+}
+
+// ImageLicensePlateNEQ applies the NEQ predicate on the "image_license_plate" field.
+func ImageLicensePlateNEQ(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldNEQ(FieldImageLicensePlate, v))
+}
+
+// ImageLicensePlateIn applies the In predicate on the "image_license_plate" field.
+func ImageLicensePlateIn(vs ...string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldIn(FieldImageLicensePlate, vs...))
+}
+
+// ImageLicensePlateNotIn applies the NotIn predicate on the "image_license_plate" field.
+func ImageLicensePlateNotIn(vs ...string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldNotIn(FieldImageLicensePlate, vs...))
+}
+
+// ImageLicensePlateGT applies the GT predicate on the "image_license_plate" field.
+func ImageLicensePlateGT(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldGT(FieldImageLicensePlate, v))
+}
+
+// ImageLicensePlateGTE applies the GTE predicate on the "image_license_plate" field.
+func ImageLicensePlateGTE(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldGTE(FieldImageLicensePlate, v))
+}
+
+// ImageLicensePlateLT applies the LT predicate on the "image_license_plate" field.
+func ImageLicensePlateLT(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldLT(FieldImageLicensePlate, v))
+}
+
+// ImageLicensePlateLTE applies the LTE predicate on the "image_license_plate" field.
+func ImageLicensePlateLTE(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldLTE(FieldImageLicensePlate, v))
+}
+
+// ImageLicensePlateContains applies the Contains predicate on the "image_license_plate" field.
+func ImageLicensePlateContains(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldContains(FieldImageLicensePlate, v))
+}
+
+// ImageLicensePlateHasPrefix applies the HasPrefix predicate on the "image_license_plate" field.
+func ImageLicensePlateHasPrefix(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldHasPrefix(FieldImageLicensePlate, v))
+}
+
+// ImageLicensePlateHasSuffix applies the HasSuffix predicate on the "image_license_plate" field.
+func ImageLicensePlateHasSuffix(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldHasSuffix(FieldImageLicensePlate, v))
+}
+
+// ImageLicensePlateIsNil applies the IsNil predicate on the "image_license_plate" field.
+func ImageLicensePlateIsNil() predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldIsNull(FieldImageLicensePlate))
+}
+
+// ImageLicensePlateNotNil applies the NotNil predicate on the "image_license_plate" field.
+func ImageLicensePlateNotNil() predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldNotNull(FieldImageLicensePlate))
+}
+
+// ImageLicensePlateEqualFold applies the EqualFold predicate on the "image_license_plate" field.
+func ImageLicensePlateEqualFold(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldEqualFold(FieldImageLicensePlate, v))
+}
+
+// ImageLicensePlateContainsFold applies the ContainsFold predicate on the "image_license_plate" field.
+func ImageLicensePlateContainsFold(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldContainsFold(FieldImageLicensePlate, v))
+}
+
+// ImageSideViewEQ applies the EQ predicate on the "image_side_view" field.
+func ImageSideViewEQ(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldEQ(FieldImageSideView, v))
+}
+
+// ImageSideViewNEQ applies the NEQ predicate on the "image_side_view" field.
+func ImageSideViewNEQ(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldNEQ(FieldImageSideView, v))
+}
+
+// ImageSideViewIn applies the In predicate on the "image_side_view" field.
+func ImageSideViewIn(vs ...string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldIn(FieldImageSideView, vs...))
+}
+
+// ImageSideViewNotIn applies the NotIn predicate on the "image_side_view" field.
+func ImageSideViewNotIn(vs ...string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldNotIn(FieldImageSideView, vs...))
+}
+
+// ImageSideViewGT applies the GT predicate on the "image_side_view" field.
+func ImageSideViewGT(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldGT(FieldImageSideView, v))
+}
+
+// ImageSideViewGTE applies the GTE predicate on the "image_side_view" field.
+func ImageSideViewGTE(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldGTE(FieldImageSideView, v))
+}
+
+// ImageSideViewLT applies the LT predicate on the "image_side_view" field.
+func ImageSideViewLT(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldLT(FieldImageSideView, v))
+}
+
+// ImageSideViewLTE applies the LTE predicate on the "image_side_view" field.
+func ImageSideViewLTE(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldLTE(FieldImageSideView, v))
+}
+
+// ImageSideViewContains applies the Contains predicate on the "image_side_view" field.
+func ImageSideViewContains(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldContains(FieldImageSideView, v))
+}
+
+// ImageSideViewHasPrefix applies the HasPrefix predicate on the "image_side_view" field.
+func ImageSideViewHasPrefix(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldHasPrefix(FieldImageSideView, v))
+}
+
+// ImageSideViewHasSuffix applies the HasSuffix predicate on the "image_side_view" field.
+func ImageSideViewHasSuffix(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldHasSuffix(FieldImageSideView, v))
+}
+
+// ImageSideViewIsNil applies the IsNil predicate on the "image_side_view" field.
+func ImageSideViewIsNil() predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldIsNull(FieldImageSideView))
+}
+
+// ImageSideViewNotNil applies the NotNil predicate on the "image_side_view" field.
+func ImageSideViewNotNil() predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldNotNull(FieldImageSideView))
+}
+
+// ImageSideViewEqualFold applies the EqualFold predicate on the "image_side_view" field.
+func ImageSideViewEqualFold(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldEqualFold(FieldImageSideView, v))
+}
+
+// ImageSideViewContainsFold applies the ContainsFold predicate on the "image_side_view" field.
+func ImageSideViewContainsFold(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldContainsFold(FieldImageSideView, v))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.

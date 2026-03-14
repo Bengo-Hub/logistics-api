@@ -38,6 +38,12 @@ func (Vehicle) Fields() []ent.Field {
 			Default("active"),
 		field.String("compliance_status").
 			Default("pending"),
+		field.String("image_license_plate").
+			Optional().
+			Comment("URL to vehicle license plate image"),
+		field.String("image_side_view").
+			Optional().
+			Comment("URL to vehicle side view image"),
 		field.JSON("metadata", map[string]any{}).
 			Default(map[string]any{}),
 		field.Time("created_at").

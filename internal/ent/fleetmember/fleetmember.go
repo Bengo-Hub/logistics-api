@@ -23,8 +23,16 @@ const (
 	FieldUserID = "user_id"
 	// FieldDriverCode holds the string denoting the driver_code field in the database.
 	FieldDriverCode = "driver_code"
+	// FieldIDNumber holds the string denoting the id_number field in the database.
+	FieldIDNumber = "id_number"
+	// FieldLicenseNo holds the string denoting the license_no field in the database.
+	FieldLicenseNo = "license_no"
 	// FieldStatus holds the string denoting the status field in the database.
 	FieldStatus = "status"
+	// FieldIDPassportAttachment holds the string denoting the id_passport_attachment field in the database.
+	FieldIDPassportAttachment = "id_passport_attachment"
+	// FieldRiderPhoto holds the string denoting the rider_photo field in the database.
+	FieldRiderPhoto = "rider_photo"
 	// FieldVehicleID holds the string denoting the vehicle_id field in the database.
 	FieldVehicleID = "vehicle_id"
 	// FieldJoinedAt holds the string denoting the joined_at field in the database.
@@ -84,7 +92,11 @@ var Columns = []string{
 	FieldFleetID,
 	FieldUserID,
 	FieldDriverCode,
+	FieldIDNumber,
+	FieldLicenseNo,
 	FieldStatus,
+	FieldIDPassportAttachment,
+	FieldRiderPhoto,
 	FieldVehicleID,
 	FieldJoinedAt,
 	FieldSuspendedAt,
@@ -148,9 +160,29 @@ func ByDriverCode(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldDriverCode, opts...).ToFunc()
 }
 
+// ByIDNumber orders the results by the id_number field.
+func ByIDNumber(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldIDNumber, opts...).ToFunc()
+}
+
+// ByLicenseNo orders the results by the license_no field.
+func ByLicenseNo(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLicenseNo, opts...).ToFunc()
+}
+
 // ByStatus orders the results by the status field.
 func ByStatus(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldStatus, opts...).ToFunc()
+}
+
+// ByIDPassportAttachment orders the results by the id_passport_attachment field.
+func ByIDPassportAttachment(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldIDPassportAttachment, opts...).ToFunc()
+}
+
+// ByRiderPhoto orders the results by the rider_photo field.
+func ByRiderPhoto(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRiderPhoto, opts...).ToFunc()
 }
 
 // ByVehicleID orders the results by the vehicle_id field.

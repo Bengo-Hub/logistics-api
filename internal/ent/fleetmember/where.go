@@ -76,9 +76,29 @@ func DriverCode(v string) predicate.FleetMember {
 	return predicate.FleetMember(sql.FieldEQ(FieldDriverCode, v))
 }
 
+// IDNumber applies equality check predicate on the "id_number" field. It's identical to IDNumberEQ.
+func IDNumber(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEQ(FieldIDNumber, v))
+}
+
+// LicenseNo applies equality check predicate on the "license_no" field. It's identical to LicenseNoEQ.
+func LicenseNo(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEQ(FieldLicenseNo, v))
+}
+
 // Status applies equality check predicate on the "status" field. It's identical to StatusEQ.
 func Status(v string) predicate.FleetMember {
 	return predicate.FleetMember(sql.FieldEQ(FieldStatus, v))
+}
+
+// IDPassportAttachment applies equality check predicate on the "id_passport_attachment" field. It's identical to IDPassportAttachmentEQ.
+func IDPassportAttachment(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEQ(FieldIDPassportAttachment, v))
+}
+
+// RiderPhoto applies equality check predicate on the "rider_photo" field. It's identical to RiderPhotoEQ.
+func RiderPhoto(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEQ(FieldRiderPhoto, v))
 }
 
 // VehicleID applies equality check predicate on the "vehicle_id" field. It's identical to VehicleIDEQ.
@@ -261,6 +281,156 @@ func DriverCodeContainsFold(v string) predicate.FleetMember {
 	return predicate.FleetMember(sql.FieldContainsFold(FieldDriverCode, v))
 }
 
+// IDNumberEQ applies the EQ predicate on the "id_number" field.
+func IDNumberEQ(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEQ(FieldIDNumber, v))
+}
+
+// IDNumberNEQ applies the NEQ predicate on the "id_number" field.
+func IDNumberNEQ(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNEQ(FieldIDNumber, v))
+}
+
+// IDNumberIn applies the In predicate on the "id_number" field.
+func IDNumberIn(vs ...string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldIn(FieldIDNumber, vs...))
+}
+
+// IDNumberNotIn applies the NotIn predicate on the "id_number" field.
+func IDNumberNotIn(vs ...string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNotIn(FieldIDNumber, vs...))
+}
+
+// IDNumberGT applies the GT predicate on the "id_number" field.
+func IDNumberGT(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldGT(FieldIDNumber, v))
+}
+
+// IDNumberGTE applies the GTE predicate on the "id_number" field.
+func IDNumberGTE(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldGTE(FieldIDNumber, v))
+}
+
+// IDNumberLT applies the LT predicate on the "id_number" field.
+func IDNumberLT(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldLT(FieldIDNumber, v))
+}
+
+// IDNumberLTE applies the LTE predicate on the "id_number" field.
+func IDNumberLTE(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldLTE(FieldIDNumber, v))
+}
+
+// IDNumberContains applies the Contains predicate on the "id_number" field.
+func IDNumberContains(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldContains(FieldIDNumber, v))
+}
+
+// IDNumberHasPrefix applies the HasPrefix predicate on the "id_number" field.
+func IDNumberHasPrefix(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldHasPrefix(FieldIDNumber, v))
+}
+
+// IDNumberHasSuffix applies the HasSuffix predicate on the "id_number" field.
+func IDNumberHasSuffix(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldHasSuffix(FieldIDNumber, v))
+}
+
+// IDNumberIsNil applies the IsNil predicate on the "id_number" field.
+func IDNumberIsNil() predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldIsNull(FieldIDNumber))
+}
+
+// IDNumberNotNil applies the NotNil predicate on the "id_number" field.
+func IDNumberNotNil() predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNotNull(FieldIDNumber))
+}
+
+// IDNumberEqualFold applies the EqualFold predicate on the "id_number" field.
+func IDNumberEqualFold(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEqualFold(FieldIDNumber, v))
+}
+
+// IDNumberContainsFold applies the ContainsFold predicate on the "id_number" field.
+func IDNumberContainsFold(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldContainsFold(FieldIDNumber, v))
+}
+
+// LicenseNoEQ applies the EQ predicate on the "license_no" field.
+func LicenseNoEQ(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEQ(FieldLicenseNo, v))
+}
+
+// LicenseNoNEQ applies the NEQ predicate on the "license_no" field.
+func LicenseNoNEQ(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNEQ(FieldLicenseNo, v))
+}
+
+// LicenseNoIn applies the In predicate on the "license_no" field.
+func LicenseNoIn(vs ...string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldIn(FieldLicenseNo, vs...))
+}
+
+// LicenseNoNotIn applies the NotIn predicate on the "license_no" field.
+func LicenseNoNotIn(vs ...string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNotIn(FieldLicenseNo, vs...))
+}
+
+// LicenseNoGT applies the GT predicate on the "license_no" field.
+func LicenseNoGT(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldGT(FieldLicenseNo, v))
+}
+
+// LicenseNoGTE applies the GTE predicate on the "license_no" field.
+func LicenseNoGTE(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldGTE(FieldLicenseNo, v))
+}
+
+// LicenseNoLT applies the LT predicate on the "license_no" field.
+func LicenseNoLT(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldLT(FieldLicenseNo, v))
+}
+
+// LicenseNoLTE applies the LTE predicate on the "license_no" field.
+func LicenseNoLTE(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldLTE(FieldLicenseNo, v))
+}
+
+// LicenseNoContains applies the Contains predicate on the "license_no" field.
+func LicenseNoContains(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldContains(FieldLicenseNo, v))
+}
+
+// LicenseNoHasPrefix applies the HasPrefix predicate on the "license_no" field.
+func LicenseNoHasPrefix(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldHasPrefix(FieldLicenseNo, v))
+}
+
+// LicenseNoHasSuffix applies the HasSuffix predicate on the "license_no" field.
+func LicenseNoHasSuffix(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldHasSuffix(FieldLicenseNo, v))
+}
+
+// LicenseNoIsNil applies the IsNil predicate on the "license_no" field.
+func LicenseNoIsNil() predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldIsNull(FieldLicenseNo))
+}
+
+// LicenseNoNotNil applies the NotNil predicate on the "license_no" field.
+func LicenseNoNotNil() predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNotNull(FieldLicenseNo))
+}
+
+// LicenseNoEqualFold applies the EqualFold predicate on the "license_no" field.
+func LicenseNoEqualFold(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEqualFold(FieldLicenseNo, v))
+}
+
+// LicenseNoContainsFold applies the ContainsFold predicate on the "license_no" field.
+func LicenseNoContainsFold(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldContainsFold(FieldLicenseNo, v))
+}
+
 // StatusEQ applies the EQ predicate on the "status" field.
 func StatusEQ(v string) predicate.FleetMember {
 	return predicate.FleetMember(sql.FieldEQ(FieldStatus, v))
@@ -324,6 +494,156 @@ func StatusEqualFold(v string) predicate.FleetMember {
 // StatusContainsFold applies the ContainsFold predicate on the "status" field.
 func StatusContainsFold(v string) predicate.FleetMember {
 	return predicate.FleetMember(sql.FieldContainsFold(FieldStatus, v))
+}
+
+// IDPassportAttachmentEQ applies the EQ predicate on the "id_passport_attachment" field.
+func IDPassportAttachmentEQ(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEQ(FieldIDPassportAttachment, v))
+}
+
+// IDPassportAttachmentNEQ applies the NEQ predicate on the "id_passport_attachment" field.
+func IDPassportAttachmentNEQ(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNEQ(FieldIDPassportAttachment, v))
+}
+
+// IDPassportAttachmentIn applies the In predicate on the "id_passport_attachment" field.
+func IDPassportAttachmentIn(vs ...string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldIn(FieldIDPassportAttachment, vs...))
+}
+
+// IDPassportAttachmentNotIn applies the NotIn predicate on the "id_passport_attachment" field.
+func IDPassportAttachmentNotIn(vs ...string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNotIn(FieldIDPassportAttachment, vs...))
+}
+
+// IDPassportAttachmentGT applies the GT predicate on the "id_passport_attachment" field.
+func IDPassportAttachmentGT(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldGT(FieldIDPassportAttachment, v))
+}
+
+// IDPassportAttachmentGTE applies the GTE predicate on the "id_passport_attachment" field.
+func IDPassportAttachmentGTE(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldGTE(FieldIDPassportAttachment, v))
+}
+
+// IDPassportAttachmentLT applies the LT predicate on the "id_passport_attachment" field.
+func IDPassportAttachmentLT(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldLT(FieldIDPassportAttachment, v))
+}
+
+// IDPassportAttachmentLTE applies the LTE predicate on the "id_passport_attachment" field.
+func IDPassportAttachmentLTE(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldLTE(FieldIDPassportAttachment, v))
+}
+
+// IDPassportAttachmentContains applies the Contains predicate on the "id_passport_attachment" field.
+func IDPassportAttachmentContains(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldContains(FieldIDPassportAttachment, v))
+}
+
+// IDPassportAttachmentHasPrefix applies the HasPrefix predicate on the "id_passport_attachment" field.
+func IDPassportAttachmentHasPrefix(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldHasPrefix(FieldIDPassportAttachment, v))
+}
+
+// IDPassportAttachmentHasSuffix applies the HasSuffix predicate on the "id_passport_attachment" field.
+func IDPassportAttachmentHasSuffix(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldHasSuffix(FieldIDPassportAttachment, v))
+}
+
+// IDPassportAttachmentIsNil applies the IsNil predicate on the "id_passport_attachment" field.
+func IDPassportAttachmentIsNil() predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldIsNull(FieldIDPassportAttachment))
+}
+
+// IDPassportAttachmentNotNil applies the NotNil predicate on the "id_passport_attachment" field.
+func IDPassportAttachmentNotNil() predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNotNull(FieldIDPassportAttachment))
+}
+
+// IDPassportAttachmentEqualFold applies the EqualFold predicate on the "id_passport_attachment" field.
+func IDPassportAttachmentEqualFold(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEqualFold(FieldIDPassportAttachment, v))
+}
+
+// IDPassportAttachmentContainsFold applies the ContainsFold predicate on the "id_passport_attachment" field.
+func IDPassportAttachmentContainsFold(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldContainsFold(FieldIDPassportAttachment, v))
+}
+
+// RiderPhotoEQ applies the EQ predicate on the "rider_photo" field.
+func RiderPhotoEQ(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEQ(FieldRiderPhoto, v))
+}
+
+// RiderPhotoNEQ applies the NEQ predicate on the "rider_photo" field.
+func RiderPhotoNEQ(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNEQ(FieldRiderPhoto, v))
+}
+
+// RiderPhotoIn applies the In predicate on the "rider_photo" field.
+func RiderPhotoIn(vs ...string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldIn(FieldRiderPhoto, vs...))
+}
+
+// RiderPhotoNotIn applies the NotIn predicate on the "rider_photo" field.
+func RiderPhotoNotIn(vs ...string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNotIn(FieldRiderPhoto, vs...))
+}
+
+// RiderPhotoGT applies the GT predicate on the "rider_photo" field.
+func RiderPhotoGT(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldGT(FieldRiderPhoto, v))
+}
+
+// RiderPhotoGTE applies the GTE predicate on the "rider_photo" field.
+func RiderPhotoGTE(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldGTE(FieldRiderPhoto, v))
+}
+
+// RiderPhotoLT applies the LT predicate on the "rider_photo" field.
+func RiderPhotoLT(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldLT(FieldRiderPhoto, v))
+}
+
+// RiderPhotoLTE applies the LTE predicate on the "rider_photo" field.
+func RiderPhotoLTE(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldLTE(FieldRiderPhoto, v))
+}
+
+// RiderPhotoContains applies the Contains predicate on the "rider_photo" field.
+func RiderPhotoContains(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldContains(FieldRiderPhoto, v))
+}
+
+// RiderPhotoHasPrefix applies the HasPrefix predicate on the "rider_photo" field.
+func RiderPhotoHasPrefix(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldHasPrefix(FieldRiderPhoto, v))
+}
+
+// RiderPhotoHasSuffix applies the HasSuffix predicate on the "rider_photo" field.
+func RiderPhotoHasSuffix(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldHasSuffix(FieldRiderPhoto, v))
+}
+
+// RiderPhotoIsNil applies the IsNil predicate on the "rider_photo" field.
+func RiderPhotoIsNil() predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldIsNull(FieldRiderPhoto))
+}
+
+// RiderPhotoNotNil applies the NotNil predicate on the "rider_photo" field.
+func RiderPhotoNotNil() predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNotNull(FieldRiderPhoto))
+}
+
+// RiderPhotoEqualFold applies the EqualFold predicate on the "rider_photo" field.
+func RiderPhotoEqualFold(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEqualFold(FieldRiderPhoto, v))
+}
+
+// RiderPhotoContainsFold applies the ContainsFold predicate on the "rider_photo" field.
+func RiderPhotoContainsFold(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldContainsFold(FieldRiderPhoto, v))
 }
 
 // VehicleIDEQ applies the EQ predicate on the "vehicle_id" field.

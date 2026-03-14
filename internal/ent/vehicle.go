@@ -38,6 +38,10 @@ type Vehicle struct {
 	Status string `json:"status,omitempty"`
 	// ComplianceStatus holds the value of the "compliance_status" field.
 	ComplianceStatus string `json:"compliance_status,omitempty"`
+	// URL to vehicle license plate image
+	ImageLicensePlate string `json:"image_license_plate,omitempty"`
+	// URL to vehicle side view image
+	ImageSideView string `json:"image_side_view,omitempty"`
 	// Metadata holds the value of the "metadata" field.
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
@@ -88,7 +92,7 @@ func (*Vehicle) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case vehicle.FieldCapacityJSON, vehicle.FieldMetadata:
 			values[i] = new([]byte)
-		case vehicle.FieldVehicleType, vehicle.FieldMake, vehicle.FieldModel, vehicle.FieldLicensePlate, vehicle.FieldStatus, vehicle.FieldComplianceStatus:
+		case vehicle.FieldVehicleType, vehicle.FieldMake, vehicle.FieldModel, vehicle.FieldLicensePlate, vehicle.FieldStatus, vehicle.FieldComplianceStatus, vehicle.FieldImageLicensePlate, vehicle.FieldImageSideView:
 			values[i] = new(sql.NullString)
 		case vehicle.FieldCreatedAt, vehicle.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -170,6 +174,18 @@ func (_m *Vehicle) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field compliance_status", values[i])
 			} else if value.Valid {
 				_m.ComplianceStatus = value.String
+			}
+		case vehicle.FieldImageLicensePlate:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field image_license_plate", values[i])
+			} else if value.Valid {
+				_m.ImageLicensePlate = value.String
+			}
+		case vehicle.FieldImageSideView:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field image_side_view", values[i])
+			} else if value.Valid {
+				_m.ImageSideView = value.String
 			}
 		case vehicle.FieldMetadata:
 			if value, ok := values[i].(*[]byte); !ok {
@@ -263,6 +279,12 @@ func (_m *Vehicle) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("compliance_status=")
 	builder.WriteString(_m.ComplianceStatus)
+	builder.WriteString(", ")
+	builder.WriteString("image_license_plate=")
+	builder.WriteString(_m.ImageLicensePlate)
+	builder.WriteString(", ")
+	builder.WriteString("image_side_view=")
+	builder.WriteString(_m.ImageSideView)
 	builder.WriteString(", ")
 	builder.WriteString("metadata=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Metadata))

@@ -14,11 +14,12 @@ import (
 
 	authclient "github.com/Bengo-Hub/shared-auth-client"
 	"github.com/Bengo-Hub/httpware"
-	handlers "github.com/bengobox/logistics-service/internal/http/handlers"
+	"github.com/bengobox/logistics-service/internal/http/handlers"
 	"github.com/bengobox/logistics-service/internal/modules/identity"
+	"github.com/bengobox/logistics-service/internal/config"
 )
 
-func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authclient.AuthMiddleware, idSvc *identity.Service) http.Handler {
+func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authclient.AuthMiddleware, idSvc *identity.Service, cfg *config.Config) http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(middleware.RequestID)
@@ -40,6 +41,15 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 	r.Get("/readyz", health.Readiness)
 	r.Get("/metrics", health.Metrics)
 	r.Get("/v1/docs/*", handlers.SwaggerUI)
+	
+	mediaHandler := handlers.NewMediaHandler(log, cfg)
+	r.Post("/api/v1/media/upload", mediaHandler.Upload)
+	
+	// Serve media files
+	if cfg != nil {
+		fs := http.StripPrefix("/media/", http.FileServer(http.Dir(cfg.Media.Root)))
+		r.Handle("/media/*", fs)
+	}
 
 	r.Route("/api/v1", func(api chi.Router) {
 		// Apply auth middleware to all v1 routes
@@ -83,6 +93,12 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 				URLParamFunc: chi.URLParam,
 				Required:     true,
 			}))
+
+			tenant.Route("/riders", func(riders chi.Router) {
+				idHandler := handlers.NewIdentityHandler(idSvc)
+				riders.Get("/me", idHandler.GetMe)
+				riders.Patch("/me/profile", idHandler.UpdateProfile)
+			})
 
 			tenant.Route("/tasks", func(tasks chi.Router) {
 				// Placeholder endpoints - to be implemented

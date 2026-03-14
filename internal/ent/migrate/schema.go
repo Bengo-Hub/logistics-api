@@ -119,7 +119,11 @@ var (
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "tenant_id", Type: field.TypeUUID},
 		{Name: "driver_code", Type: field.TypeString, Unique: true, Nullable: true},
-		{Name: "status", Type: field.TypeString, Default: "active"},
+		{Name: "id_number", Type: field.TypeString, Nullable: true},
+		{Name: "license_no", Type: field.TypeString, Nullable: true},
+		{Name: "status", Type: field.TypeString, Default: "pending"},
+		{Name: "id_passport_attachment", Type: field.TypeString, Nullable: true},
+		{Name: "rider_photo", Type: field.TypeString, Nullable: true},
 		{Name: "joined_at", Type: field.TypeTime},
 		{Name: "suspended_at", Type: field.TypeTime, Nullable: true},
 		{Name: "metadata", Type: field.TypeJSON},
@@ -137,19 +141,19 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "fleet_members_fleets_members",
-				Columns:    []*schema.Column{FleetMembersColumns[9]},
+				Columns:    []*schema.Column{FleetMembersColumns[13]},
 				RefColumns: []*schema.Column{FleetsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "fleet_members_vehicles_vehicle",
-				Columns:    []*schema.Column{FleetMembersColumns[10]},
+				Columns:    []*schema.Column{FleetMembersColumns[14]},
 				RefColumns: []*schema.Column{VehiclesColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "fleet_members_users_fleet_memberships",
-				Columns:    []*schema.Column{FleetMembersColumns[11]},
+				Columns:    []*schema.Column{FleetMembersColumns[15]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -158,7 +162,7 @@ var (
 			{
 				Name:    "fleetmember_tenant_id_user_id",
 				Unique:  true,
-				Columns: []*schema.Column{FleetMembersColumns[1], FleetMembersColumns[11]},
+				Columns: []*schema.Column{FleetMembersColumns[1], FleetMembersColumns[15]},
 			},
 			{
 				Name:    "fleetmember_driver_code",
@@ -546,6 +550,8 @@ var (
 		{Name: "capacity_json", Type: field.TypeJSON, Nullable: true},
 		{Name: "status", Type: field.TypeString, Default: "active"},
 		{Name: "compliance_status", Type: field.TypeString, Default: "pending"},
+		{Name: "image_license_plate", Type: field.TypeString, Nullable: true},
+		{Name: "image_side_view", Type: field.TypeString, Nullable: true},
 		{Name: "metadata", Type: field.TypeJSON},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
@@ -559,7 +565,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "vehicles_fleets_vehicles",
-				Columns:    []*schema.Column{VehiclesColumns[12]},
+				Columns:    []*schema.Column{VehiclesColumns[14]},
 				RefColumns: []*schema.Column{FleetsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},

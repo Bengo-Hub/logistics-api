@@ -19,6 +19,7 @@ type Config struct {
 	Events    EventsConfig
 	Telemetry TelemetryConfig
 	Auth      AuthConfig
+	Media     MediaConfig
 }
 
 type AppConfig struct {
@@ -74,6 +75,11 @@ type AuthConfig struct {
 	JWKSUrl             string        `envconfig:"AUTH_JWKS_URL" default:"https://auth.codevertex.local:4101/api/v1/.well-known/jwks.json"`
 	JWKSCacheTTL        time.Duration `envconfig:"AUTH_JWKS_CACHE_TTL" default:"3600s"`
 	JWKSRefreshInterval time.Duration `envconfig:"AUTH_JWKS_REFRESH_INTERVAL" default:"300s"`
+}
+
+type MediaConfig struct {
+	Root    string `envconfig:"MEDIA_ROOT" default:"./media"`
+	URLBase string `envconfig:"MEDIA_URL_BASE" default:"http://localhost:4005/media"`
 }
 
 // Load gathers configuration from environment variables and optional .env files.

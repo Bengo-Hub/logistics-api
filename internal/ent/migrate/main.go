@@ -12,8 +12,8 @@ import (
 	atlasmigrate "ariga.io/atlas/sql/migrate"
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql/schema"
-	_ "github.com/lib/pq"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	_ "github.com/lib/pq"
 )
 
 func main() {
@@ -33,7 +33,7 @@ func main() {
 	if len(os.Args) != 2 {
 		log.Fatalln("migration name is required. use: 'go run -mod=mod internal/ent/migrate/main.go <name>'")
 	}
-	
+
 	// Generate migrations using Atlas support.
 	// We use the default development database URL or one from ENV if needed.
 	// For generation, we usually use a temporary or local dev DB.

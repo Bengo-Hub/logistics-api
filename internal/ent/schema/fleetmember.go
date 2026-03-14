@@ -28,8 +28,21 @@ func (FleetMember) Fields() []ent.Field {
 		field.String("driver_code").
 			Optional().
 			Unique(),
+		field.String("id_number").
+			Optional().
+			Comment("National ID or Passport Number"),
+		field.String("license_no").
+			Optional().
+			Comment("Driving License Number"),
 		field.String("status").
-			Default("active"),
+			Default("pending").
+			Comment("pending, approved, active, suspended"),
+		field.String("id_passport_attachment").
+			Optional().
+			Comment("URL to ID/Passport attachment"),
+		field.String("rider_photo").
+			Optional().
+			Comment("URL to rider's passport photo"),
 		field.UUID("vehicle_id", uuid.UUID{}).
 			Optional().
 			Nillable(),

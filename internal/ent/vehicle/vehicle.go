@@ -33,6 +33,10 @@ const (
 	FieldStatus = "status"
 	// FieldComplianceStatus holds the string denoting the compliance_status field in the database.
 	FieldComplianceStatus = "compliance_status"
+	// FieldImageLicensePlate holds the string denoting the image_license_plate field in the database.
+	FieldImageLicensePlate = "image_license_plate"
+	// FieldImageSideView holds the string denoting the image_side_view field in the database.
+	FieldImageSideView = "image_side_view"
 	// FieldMetadata holds the string denoting the metadata field in the database.
 	FieldMetadata = "metadata"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
@@ -73,6 +77,8 @@ var Columns = []string{
 	FieldCapacityJSON,
 	FieldStatus,
 	FieldComplianceStatus,
+	FieldImageLicensePlate,
+	FieldImageSideView,
 	FieldMetadata,
 	FieldCreatedAt,
 	FieldUpdatedAt,
@@ -159,6 +165,16 @@ func ByStatus(opts ...sql.OrderTermOption) OrderOption {
 // ByComplianceStatus orders the results by the compliance_status field.
 func ByComplianceStatus(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldComplianceStatus, opts...).ToFunc()
+}
+
+// ByImageLicensePlate orders the results by the image_license_plate field.
+func ByImageLicensePlate(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldImageLicensePlate, opts...).ToFunc()
+}
+
+// ByImageSideView orders the results by the image_side_view field.
+func ByImageSideView(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldImageSideView, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.

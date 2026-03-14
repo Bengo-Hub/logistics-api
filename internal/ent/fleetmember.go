@@ -30,8 +30,16 @@ type FleetMember struct {
 	UserID uuid.UUID `json:"user_id,omitempty"`
 	// DriverCode holds the value of the "driver_code" field.
 	DriverCode string `json:"driver_code,omitempty"`
-	// Status holds the value of the "status" field.
+	// National ID or Passport Number
+	IDNumber string `json:"id_number,omitempty"`
+	// Driving License Number
+	LicenseNo string `json:"license_no,omitempty"`
+	// pending, approved, active, suspended
 	Status string `json:"status,omitempty"`
+	// URL to ID/Passport attachment
+	IDPassportAttachment string `json:"id_passport_attachment,omitempty"`
+	// URL to rider's passport photo
+	RiderPhoto string `json:"rider_photo,omitempty"`
 	// VehicleID holds the value of the "vehicle_id" field.
 	VehicleID *uuid.UUID `json:"vehicle_id,omitempty"`
 	// JoinedAt holds the value of the "joined_at" field.
@@ -116,7 +124,7 @@ func (*FleetMember) scanValues(columns []string) ([]any, error) {
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case fleetmember.FieldMetadata:
 			values[i] = new([]byte)
-		case fleetmember.FieldDriverCode, fleetmember.FieldStatus:
+		case fleetmember.FieldDriverCode, fleetmember.FieldIDNumber, fleetmember.FieldLicenseNo, fleetmember.FieldStatus, fleetmember.FieldIDPassportAttachment, fleetmember.FieldRiderPhoto:
 			values[i] = new(sql.NullString)
 		case fleetmember.FieldJoinedAt, fleetmember.FieldSuspendedAt, fleetmember.FieldCreatedAt, fleetmember.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -167,11 +175,35 @@ func (_m *FleetMember) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.DriverCode = value.String
 			}
+		case fleetmember.FieldIDNumber:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field id_number", values[i])
+			} else if value.Valid {
+				_m.IDNumber = value.String
+			}
+		case fleetmember.FieldLicenseNo:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field license_no", values[i])
+			} else if value.Valid {
+				_m.LicenseNo = value.String
+			}
 		case fleetmember.FieldStatus:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
 				_m.Status = value.String
+			}
+		case fleetmember.FieldIDPassportAttachment:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field id_passport_attachment", values[i])
+			} else if value.Valid {
+				_m.IDPassportAttachment = value.String
+			}
+		case fleetmember.FieldRiderPhoto:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field rider_photo", values[i])
+			} else if value.Valid {
+				_m.RiderPhoto = value.String
 			}
 		case fleetmember.FieldVehicleID:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -281,8 +313,20 @@ func (_m *FleetMember) String() string {
 	builder.WriteString("driver_code=")
 	builder.WriteString(_m.DriverCode)
 	builder.WriteString(", ")
+	builder.WriteString("id_number=")
+	builder.WriteString(_m.IDNumber)
+	builder.WriteString(", ")
+	builder.WriteString("license_no=")
+	builder.WriteString(_m.LicenseNo)
+	builder.WriteString(", ")
 	builder.WriteString("status=")
 	builder.WriteString(_m.Status)
+	builder.WriteString(", ")
+	builder.WriteString("id_passport_attachment=")
+	builder.WriteString(_m.IDPassportAttachment)
+	builder.WriteString(", ")
+	builder.WriteString("rider_photo=")
+	builder.WriteString(_m.RiderPhoto)
 	builder.WriteString(", ")
 	if v := _m.VehicleID; v != nil {
 		builder.WriteString("vehicle_id=")

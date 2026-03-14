@@ -30,7 +30,7 @@ func (Task) Fields() []ent.Field {
 			Comment("cafe-backend | inventory-service | pos-service"),
 		field.String("task_type").
 			Default("delivery").
-			Comment("delivery | pickup | return | transfer"),
+			Comment("delivery | pickup | return | transfer | ride"),
 		field.Int("priority").
 			Default(0),
 		field.String("status").

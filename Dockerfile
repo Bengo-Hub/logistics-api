@@ -11,15 +11,28 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 
-RUN CGO_ENABLED=0 go build -o /out/logistics ./cmd/api
+RUN CGO_ENABLED=0 go build -o /out/logistics-api ./cmd/api
+RUN CGO_ENABLED=0 go build -o /out/logistics-migrate ./cmd/migrate
+RUN CGO_ENABLED=0 go build -o /out/logistics-seed ./cmd/seed
 
 FROM alpine:3.20
+RUN apk add --no-cache ca-certificates
 RUN addgroup -S app && adduser -S app -G app
 WORKDIR /app
-COPY --from=builder /out/logistics /app/service
+
+# Binaries
+COPY --from=builder /out/logistics-api /usr/local/bin/logistics-api
+COPY --from=builder /out/logistics-migrate /usr/local/bin/logistics-migrate
+COPY --from=builder /out/logistics-seed /usr/local/bin/logistics-seed
+
+# Migrations and entrypoint
 COPY internal/ent/migrate/migrations ./internal/ent/migrate/migrations
-RUN mkdir -p ./config/certs
+COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# Media folder setup
+RUN mkdir -p /media && chown -R app:app /media && chmod -R 775 /media
+
 USER app
 EXPOSE 4000
-ENV PORT=4000
-ENTRYPOINT ["/app/service"]
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
