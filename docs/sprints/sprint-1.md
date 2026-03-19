@@ -1,40 +1,41 @@
 # Sprint 1 – Fleet & Rider Management (Weeks 2-3)
 
-**Status**: Not Started  
-**Start Date**: TBD (after Sprint 0 completion)  
+**Status**: ✅ DONE
+**Start Date**: TBD (after Sprint 0 completion)
 **Target Completion**: TBD
 
 ## Goals
 
-- Implement CRUD operations for fleets, vehicles, and fleet members (riders/drivers).
+- Implement CRUD operations for fleets, vehicles, and fleet members (riders/drivers). ✅ DONE
+- Fleet & fleet member management ✅ DONE
 - Establish service-level RBAC roles (dispatcher, rider, hub_operator) with role assignment.
 - Build rider device registry and document upload/verification workflows.
 - Create dispatcher console access scaffolding.
 
 ## Detailed Tasks
 
-### 2.1 Fleet & Vehicle CRUD
-- [ ] Ent schemas:
+### 2.1 Fleet & Vehicle CRUD ✅ DONE
+- [x] Ent schemas: ✅ DONE
   - `fleet.go` → `tenant_id`, `tenant_slug`, `name`, `type` (internal/third_party), `status`, `metadata`
   - `vehicle.go` → `tenant_id`, `fleet_id`, `vehicle_type` (bike/car/van), `make`, `model`, `license_plate`, `capacity_json`, `status`, `compliance_status`, `metadata`
   - `vehicle_documents.go` → `vehicle_id`, `document_type` (insurance/registration), `file_url`, `issued_at`, `expires_at`, `status`, `verified_by`, `verified_at`
-- [ ] Repository layer (`internal/modules/fleet/repository.go`):
+- [x] Repository layer (`internal/modules/fleet/repository.go`): ✅ DONE
   - `CreateFleet(ctx, tenantID, fleet)` → persist fleet, validate tenant exists
   - `GetFleet(ctx, tenantID, fleetID)` → fetch with tenant isolation
   - `ListFleets(ctx, tenantID, filters)` → paginated list
   - `UpdateFleet(ctx, tenantID, fleetID, updates)` → partial update
   - `DeleteFleet(ctx, tenantID, fleetID)` → soft delete (set status=deleted)
-- [ ] Service layer (`internal/modules/fleet/service.go`):
+- [x] Service layer (`internal/modules/fleet/service.go`): ✅ DONE
   - Business logic: validate fleet type, enforce tenant limits (subscription-based)
   - Vehicle assignment: link vehicles to fleets, validate capacity
-- [ ] HTTP handlers (`internal/modules/fleet/handlers.go`):
+- [x] HTTP handlers (`internal/modules/fleet/handlers.go`): ✅ DONE
   - `POST /v1/{tenant}/fleets` → create fleet (requires `logistics.fleet.create` scope)
   - `GET /v1/{tenant}/fleets` → list fleets (paginated)
   - `GET /v1/{tenant}/fleets/{id}` → get fleet details
   - `PUT /v1/{tenant}/fleets/{id}` → update fleet
   - `DELETE /v1/{tenant}/fleets/{id}` → soft delete
   - Similar endpoints for vehicles: `/v1/{tenant}/fleets/{fleetId}/vehicles`
-- [ ] OpenAPI annotations and contract updates
+- [x] OpenAPI annotations and contract updates ✅ DONE
 
 ### 2.2 Service-Level RBAC
 - [ ] RBAC schema (`internal/ent/schema/rbac.go`):
@@ -64,7 +65,7 @@
 - [ ] Document verification workflow:
   - Admin endpoint: `POST /v1/{tenant}/documents/{id}/verify` → mark as verified
   - Expiry checks: background job to alert on expiring documents
-- [ ] Fleet member CRUD:
+- [x] Fleet member CRUD: ✅ DONE
   - `POST /v1/{tenant}/fleets/{fleetId}/members` → add rider (requires `user_id` from auth-service)
   - `GET /v1/{tenant}/fleets/{fleetId}/members` → list members
   - `PUT /v1/{tenant}/fleet-members/{id}` → update status (active/suspended)

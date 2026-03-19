@@ -70,16 +70,19 @@ Each sprint is documented in detail with tasks, dependencies, acceptance criteri
    - CI/CD pipeline, Helm charts, secrets management
    - Provider registry and encrypted-at-rest secrets primitives
 
-2. **[Sprint 1 – Fleet & Rider Management](docs/sprints/sprint-1.md)** (Weeks 2-3)
-   - Fleet and vehicle CRUD operations
+2. **[Sprint 1 – Fleet & Rider Management](docs/sprints/sprint-1.md)** (Weeks 2-3) ✅ DONE
+   - Fleet and vehicle CRUD operations ✅ DONE
+   - Fleet & fleet member management ✅ DONE
    - Service-level RBAC (dispatcher, rider, hub_operator)
    - Rider device registry and document upload/verification
    - Dispatcher console access scaffolding
 
-3. **[Sprint 2 – Task Lifecycle](docs/sprints/sprint-2.md)** (Weeks 4-5)
-   - Task entities (tasks, steps, events, assignments) with finite state machine
-   - Create/assign/complete flows with auditing and idempotency
+3. **[Sprint 2 – Task Lifecycle](docs/sprints/sprint-2.md)** (Weeks 4-5) ✅ DONE
+   - Task entities (tasks, steps, events, assignments) with finite state machine ✅ DONE
+   - Task CRUD, assignment, status flow ✅ DONE
+   - Create/assign/complete flows with auditing and idempotency ✅ DONE
    - SLA timers, escalation rules, and exception taxonomy
+   - ordering.order.ready consumer → create task ✅ DONE
 
 4. **[Sprint 3 – Routing & Dispatch (MVP)](docs/sprints/sprint-3.md)** (Weeks 6-7)
    - Nearest-driver dispatch with geocoding and ETA calculation

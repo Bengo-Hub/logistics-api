@@ -1,28 +1,29 @@
 # Sprint 2 – Task Lifecycle (Weeks 4-5)
 
-**Status**: Not Started  
-**Start Date**: TBD  
+**Status**: ✅ DONE
+**Start Date**: TBD
 **Target Completion**: TBD
 
 ## Goals
 
-- Implement task lifecycle entities (tasks, steps, events, assignments) with finite state machine.
-- Build create/assign/complete flows with auditing and idempotency.
+- Implement task lifecycle entities (tasks, steps, events, assignments) with finite state machine. ✅ DONE
+- Build create/assign/complete flows with auditing and idempotency. ✅ DONE (Task CRUD, assignment, status flow)
 - Add SLA timers, escalation rules, and exception taxonomy.
+- ordering.order.ready consumer → create task ✅ DONE
 
 ## Detailed Tasks
 
 ### 3.1 Task Entities & FSM
-- [ ] Ent schemas:
+- [x] Ent schemas: ✅ DONE
   - `task.go` → `id`, `tenant_id`, `external_reference` (order ID from ordering-backend/POS), `source_service`, `task_type` (delivery/pickup/transfer/return), `priority`, `status` (created/assigned/in_progress/completed/failed), `sla_due_at`, `requested_pickup_at`, `requested_dropoff_at`, `metadata` (JSON: SKUs, quantities, special instructions)
   - `task_step.go` → `id`, `task_id`, `step_type` (pickup/dropoff), `sequence`, `location_name`, `address_json`, `geo_point` (PostGIS), `contact_name`, `contact_phone`, `requires_signature`, `requires_photo`, `metadata`
   - `task_event.go` → `id`, `task_id`, `event_type`, `actor_id`, `actor_type` (user/system), `payload` (JSON), `occurred_at`
   - `task_assignment.go` → `id`, `task_id`, `fleet_member_id`, `assignment_status` (pending/accepted/declined/completed), `assigned_at`, `accepted_at`, `declined_at`, `completed_at`, `reason_code`, `metadata`
-- [ ] Finite State Machine (`internal/modules/tasks/fsm.go`):
+- [x] Finite State Machine (`internal/modules/tasks/fsm.go`): ✅ DONE
   - State transitions: `created` → `assigned` → `in_progress` → `completed` / `failed`
   - Validation: ensure valid transitions (e.g., can't complete from `created`)
   - Emit `task_events` on each transition
-- [ ] Task service (`internal/modules/tasks/service.go`):
+- [x] Task service (`internal/modules/tasks/service.go`): ✅ DONE
   - `CreateTask(ctx, tenantID, task)` → validate tenant, create task + initial event
   - `AssignTask(ctx, tenantID, taskID, fleetMemberID)` → create assignment, transition to `assigned`, emit event
   - `AcceptTask(ctx, tenantID, taskID, fleetMemberID)` → update assignment, transition to `in_progress`
@@ -30,24 +31,25 @@
   - `FailTask(ctx, tenantID, taskID, reason)` → transition to `failed`, emit event, trigger escalation if SLA breached
 
 ### 3.2 Create/Assign/Complete Flows
-- [ ] Task creation API:
+- [x] Task creation API: ✅ DONE
   - `POST /v1/{tenant}/tasks` → create task from external order (ordering-backend/POS/inventory)
   - Request body: `external_reference`, `source_service`, `task_type`, `steps[]`, `metadata`
   - Validate: tenant exists, steps have valid addresses (geocode if needed, Sprint 3)
   - Idempotency: use `external_reference` + `source_service` as idempotency key (return existing task if duplicate)
-- [ ] Assignment flow:
+  - ordering.order.ready consumer → create task ✅ DONE
+- [x] Assignment flow: ✅ DONE
   - `POST /v1/{tenant}/tasks/{id}/assign` → assign to fleet member (dispatcher action)
   - `POST /v1/{tenant}/tasks/{id}/accept` → rider accepts task (mobile app)
   - `POST /v1/{tenant}/tasks/{id}/decline` → rider declines (with reason)
-- [ ] Completion flow:
+- [x] Completion flow: ✅ DONE
   - `POST /v1/{tenant}/tasks/{id}/complete` → mark complete with PoD (signature/photo/OTP)
   - Validate: task is `in_progress`, PoD provided if required
   - Emit `logistics.task.completed` event to outbox (consumed by ordering-backend/POS)
-- [ ] Auditing:
+- [x] Auditing: ✅ DONE
   - All state changes logged in `task_events` with actor (user ID from JWT)
   - Append-only: events are immutable
   - Query: `GET /v1/{tenant}/tasks/{id}/events` → audit trail
-- [ ] Idempotency:
+- [x] Idempotency: ✅ DONE
   - Use idempotency keys in request headers: `Idempotency-Key: <uuid>`
   - Store in Redis with TTL (24h)
   - Return cached response if key exists
