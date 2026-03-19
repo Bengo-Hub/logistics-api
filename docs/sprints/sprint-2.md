@@ -14,7 +14,7 @@
 
 ### 3.1 Task Entities & FSM
 - [ ] Ent schemas:
-  - `task.go` → `id`, `tenant_id`, `external_reference` (order ID from cafe-backend/POS), `source_service`, `task_type` (delivery/pickup/transfer/return), `priority`, `status` (created/assigned/in_progress/completed/failed), `sla_due_at`, `requested_pickup_at`, `requested_dropoff_at`, `metadata` (JSON: SKUs, quantities, special instructions)
+  - `task.go` → `id`, `tenant_id`, `external_reference` (order ID from ordering-backend/POS), `source_service`, `task_type` (delivery/pickup/transfer/return), `priority`, `status` (created/assigned/in_progress/completed/failed), `sla_due_at`, `requested_pickup_at`, `requested_dropoff_at`, `metadata` (JSON: SKUs, quantities, special instructions)
   - `task_step.go` → `id`, `task_id`, `step_type` (pickup/dropoff), `sequence`, `location_name`, `address_json`, `geo_point` (PostGIS), `contact_name`, `contact_phone`, `requires_signature`, `requires_photo`, `metadata`
   - `task_event.go` → `id`, `task_id`, `event_type`, `actor_id`, `actor_type` (user/system), `payload` (JSON), `occurred_at`
   - `task_assignment.go` → `id`, `task_id`, `fleet_member_id`, `assignment_status` (pending/accepted/declined/completed), `assigned_at`, `accepted_at`, `declined_at`, `completed_at`, `reason_code`, `metadata`
@@ -31,7 +31,7 @@
 
 ### 3.2 Create/Assign/Complete Flows
 - [ ] Task creation API:
-  - `POST /v1/{tenant}/tasks` → create task from external order (cafe-backend/POS/inventory)
+  - `POST /v1/{tenant}/tasks` → create task from external order (ordering-backend/POS/inventory)
   - Request body: `external_reference`, `source_service`, `task_type`, `steps[]`, `metadata`
   - Validate: tenant exists, steps have valid addresses (geocode if needed, Sprint 3)
   - Idempotency: use `external_reference` + `source_service` as idempotency key (return existing task if duplicate)
@@ -42,7 +42,7 @@
 - [ ] Completion flow:
   - `POST /v1/{tenant}/tasks/{id}/complete` → mark complete with PoD (signature/photo/OTP)
   - Validate: task is `in_progress`, PoD provided if required
-  - Emit `logistics.task.completed` event to outbox (consumed by cafe-backend/POS)
+  - Emit `logistics.task.completed` event to outbox (consumed by ordering-backend/POS)
 - [ ] Auditing:
   - All state changes logged in `task_events` with actor (user ID from JWT)
   - Append-only: events are immutable

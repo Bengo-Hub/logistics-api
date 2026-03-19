@@ -86,7 +86,7 @@
 
 ## Acceptance Criteria
 
-- [ ] Webhooks from POS/inventory/cafe-backend create tasks successfully
+- [ ] Webhooks from POS/inventory/ordering-backend create tasks successfully
 - [ ] Traffic incidents are detected and stored
 - [ ] Alternative routes are calculated and suggested
 - [ ] Weather forecasts adjust ETAs and routing

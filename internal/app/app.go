@@ -23,22 +23,27 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/migrate"
 	handlers "github.com/bengobox/logistics-service/internal/http/handlers"
 	router "github.com/bengobox/logistics-service/internal/http/router"
+	"github.com/bengobox/logistics-service/internal/modules/consumers"
+	fleetmod "github.com/bengobox/logistics-service/internal/modules/fleet"
 	"github.com/bengobox/logistics-service/internal/modules/identity"
+	"github.com/bengobox/logistics-service/internal/modules/tasks"
 	"github.com/bengobox/logistics-service/internal/modules/tenant"
 	"github.com/bengobox/logistics-service/internal/platform/cache"
 	"github.com/bengobox/logistics-service/internal/platform/database"
 	"github.com/bengobox/logistics-service/internal/platform/events"
+	"github.com/bengobox/logistics-service/internal/platform/subscriptions"
 	"github.com/bengobox/logistics-service/internal/shared/logger"
 )
 
 type App struct {
-	cfg        *config.Config
-	log        *zap.Logger
-	httpServer *http.Server
-	db         *pgxpool.Pool
-	entClient  *ent.Client
-	cache      *redis.Client
-	events     *nats.Conn
+	cfg           *config.Config
+	log           *zap.Logger
+	httpServer    *http.Server
+	db            *pgxpool.Pool
+	entClient     *ent.Client
+	cache         *redis.Client
+	events        *nats.Conn
+	orderConsumer *consumers.OrderReadyConsumer
 }
 
 func New(ctx context.Context) (*App, error) {
@@ -97,10 +102,21 @@ func New(ctx context.Context) (*App, error) {
 	}
 	log.Info("versioned migrations completed - run 'go run cmd/seed/main.go' to seed initial data (idempotent)")
 
+	_ = subscriptions.NewClient(subscriptions.Config{
+		ServiceURL:     cfg.Subscriptions.ServiceURL,
+		RequestTimeout: cfg.Subscriptions.RequestTimeout,
+	})
+
 	tenantSyncer := tenant.NewSyncer(entClient)
 	identitySvc := identity.NewService(entClient, tenantSyncer)
 
-	chiRouter := router.New(log, healthHandler, authMiddleware, identitySvc, cfg)
+	taskSvc := tasks.NewService(entClient, log)
+	fleetSvc := fleetmod.NewService(entClient, log)
+	logisticsHandler := handlers.NewLogisticsHandler(log, taskSvc, fleetSvc)
+
+	orderConsumer := consumers.NewOrderReadyConsumer(log, taskSvc)
+
+	chiRouter := router.New(log, healthHandler, authMiddleware, identitySvc, logisticsHandler, cfg)
 
 	httpServer := &http.Server{
 		Addr:              fmt.Sprintf("%s:%d", cfg.HTTP.Host, cfg.HTTP.Port),
@@ -112,17 +128,33 @@ func New(ctx context.Context) (*App, error) {
 	}
 
 	return &App{
-		cfg:        cfg,
-		log:        log,
-		httpServer: httpServer,
-		db:         dbPool,
-		entClient:  entClient,
-		cache:      redisClient,
-		events:     natsConn,
+		cfg:           cfg,
+		log:           log,
+		httpServer:    httpServer,
+		db:            dbPool,
+		entClient:     entClient,
+		cache:         redisClient,
+		events:        natsConn,
+		orderConsumer: orderConsumer,
 	}, nil
 }
 
 func (a *App) Run(ctx context.Context) error {
+	// Start order.ready consumer for auto-creating delivery tasks
+	if a.orderConsumer != nil && a.events != nil {
+		js, err := a.events.JetStream()
+		if err != nil {
+			a.log.Warn("jetstream unavailable, order consumer not started", zap.Error(err))
+		} else {
+			go func() {
+				if err := a.orderConsumer.Start(ctx, js); err != nil {
+					a.log.Error("order ready consumer stopped", zap.Error(err))
+				}
+			}()
+			a.log.Info("order ready consumer started")
+		}
+	}
+
 	a.log.Info("logistics service starting", zap.String("addr", a.httpServer.Addr))
 
 	errCh := make(chan error, 1)

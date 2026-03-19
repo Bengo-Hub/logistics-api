@@ -19,7 +19,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/config"
 )
 
-func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authclient.AuthMiddleware, idSvc *identity.Service, cfg *config.Config) http.Handler {
+func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authclient.AuthMiddleware, idSvc *identity.Service, lh *handlers.LogisticsHandler, cfg *config.Config) http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(middleware.RequestID)
@@ -100,29 +100,25 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 				riders.Patch("/me/profile", idHandler.UpdateProfile)
 			})
 
-			tenant.Route("/tasks", func(tasks chi.Router) {
-				// Placeholder endpoints - to be implemented
-				tasks.Get("/", func(w http.ResponseWriter, r *http.Request) {
-					w.WriteHeader(http.StatusNotImplemented)
-					w.Write([]byte("Not implemented yet"))
+			if lh != nil {
+				tenant.Route("/tasks", func(taskR chi.Router) {
+					taskR.Get("/", lh.ListTasks)
+					taskR.Post("/", lh.CreateTask)
+					taskR.Get("/{taskId}", lh.GetTask)
+					taskR.Patch("/{taskId}/status", lh.UpdateTaskStatus)
+					taskR.Post("/{taskId}/assign", lh.AssignTask)
+					taskR.Post("/{taskId}/pod", lh.SubmitPoD)
 				})
-			})
 
-			tenant.Route("/fleet", func(fleet chi.Router) {
-				// Placeholder endpoints - to be implemented
-				fleet.Get("/members", func(w http.ResponseWriter, r *http.Request) {
-					w.WriteHeader(http.StatusNotImplemented)
-					w.Write([]byte("Not implemented yet"))
+				tenant.Route("/fleet", func(fleetR chi.Router) {
+					fleetR.Get("/", lh.GetFleet)
+					fleetR.Get("/members", lh.ListMembers)
+					fleetR.Post("/members", lh.InviteMember)
+					fleetR.Get("/members/{memberId}", lh.GetMember)
+					fleetR.Post("/members/{memberId}/approve", lh.ApproveMember)
+					fleetR.Post("/members/{memberId}/suspend", lh.SuspendMember)
 				})
-			})
-
-			tenant.Route("/routes", func(routes chi.Router) {
-				// Placeholder endpoints - to be implemented
-				routes.Get("/{routeId}", func(w http.ResponseWriter, r *http.Request) {
-					w.WriteHeader(http.StatusNotImplemented)
-					w.Write([]byte("Not implemented yet"))
-				})
-			})
+			}
 		})
 	})
 

@@ -1,0 +1,181 @@
+package fleet
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/google/uuid"
+	"go.uber.org/zap"
+
+	"github.com/bengobox/logistics-service/internal/ent"
+	entfleet "github.com/bengobox/logistics-service/internal/ent/fleet"
+	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
+)
+
+// InviteMemberRequest is the DTO for adding a rider to a fleet.
+type InviteMemberRequest struct {
+	UserID   uuid.UUID `json:"user_id"`
+	FleetID  uuid.UUID `json:"fleet_id,omitempty"`
+	IDNumber string    `json:"id_number,omitempty"`
+	LicenseNo string   `json:"license_no,omitempty"`
+}
+
+// Service handles fleet and fleet member business logic.
+type Service struct {
+	client *ent.Client
+	log    *zap.Logger
+}
+
+// NewService creates a new fleet service.
+func NewService(client *ent.Client, log *zap.Logger) *Service {
+	return &Service{
+		client: client,
+		log:    log.Named("fleet.service"),
+	}
+}
+
+// GetOrCreateFleet returns the tenant's active fleet, creating one if none exists.
+func (s *Service) GetOrCreateFleet(ctx context.Context, tenantID uuid.UUID, tenantSlug string) (*ent.Fleet, error) {
+	fl, err := s.client.Fleet.Query().
+		Where(entfleet.TenantID(tenantID), entfleet.Status("active")).
+		WithMembers(func(q *ent.FleetMemberQuery) {
+			q.Limit(100)
+		}).
+		First(ctx)
+	if err == nil {
+		return fl, nil
+	}
+	if !ent.IsNotFound(err) {
+		return nil, fmt.Errorf("fleet: query: %w", err)
+	}
+
+	slug := tenantSlug
+	if slug == "" {
+		slug = tenantID.String()
+	}
+
+	fl, err = s.client.Fleet.Create().
+		SetTenantID(tenantID).
+		SetTenantSlug(slug).
+		SetName("Default Fleet").
+		SetType("internal").
+		SetStatus("active").
+		Save(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("fleet: create default: %w", err)
+	}
+	s.log.Info("created default fleet", zap.String("fleet_id", fl.ID.String()))
+	return fl, nil
+}
+
+// ListMembers returns fleet members for a tenant.
+func (s *Service) ListMembers(ctx context.Context, tenantID uuid.UUID, status string) ([]*ent.FleetMember, error) {
+	q := s.client.FleetMember.Query().
+		Where(fleetmember.TenantID(tenantID)).
+		WithVehicle()
+
+	if status != "" {
+		q = q.Where(fleetmember.Status(status))
+	}
+
+	members, err := q.All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("fleet: list members: %w", err)
+	}
+	return members, nil
+}
+
+// GetMember returns a specific fleet member.
+func (s *Service) GetMember(ctx context.Context, tenantID, memberID uuid.UUID) (*ent.FleetMember, error) {
+	m, err := s.client.FleetMember.Query().
+		Where(fleetmember.ID(memberID), fleetmember.TenantID(tenantID)).
+		WithVehicle().
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, fmt.Errorf("fleet: member not found")
+		}
+		return nil, fmt.Errorf("fleet: get member: %w", err)
+	}
+	return m, nil
+}
+
+// InviteMember adds a rider to the fleet in "pending" status.
+func (s *Service) InviteMember(ctx context.Context, tenantID uuid.UUID, tenantSlug string, req InviteMemberRequest) (*ent.FleetMember, error) {
+	// Check for duplicate membership
+	existing, _ := s.client.FleetMember.Query().
+		Where(fleetmember.TenantID(tenantID), fleetmember.UserID(req.UserID)).
+		First(ctx)
+	if existing != nil {
+		return existing, nil
+	}
+
+	fleetID := req.FleetID
+	if fleetID == uuid.Nil {
+		fl, err := s.GetOrCreateFleet(ctx, tenantID, tenantSlug)
+		if err != nil {
+			return nil, err
+		}
+		fleetID = fl.ID
+	}
+
+	builder := s.client.FleetMember.Create().
+		SetTenantID(tenantID).
+		SetFleetID(fleetID).
+		SetUserID(req.UserID).
+		SetStatus("pending")
+
+	if req.IDNumber != "" {
+		builder.SetIDNumber(req.IDNumber)
+	}
+	if req.LicenseNo != "" {
+		builder.SetLicenseNo(req.LicenseNo)
+	}
+
+	m, err := builder.Save(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("fleet: invite member: %w", err)
+	}
+
+	s.log.Info("fleet member invited",
+		zap.String("member_id", m.ID.String()),
+		zap.String("user_id", req.UserID.String()),
+	)
+	return m, nil
+}
+
+// ApproveMember transitions a member from pending → approved → active.
+func (s *Service) ApproveMember(ctx context.Context, tenantID, memberID uuid.UUID) (*ent.FleetMember, error) {
+	m, err := s.client.FleetMember.Query().
+		Where(fleetmember.ID(memberID), fleetmember.TenantID(tenantID)).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, fmt.Errorf("fleet: member not found")
+		}
+		return nil, fmt.Errorf("fleet: get for approve: %w", err)
+	}
+	updated, err := s.client.FleetMember.UpdateOne(m).SetStatus("active").Save(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("fleet: approve: %w", err)
+	}
+	return updated, nil
+}
+
+// SuspendMember transitions a member to suspended status.
+func (s *Service) SuspendMember(ctx context.Context, tenantID, memberID uuid.UUID) (*ent.FleetMember, error) {
+	m, err := s.client.FleetMember.Query().
+		Where(fleetmember.ID(memberID), fleetmember.TenantID(tenantID)).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, fmt.Errorf("fleet: member not found")
+		}
+		return nil, fmt.Errorf("fleet: get for suspend: %w", err)
+	}
+	updated, err := s.client.FleetMember.UpdateOne(m).SetStatus("suspended").Save(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("fleet: suspend: %w", err)
+	}
+	return updated, nil
+}

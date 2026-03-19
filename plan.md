@@ -36,7 +36,7 @@
   - Weather: OpenWeather One Call and/or Tomorrow.io for hyperlocal forecasts/alerts; open alternatives (Open‑Meteo, NOAA/NWS CAP). Weather adjusts ETAs and triggers alt‑route suggestions and advisories.
   - Smart locks: August/Yale cloud APIs (OAuth + webhooks), Nuki Web/Bridge API, and supported Schlage integrations; delivery unlock at destination by designated user (code/biometric/device) → PoD event + audit; manual override workflow.
   - Telematics: Samsara/Geotab APIs for driver events and vehicle diagnostics; scheduled ingestion with dedupe/backoff; enrich driver scorecards and ETA models.
-  - Internal microservices: Treasury for payouts/surcharges/expenses; Inventory/POS/Cafe Backend for readiness/transfer hooks and state sync; Notifications for customer ETA and SLA alerts.
+  - Internal microservices: Treasury for payouts/surcharges/expenses; Inventory/POS/ordering-backend for readiness/transfer hooks and state sync; Notifications for customer ETA and SLA alerts.
 - Data model summary:
   - Tasks/Routes/Fleet/Telemetry/PoD/Integrations/Optimization/Safety/Access/Governance as described; include expenses linkage fields (route_id, vehicle_id, driver_id, category, receipt_ref) in events exported to treasury.
 
@@ -53,9 +53,9 @@
 - Notifications App:
   - Webhooks: `customer.eta.updated`, `customer.delivery.failed`, `ops.sla.alert`
   - REST: `/v1/{tenant}/notify` with channels (sms,email,push,voice-masked)
-- Cafe Backend:
+- Ordering-Backend:
   - Webhooks: `cafe.order.created`, `cafe.order.ready` → triggers task creation
-  - REST: `POST /v1/{tenant}/tasks` → cafe backend creates delivery tasks
+  - REST: `POST /v1/{tenant}/tasks` → ordering-backend creates delivery tasks
   - Events: `logistics.task.assigned`, `logistics.task.completed`, `logistics.route.updated`
   - Streaming: ETA feed for customer app subscriptions via WebSocket/SSE
 
@@ -156,7 +156,7 @@ Each sprint is documented in detail with tasks, dependencies, acceptance criteri
 
 ### 9. Immediate Next Steps
 - Confirm ERD alignment with inventory/POS (shared concepts: warehouse, order IDs).
-- Define contract-first API specs for cafe-backend and POS interactions.
+- Define contract-first API specs for ordering-backend and POS interactions.
 - Validate mapping provider contracts, start reference implementation (Mapbox + OSRM fallback).
 - Produce threat model (location spoofing, assignment fraud) and commence Sprint 0 after stakeholder approval.
 

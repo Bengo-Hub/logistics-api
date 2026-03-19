@@ -1,0 +1,86 @@
+# Logistics API — Integrations
+
+**Service**: logistics-api (Go)  
+**Canonical data ownership**: See **shared-docs/CROSS-SERVICE-DATA-OWNERSHIP.md** for the cross-service entity ownership matrix and reference-only rules.
+
+---
+
+## Overview
+
+Logistics-api owns **fleets, riders (fleet members), vehicles, tasks, routes, proof of delivery, and telemetry**. It does **not** own orders, users, tenants, inventory, or payments; it references them by ID and consumes events or REST from other services.
+
+---
+
+## Inbound: Ordering-Backend (Cafe / Online Orders)
+
+**How ordering-backend integrates with logistics-api:**
+
+| Flow | Mechanism | Description |
+|------|------------|-------------|
+| **Create delivery task** | REST `POST /api/v1/{tenant}/tasks` | When an order is ready for delivery, ordering-backend calls logistics-api to create a task. Payload includes `external_reference` (order ID), pickup/dropoff locations, customer contact, instructions. |
+| **Webhook callbacks** | HTTP `POST /api/v1/webhooks/logistics` (on ordering-backend) | Logistics-api does **not** call ordering-backend; instead, logistics-api publishes NATS events (`logistics.task.assigned`, `logistics.task.completed`, etc.). Ordering-backend **receives webhooks from logistics** (or subscribes to NATS) to update its local `order_assignments` (e.g. rider_id, status). |
+| **Event-driven task creation** | NATS `ordering.order.ready` or `cafe.order.ready` | Logistics-api subscribes to order-ready events and can create a task when an order is ready for delivery. Ordering-backend may also create the task via REST (see plan/integrations in ordering-backend). |
+| **Tracking & PoD** | REST `GET /api/v1/{tenant}/tracking/task/{taskId}`, `GET .../deliveries/{taskId}/proof` | Ordering-backend (or ordering-frontend) calls logistics-api to get live rider location and proof of delivery. |
+
+**Data ownership:** Ordering-backend stores only `order_assignments.logistics_task_id` and `order_assignments.rider_id` (references). All task, rider, fleet, and PoD data are owned by logistics-api.
+
+---
+
+## Inbound: Auth-Service
+
+- **JWT validation**: All protected routes require a valid Bearer token from auth-service (JWKS).
+- **Tenant / user identity**: Logistics does not store users or tenants; it uses `tenant_id` and `user_id` from JWT and syncs tenant metadata via `auth.tenant.created` / `auth.tenant.updated` into `tenant_sync_events`.
+- **Fleet members**: `fleet_members.user_id` is a reference to auth-service user. Rider onboarding uses auth-service for login; logistics stores only rider-specific data (vehicle, documents, KYC).
+
+---
+
+## Inbound: Inventory, POS, Notifications, Treasury
+
+- **Inventory**: Webhooks `inventory.transfer.created`, `inventory.transfer.completed`; REST for availability (e.g. zone/branch) when needed for dispatch. See plan.md §2.5.
+- **POS**: Webhooks `pos.order.ready`, `pos.order.handoff` for pickup/curbside flows.
+- **Notifications**: Outbound only — logistics publishes events that notifications-api consumes for customer ETA and SLA alerts.
+- **Treasury**: REST for expenses, payouts, bills; events `treasury.payout.completed`, `treasury.expense.approved`. See plan.md §2.5.
+
+---
+
+## Outbound: Events (NATS)
+
+**Published by logistics-api (via outbox):**
+
+| Event | When | Consumers |
+|-------|------|-----------|
+| `logistics.task.created` | Task created | Ordering-backend, notifications |
+| `logistics.task.assigned` | Rider assigned | Ordering-backend (updates order_assignment) |
+| `logistics.task.accepted` | Rider accepted | Ordering-backend |
+| `logistics.task.en_route` | Rider en route | Ordering-backend, notifications (ETA) |
+| `logistics.task.completed` | Delivery completed | Ordering-backend, notifications |
+| `logistics.task.cancelled` | Task cancelled | Ordering-backend |
+| `logistics.route.updated` | ETA/route updated | Ordering-backend, notifications |
+
+**Consumed by logistics-api:**
+
+| Event | Action |
+|-------|--------|
+| `ordering.order.ready` / `cafe.order.ready` | Create delivery task from order (if not already created via REST) |
+| `auth.user.created` | Optionally create fleet member if rider role |
+| `auth.tenant.created` / `auth.tenant.updated` | Initialize/update tenant metadata |
+| `auth.outlet.created` | Register outlet for task steps |
+
+---
+
+## Configuration
+
+| Variable | Description |
+|---------|-------------|
+| `AUTH_SERVICE_URL` | Auth-service base URL (JWKS, tenant sync) |
+| `NATS_URL` | NATS JetStream for event publish/subscribe |
+| Webhook secrets | For outbound webhooks to ordering-backend (if used); ordering-backend uses `LOGISTICS_WEBHOOK_SECRET` to verify inbound webhooks from logistics |
+
+---
+
+## References
+
+- [shared-docs/CROSS-SERVICE-DATA-OWNERSHIP.md](../../../shared-docs/CROSS-SERVICE-DATA-OWNERSHIP.md) — Canonical data ownership; logistics owns tasks, riders, fleets, PoD; ordering-backend stores only references.
+- [Ordering-backend integrations](../../../ordering-service/ordering-backend/docs/integrations.md) — Logistics Service section documents REST, events, webhooks, and data ownership from ordering’s perspective.
+- [Logistics API plan](../plan.md) — §2.5 Integration Points by Service.
+- [Logistics API architecture](architecture.md) — Event architecture, RBAC, location tracking.
