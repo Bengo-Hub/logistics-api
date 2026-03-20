@@ -8,26 +8,30 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"go.uber.org/zap"
 
 	authclient "github.com/Bengo-Hub/shared-auth-client"
 	"github.com/Bengo-Hub/httpware"
+	"github.com/redis/go-redis/v9"
+
 	"github.com/bengobox/logistics-service/internal/http/handlers"
+	appmw "github.com/bengobox/logistics-service/internal/middleware"
 	"github.com/bengobox/logistics-service/internal/modules/identity"
 	"github.com/bengobox/logistics-service/internal/config"
 )
 
-func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authclient.AuthMiddleware, idSvc *identity.Service, lh *handlers.LogisticsHandler, rh *handlers.RoutingHandler, th *handlers.TrackingHandler, zh *handlers.ZonesHandler, cfg *config.Config) http.Handler {
+func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authclient.AuthMiddleware, idSvc *identity.Service, lh *handlers.LogisticsHandler, rh *handlers.RoutingHandler, th *handlers.TrackingHandler, zh *handlers.ZonesHandler, rdb *redis.Client, cfg *config.Config) http.Handler {
+	rl := appmw.NewRateLimiter(rdb)
 	r := chi.NewRouter()
 
-	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
+	r.Use(chimw.RequestID)
+	r.Use(chimw.RealIP)
 	r.Use(httpware.RequestID)
 	r.Use(httpware.Logging(log))
 	r.Use(httpware.Recover(log))
-	r.Use(middleware.Timeout(30 * time.Second))
+	r.Use(chimw.Timeout(30 * time.Second))
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
@@ -119,11 +123,19 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 
 			if rh != nil {
 				tenant.Route("/routing", func(routeR chi.Router) {
+					routeR.Use(appmw.RequireRateLimit(rl, "routing_requests_per_day"))
 					routeR.Get("/route", rh.GetRoute)
 					routeR.Get("/eta", rh.GetETA)
 					routeR.Post("/matrix", rh.GetMatrix)
 					routeR.Get("/isochrone", rh.GetIsochrone)
 					routeR.Get("/health", rh.HealthCheck)
+				})
+			}
+
+			if th != nil {
+				tenant.Route("/tracking", func(trackR chi.Router) {
+					trackR.Use(appmw.RequireRateLimit(rl, "live_tracking_requests_per_day"))
+					trackR.Get("/{taskId}", th.TrackByCode)
 				})
 			}
 
