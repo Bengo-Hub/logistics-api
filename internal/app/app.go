@@ -130,7 +130,7 @@ func New(ctx context.Context) (*App, error) {
 	zoneSvc := zonesmod.NewService(entClient, log)
 	zonesHandler := handlers.NewZonesHandler(zoneSvc, log)
 
-	chiRouter := router.New(log, healthHandler, authMiddleware, identitySvc, logisticsHandler, routingHandler, trackingHandler, zonesHandler, redisClient, cfg)
+	chiRouter := router.New(log, healthHandler, authMiddleware, identitySvc, logisticsHandler, routingHandler, trackingHandler, zonesHandler, redisClient, cfg, cfg.HTTP.AllowedOrigins)
 
 	httpServer := &http.Server{
 		Addr:              fmt.Sprintf("%s:%d", cfg.HTTP.Host, cfg.HTTP.Port),
