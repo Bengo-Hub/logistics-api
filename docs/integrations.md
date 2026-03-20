@@ -68,13 +68,70 @@ Logistics-api owns **fleets, riders (fleet members), vehicles, tasks, routes, pr
 
 ---
 
+## Map Services Integration (Valhalla + TileServer)
+
+Logistics-api wraps the self-hosted Valhalla routing engine with Redis caching, provider fallback, and tenant-scoped rate limiting. The map tile server (TileServer-GL) serves OpenStreetMap vector tiles to all frontends via `@bengo-hub/maps`.
+
+### Routing API Endpoints (via logistics-api)
+
+All routing endpoints require authentication and are scoped to the tenant's subscription plan rate limits.
+
+| Endpoint | Method | Description | Rate Limit Key |
+|----------|--------|-------------|----------------|
+| `/{tenant}/routing/route` | GET | Route between two points (ETA + distance + polyline) | `routing_requests_per_day` |
+| `/{tenant}/routing/eta` | GET | ETA in minutes + distance in km | `routing_requests_per_day` |
+| `/{tenant}/routing/matrix` | POST | N×M distance/duration matrix | `routing_requests_per_day` |
+| `/{tenant}/routing/isochrone` | GET | Reachability polygon (time-based) | `routing_requests_per_day` |
+| `/{tenant}/routing/health` | GET | Routing provider health status | — |
+
+**Query parameters** (route/eta): `from_lat`, `from_lng`, `to_lat`, `to_lng`
+**Query parameters** (isochrone): `lat`, `lng`, `time_minutes` (default 15)
+**Request body** (matrix): `{"origins": [{"lat":..,"lng":..}], "destinations": [{"lat":..,"lng":..}]}`
+
+### Public Tracking Endpoint
+
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/api/v1/track/{trackingCode}` | GET | None | Public order/delivery tracking by waybill or tracking code |
+
+Returns: status, status_history timeline, rider info, pickup/dropoff locations, `live_tracking_available` flag.
+
+### Infrastructure
+
+| Component | Internal URL | External URL |
+|-----------|-------------|--------------|
+| Valhalla | `http://valhalla.logistics.svc.cluster.local:8002` | `https://routing.codevertexitsolutions.com` |
+| TileServer | `http://tileserver.logistics.svc.cluster.local:8080` | `https://tiles.codevertexitsolutions.com` |
+
+### Rate Limiting (per tenant subscription plan)
+
+| Feature | Starter | Growth | Professional |
+|---------|---------|--------|--------------|
+| `routing_requests_per_day` | 100 | 1,000 | 10,000 |
+| `live_tracking_requests_per_day` | 500 | 5,000 | Unlimited |
+| `live_tracking_duration_minutes` | 30 | 120 | Unlimited |
+| `map_loads_per_day` | 200 | 2,000 | Unlimited |
+
+When a limit is reached, the API returns `HTTP 429 Too Many Requests` with `X-RateLimit-*` headers and an upgrade URL.
+
+### Frontend Integration (@bengo-hub/maps)
+
+All frontends use the shared `@bengo-hub/maps` NPM package (MapLibre GL JS) which connects to:
+- **TileServer** for map rendering (vector tiles)
+- **Logistics-API** routing endpoints for directions, ETA, distance
+
+---
+
 ## Configuration
 
 | Variable | Description |
 |---------|-------------|
 | `AUTH_SERVICE_URL` | Auth-service base URL (JWKS, tenant sync) |
 | `NATS_URL` | NATS JetStream for event publish/subscribe |
-| Webhook secrets | For outbound webhooks to ordering-backend (if used); ordering-backend uses `LOGISTICS_WEBHOOK_SECRET` to verify inbound webhooks from logistics |
+| `ROUTING_PRIMARY_URL` | Valhalla URL (default: `http://valhalla.logistics.svc.cluster.local:8002`) |
+| `ROUTING_CACHE_TTL` | Route cache TTL (default: `5m`) |
+| `REDIS_ADDR` | Redis for routing cache and rate limiting |
+| Webhook secrets | For outbound webhooks to ordering-backend |
 
 ---
 
