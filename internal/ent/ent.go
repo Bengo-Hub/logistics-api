@@ -18,6 +18,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/earningsstatement"
 	"github.com/bengobox/logistics-service/internal/ent/fleet"
 	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
+	"github.com/bengobox/logistics-service/internal/ent/geofence"
 	"github.com/bengobox/logistics-service/internal/ent/integrationsetting"
 	"github.com/bengobox/logistics-service/internal/ent/outboxevent"
 	"github.com/bengobox/logistics-service/internal/ent/proofofdelivery"
@@ -97,6 +98,7 @@ func checkColumn(t, c string) error {
 			earningsstatement.Table:  earningsstatement.ValidColumn,
 			fleet.Table:              fleet.ValidColumn,
 			fleetmember.Table:        fleetmember.ValidColumn,
+			geofence.Table:           geofence.ValidColumn,
 			integrationsetting.Table: integrationsetting.ValidColumn,
 			outboxevent.Table:        outboxevent.ValidColumn,
 			proofofdelivery.Table:    proofofdelivery.ValidColumn,

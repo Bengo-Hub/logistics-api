@@ -29,6 +29,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/modules/routing"
 	"github.com/bengobox/logistics-service/internal/modules/tasks"
 	"github.com/bengobox/logistics-service/internal/modules/tenant"
+	zonesmod "github.com/bengobox/logistics-service/internal/modules/zones"
 	"github.com/bengobox/logistics-service/internal/platform/cache"
 	"github.com/bengobox/logistics-service/internal/platform/database"
 	"github.com/bengobox/logistics-service/internal/platform/events"
@@ -125,7 +126,11 @@ func New(ctx context.Context) (*App, error) {
 	// Public tracking handler (no auth)
 	trackingHandler := handlers.NewTrackingHandler(taskSvc, log)
 
-	chiRouter := router.New(log, healthHandler, authMiddleware, identitySvc, logisticsHandler, routingHandler, trackingHandler, cfg)
+	// Zone management
+	zoneSvc := zonesmod.NewService(entClient, log)
+	zonesHandler := handlers.NewZonesHandler(zoneSvc, log)
+
+	chiRouter := router.New(log, healthHandler, authMiddleware, identitySvc, logisticsHandler, routingHandler, trackingHandler, zonesHandler, cfg)
 
 	httpServer := &http.Server{
 		Addr:              fmt.Sprintf("%s:%d", cfg.HTTP.Host, cfg.HTTP.Port),

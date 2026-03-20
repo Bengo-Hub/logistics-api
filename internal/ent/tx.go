@@ -24,6 +24,8 @@ type Tx struct {
 	Fleet *FleetClient
 	// FleetMember is the client for interacting with the FleetMember builders.
 	FleetMember *FleetMemberClient
+	// GeoFence is the client for interacting with the GeoFence builders.
+	GeoFence *GeoFenceClient
 	// IntegrationSetting is the client for interacting with the IntegrationSetting builders.
 	IntegrationSetting *IntegrationSettingClient
 	// OutboxEvent is the client for interacting with the OutboxEvent builders.
@@ -187,6 +189,7 @@ func (tx *Tx) init() {
 	tx.EarningsStatement = NewEarningsStatementClient(tx.config)
 	tx.Fleet = NewFleetClient(tx.config)
 	tx.FleetMember = NewFleetMemberClient(tx.config)
+	tx.GeoFence = NewGeoFenceClient(tx.config)
 	tx.IntegrationSetting = NewIntegrationSettingClient(tx.config)
 	tx.OutboxEvent = NewOutboxEventClient(tx.config)
 	tx.ProofOfDelivery = NewProofOfDeliveryClient(tx.config)

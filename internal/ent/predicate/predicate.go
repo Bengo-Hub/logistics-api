@@ -24,6 +24,9 @@ type Fleet func(*sql.Selector)
 // FleetMember is the predicate function for fleetmember builders.
 type FleetMember func(*sql.Selector)
 
+// GeoFence is the predicate function for geofence builders.
+type GeoFence func(*sql.Selector)
+
 // IntegrationSetting is the predicate function for integrationsetting builders.
 type IntegrationSetting func(*sql.Selector)
 

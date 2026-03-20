@@ -81,6 +81,18 @@ func (f FleetMemberFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value,
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.FleetMemberMutation", m)
 }
 
+// The GeoFenceFunc type is an adapter to allow the use of ordinary
+// function as GeoFence mutator.
+type GeoFenceFunc func(context.Context, *ent.GeoFenceMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f GeoFenceFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.GeoFenceMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.GeoFenceMutation", m)
+}
+
 // The IntegrationSettingFunc type is an adapter to allow the use of ordinary
 // function as IntegrationSetting mutator.
 type IntegrationSettingFunc func(context.Context, *ent.IntegrationSettingMutation) (ent.Value, error)

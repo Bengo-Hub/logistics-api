@@ -171,6 +171,42 @@ var (
 			},
 		},
 	}
+	// GeoFencesColumns holds the columns for the "geo_fences" table.
+	GeoFencesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID},
+		{Name: "name", Type: field.TypeString},
+		{Name: "zone_type", Type: field.TypeString, Default: "delivery"},
+		{Name: "status", Type: field.TypeString, Default: "active"},
+		{Name: "boundary", Type: field.TypeJSON},
+		{Name: "color", Type: field.TypeString, Nullable: true, Default: "#3b82f6"},
+		{Name: "metadata", Type: field.TypeJSON, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// GeoFencesTable holds the schema information for the "geo_fences" table.
+	GeoFencesTable = &schema.Table{
+		Name:       "geo_fences",
+		Columns:    GeoFencesColumns,
+		PrimaryKey: []*schema.Column{GeoFencesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "geofence_tenant_id",
+				Unique:  false,
+				Columns: []*schema.Column{GeoFencesColumns[1]},
+			},
+			{
+				Name:    "geofence_tenant_id_name",
+				Unique:  true,
+				Columns: []*schema.Column{GeoFencesColumns[1], GeoFencesColumns[2]},
+			},
+			{
+				Name:    "geofence_status",
+				Unique:  false,
+				Columns: []*schema.Column{GeoFencesColumns[4]},
+			},
+		},
+	}
 	// IntegrationSettingsColumns holds the columns for the "integration_settings" table.
 	IntegrationSettingsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -592,6 +628,7 @@ var (
 		EarningsStatementsTable,
 		FleetsTable,
 		FleetMembersTable,
+		GeoFencesTable,
 		IntegrationSettingsTable,
 		OutboxEventsTable,
 		ProofOfDeliveriesTable,

@@ -11,6 +11,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/earningsstatement"
 	"github.com/bengobox/logistics-service/internal/ent/fleet"
 	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
+	"github.com/bengobox/logistics-service/internal/ent/geofence"
 	"github.com/bengobox/logistics-service/internal/ent/integrationsetting"
 	"github.com/bengobox/logistics-service/internal/ent/outboxevent"
 	"github.com/bengobox/logistics-service/internal/ent/proofofdelivery"
@@ -198,6 +199,42 @@ func init() {
 	fleetmemberDescID := fleetmemberFields[0].Descriptor()
 	// fleetmember.DefaultID holds the default value on creation for the id field.
 	fleetmember.DefaultID = fleetmemberDescID.Default.(func() uuid.UUID)
+	geofenceFields := schema.GeoFence{}.Fields()
+	_ = geofenceFields
+	// geofenceDescName is the schema descriptor for name field.
+	geofenceDescName := geofenceFields[2].Descriptor()
+	// geofence.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	geofence.NameValidator = geofenceDescName.Validators[0].(func(string) error)
+	// geofenceDescZoneType is the schema descriptor for zone_type field.
+	geofenceDescZoneType := geofenceFields[3].Descriptor()
+	// geofence.DefaultZoneType holds the default value on creation for the zone_type field.
+	geofence.DefaultZoneType = geofenceDescZoneType.Default.(string)
+	// geofenceDescStatus is the schema descriptor for status field.
+	geofenceDescStatus := geofenceFields[4].Descriptor()
+	// geofence.DefaultStatus holds the default value on creation for the status field.
+	geofence.DefaultStatus = geofenceDescStatus.Default.(string)
+	// geofenceDescColor is the schema descriptor for color field.
+	geofenceDescColor := geofenceFields[6].Descriptor()
+	// geofence.DefaultColor holds the default value on creation for the color field.
+	geofence.DefaultColor = geofenceDescColor.Default.(string)
+	// geofenceDescMetadata is the schema descriptor for metadata field.
+	geofenceDescMetadata := geofenceFields[7].Descriptor()
+	// geofence.DefaultMetadata holds the default value on creation for the metadata field.
+	geofence.DefaultMetadata = geofenceDescMetadata.Default.(map[string]interface{})
+	// geofenceDescCreatedAt is the schema descriptor for created_at field.
+	geofenceDescCreatedAt := geofenceFields[8].Descriptor()
+	// geofence.DefaultCreatedAt holds the default value on creation for the created_at field.
+	geofence.DefaultCreatedAt = geofenceDescCreatedAt.Default.(func() time.Time)
+	// geofenceDescUpdatedAt is the schema descriptor for updated_at field.
+	geofenceDescUpdatedAt := geofenceFields[9].Descriptor()
+	// geofence.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	geofence.DefaultUpdatedAt = geofenceDescUpdatedAt.Default.(func() time.Time)
+	// geofence.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	geofence.UpdateDefaultUpdatedAt = geofenceDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// geofenceDescID is the schema descriptor for id field.
+	geofenceDescID := geofenceFields[0].Descriptor()
+	// geofence.DefaultID holds the default value on creation for the id field.
+	geofence.DefaultID = geofenceDescID.Default.(func() uuid.UUID)
 	integrationsettingFields := schema.IntegrationSetting{}.Fields()
 	_ = integrationsettingFields
 	// integrationsettingDescTenantSlug is the schema descriptor for tenant_slug field.

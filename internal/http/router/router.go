@@ -19,7 +19,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/config"
 )
 
-func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authclient.AuthMiddleware, idSvc *identity.Service, lh *handlers.LogisticsHandler, rh *handlers.RoutingHandler, th *handlers.TrackingHandler, cfg *config.Config) http.Handler {
+func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authclient.AuthMiddleware, idSvc *identity.Service, lh *handlers.LogisticsHandler, rh *handlers.RoutingHandler, th *handlers.TrackingHandler, zh *handlers.ZonesHandler, cfg *config.Config) http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(middleware.RequestID)
@@ -106,6 +106,16 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 				riders.Get("/me", idHandler.GetMe)
 				riders.Patch("/me/profile", idHandler.UpdateProfile)
 			})
+
+			if zh != nil {
+				tenant.Route("/zones", func(zoneR chi.Router) {
+					zoneR.Get("/", zh.ListZones)
+					zoneR.Post("/", zh.CreateZone)
+					zoneR.Get("/{zoneId}", zh.GetZone)
+					zoneR.Patch("/{zoneId}", zh.UpdateZone)
+					zoneR.Delete("/{zoneId}", zh.DeleteZone)
+				})
+			}
 
 			if rh != nil {
 				tenant.Route("/routing", func(routeR chi.Router) {

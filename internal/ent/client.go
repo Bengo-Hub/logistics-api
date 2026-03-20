@@ -22,6 +22,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/earningsstatement"
 	"github.com/bengobox/logistics-service/internal/ent/fleet"
 	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
+	"github.com/bengobox/logistics-service/internal/ent/geofence"
 	"github.com/bengobox/logistics-service/internal/ent/integrationsetting"
 	"github.com/bengobox/logistics-service/internal/ent/outboxevent"
 	"github.com/bengobox/logistics-service/internal/ent/proofofdelivery"
@@ -54,6 +55,8 @@ type Client struct {
 	Fleet *FleetClient
 	// FleetMember is the client for interacting with the FleetMember builders.
 	FleetMember *FleetMemberClient
+	// GeoFence is the client for interacting with the GeoFence builders.
+	GeoFence *GeoFenceClient
 	// IntegrationSetting is the client for interacting with the IntegrationSetting builders.
 	IntegrationSetting *IntegrationSettingClient
 	// OutboxEvent is the client for interacting with the OutboxEvent builders.
@@ -97,6 +100,7 @@ func (c *Client) init() {
 	c.EarningsStatement = NewEarningsStatementClient(c.config)
 	c.Fleet = NewFleetClient(c.config)
 	c.FleetMember = NewFleetMemberClient(c.config)
+	c.GeoFence = NewGeoFenceClient(c.config)
 	c.IntegrationSetting = NewIntegrationSettingClient(c.config)
 	c.OutboxEvent = NewOutboxEventClient(c.config)
 	c.ProofOfDelivery = NewProofOfDeliveryClient(c.config)
@@ -208,6 +212,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		EarningsStatement:  NewEarningsStatementClient(cfg),
 		Fleet:              NewFleetClient(cfg),
 		FleetMember:        NewFleetMemberClient(cfg),
+		GeoFence:           NewGeoFenceClient(cfg),
 		IntegrationSetting: NewIntegrationSettingClient(cfg),
 		OutboxEvent:        NewOutboxEventClient(cfg),
 		ProofOfDelivery:    NewProofOfDeliveryClient(cfg),
@@ -246,6 +251,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		EarningsStatement:  NewEarningsStatementClient(cfg),
 		Fleet:              NewFleetClient(cfg),
 		FleetMember:        NewFleetMemberClient(cfg),
+		GeoFence:           NewGeoFenceClient(cfg),
 		IntegrationSetting: NewIntegrationSettingClient(cfg),
 		OutboxEvent:        NewOutboxEventClient(cfg),
 		ProofOfDelivery:    NewProofOfDeliveryClient(cfg),
@@ -289,9 +295,10 @@ func (c *Client) Close() error {
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.BillingEvent, c.CarrierJob, c.CarrierPartner, c.EarningsStatement, c.Fleet,
-		c.FleetMember, c.IntegrationSetting, c.OutboxEvent, c.ProofOfDelivery, c.Task,
-		c.TaskAssignment, c.TaskEvent, c.TaskStep, c.TelemetryPoint, c.TelemetryStream,
-		c.Tenant, c.TenantSyncEvent, c.User, c.Vehicle,
+		c.FleetMember, c.GeoFence, c.IntegrationSetting, c.OutboxEvent,
+		c.ProofOfDelivery, c.Task, c.TaskAssignment, c.TaskEvent, c.TaskStep,
+		c.TelemetryPoint, c.TelemetryStream, c.Tenant, c.TenantSyncEvent, c.User,
+		c.Vehicle,
 	} {
 		n.Use(hooks...)
 	}
@@ -302,9 +309,10 @@ func (c *Client) Use(hooks ...Hook) {
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.BillingEvent, c.CarrierJob, c.CarrierPartner, c.EarningsStatement, c.Fleet,
-		c.FleetMember, c.IntegrationSetting, c.OutboxEvent, c.ProofOfDelivery, c.Task,
-		c.TaskAssignment, c.TaskEvent, c.TaskStep, c.TelemetryPoint, c.TelemetryStream,
-		c.Tenant, c.TenantSyncEvent, c.User, c.Vehicle,
+		c.FleetMember, c.GeoFence, c.IntegrationSetting, c.OutboxEvent,
+		c.ProofOfDelivery, c.Task, c.TaskAssignment, c.TaskEvent, c.TaskStep,
+		c.TelemetryPoint, c.TelemetryStream, c.Tenant, c.TenantSyncEvent, c.User,
+		c.Vehicle,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -325,6 +333,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Fleet.mutate(ctx, m)
 	case *FleetMemberMutation:
 		return c.FleetMember.mutate(ctx, m)
+	case *GeoFenceMutation:
+		return c.GeoFence.mutate(ctx, m)
 	case *IntegrationSettingMutation:
 		return c.IntegrationSetting.mutate(ctx, m)
 	case *OutboxEventMutation:
@@ -1247,6 +1257,139 @@ func (c *FleetMemberClient) mutate(ctx context.Context, m *FleetMemberMutation) 
 		return (&FleetMemberDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown FleetMember mutation op: %q", m.Op())
+	}
+}
+
+// GeoFenceClient is a client for the GeoFence schema.
+type GeoFenceClient struct {
+	config
+}
+
+// NewGeoFenceClient returns a client for the GeoFence from the given config.
+func NewGeoFenceClient(c config) *GeoFenceClient {
+	return &GeoFenceClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `geofence.Hooks(f(g(h())))`.
+func (c *GeoFenceClient) Use(hooks ...Hook) {
+	c.hooks.GeoFence = append(c.hooks.GeoFence, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `geofence.Intercept(f(g(h())))`.
+func (c *GeoFenceClient) Intercept(interceptors ...Interceptor) {
+	c.inters.GeoFence = append(c.inters.GeoFence, interceptors...)
+}
+
+// Create returns a builder for creating a GeoFence entity.
+func (c *GeoFenceClient) Create() *GeoFenceCreate {
+	mutation := newGeoFenceMutation(c.config, OpCreate)
+	return &GeoFenceCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of GeoFence entities.
+func (c *GeoFenceClient) CreateBulk(builders ...*GeoFenceCreate) *GeoFenceCreateBulk {
+	return &GeoFenceCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *GeoFenceClient) MapCreateBulk(slice any, setFunc func(*GeoFenceCreate, int)) *GeoFenceCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &GeoFenceCreateBulk{err: fmt.Errorf("calling to GeoFenceClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*GeoFenceCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &GeoFenceCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for GeoFence.
+func (c *GeoFenceClient) Update() *GeoFenceUpdate {
+	mutation := newGeoFenceMutation(c.config, OpUpdate)
+	return &GeoFenceUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *GeoFenceClient) UpdateOne(_m *GeoFence) *GeoFenceUpdateOne {
+	mutation := newGeoFenceMutation(c.config, OpUpdateOne, withGeoFence(_m))
+	return &GeoFenceUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *GeoFenceClient) UpdateOneID(id uuid.UUID) *GeoFenceUpdateOne {
+	mutation := newGeoFenceMutation(c.config, OpUpdateOne, withGeoFenceID(id))
+	return &GeoFenceUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for GeoFence.
+func (c *GeoFenceClient) Delete() *GeoFenceDelete {
+	mutation := newGeoFenceMutation(c.config, OpDelete)
+	return &GeoFenceDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *GeoFenceClient) DeleteOne(_m *GeoFence) *GeoFenceDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *GeoFenceClient) DeleteOneID(id uuid.UUID) *GeoFenceDeleteOne {
+	builder := c.Delete().Where(geofence.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &GeoFenceDeleteOne{builder}
+}
+
+// Query returns a query builder for GeoFence.
+func (c *GeoFenceClient) Query() *GeoFenceQuery {
+	return &GeoFenceQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeGeoFence},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a GeoFence entity by its id.
+func (c *GeoFenceClient) Get(ctx context.Context, id uuid.UUID) (*GeoFence, error) {
+	return c.Query().Where(geofence.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *GeoFenceClient) GetX(ctx context.Context, id uuid.UUID) *GeoFence {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *GeoFenceClient) Hooks() []Hook {
+	return c.hooks.GeoFence
+}
+
+// Interceptors returns the client interceptors.
+func (c *GeoFenceClient) Interceptors() []Interceptor {
+	return c.inters.GeoFence
+}
+
+func (c *GeoFenceClient) mutate(ctx context.Context, m *GeoFenceMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&GeoFenceCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&GeoFenceUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&GeoFenceUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&GeoFenceDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown GeoFence mutation op: %q", m.Op())
 	}
 }
 
@@ -3255,14 +3398,14 @@ func (c *VehicleClient) mutate(ctx context.Context, m *VehicleMutation) (Value, 
 type (
 	hooks struct {
 		BillingEvent, CarrierJob, CarrierPartner, EarningsStatement, Fleet, FleetMember,
-		IntegrationSetting, OutboxEvent, ProofOfDelivery, Task, TaskAssignment,
-		TaskEvent, TaskStep, TelemetryPoint, TelemetryStream, Tenant, TenantSyncEvent,
-		User, Vehicle []ent.Hook
+		GeoFence, IntegrationSetting, OutboxEvent, ProofOfDelivery, Task,
+		TaskAssignment, TaskEvent, TaskStep, TelemetryPoint, TelemetryStream, Tenant,
+		TenantSyncEvent, User, Vehicle []ent.Hook
 	}
 	inters struct {
 		BillingEvent, CarrierJob, CarrierPartner, EarningsStatement, Fleet, FleetMember,
-		IntegrationSetting, OutboxEvent, ProofOfDelivery, Task, TaskAssignment,
-		TaskEvent, TaskStep, TelemetryPoint, TelemetryStream, Tenant, TenantSyncEvent,
-		User, Vehicle []ent.Interceptor
+		GeoFence, IntegrationSetting, OutboxEvent, ProofOfDelivery, Task,
+		TaskAssignment, TaskEvent, TaskStep, TelemetryPoint, TelemetryStream, Tenant,
+		TenantSyncEvent, User, Vehicle []ent.Interceptor
 	}
 )

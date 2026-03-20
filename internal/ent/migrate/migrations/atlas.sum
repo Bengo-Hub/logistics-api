@@ -1,3 +1,4 @@
-h1:O5h6Lnu/Ruqtp2RCgy20B69BGnpe62Qhr3VMmsEzMS8=
+h1:Hm1Rwr7WWXb7xra4vzoKMKh0HSf4EbkgtRSMhTMhLcU=
 20260314184847_initial_schema.sql h1:L0wAADcTDNVU6BeR2ScWX5poErpcRylCO9xWQakqX+M=
 20260320140940_add_tracking_code_and_routing.sql h1:kfFLd/S6aqmD3l6l5aHN+44M18ct8inCdUO/ebQVzPs=
+20260320144356_add_geo_fence_zones.sql h1:DIWWryUDFzragzPYE4N/Qag94zVyu/XejorTCXB5eUc=

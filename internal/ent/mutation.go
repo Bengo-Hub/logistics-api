@@ -17,6 +17,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/earningsstatement"
 	"github.com/bengobox/logistics-service/internal/ent/fleet"
 	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
+	"github.com/bengobox/logistics-service/internal/ent/geofence"
 	"github.com/bengobox/logistics-service/internal/ent/integrationsetting"
 	"github.com/bengobox/logistics-service/internal/ent/outboxevent"
 	"github.com/bengobox/logistics-service/internal/ent/predicate"
@@ -49,6 +50,7 @@ const (
 	TypeEarningsStatement  = "EarningsStatement"
 	TypeFleet              = "Fleet"
 	TypeFleetMember        = "FleetMember"
+	TypeGeoFence           = "GeoFence"
 	TypeIntegrationSetting = "IntegrationSetting"
 	TypeOutboxEvent        = "OutboxEvent"
 	TypeProofOfDelivery    = "ProofOfDelivery"
@@ -5771,6 +5773,827 @@ func (m *FleetMemberMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown FleetMember edge %s", name)
+}
+
+// GeoFenceMutation represents an operation that mutates the GeoFence nodes in the graph.
+type GeoFenceMutation struct {
+	config
+	op             Op
+	typ            string
+	id             *uuid.UUID
+	tenant_id      *uuid.UUID
+	name           *string
+	zone_type      *string
+	status         *string
+	boundary       *[][]float64
+	appendboundary [][]float64
+	color          *string
+	metadata       *map[string]interface{}
+	created_at     *time.Time
+	updated_at     *time.Time
+	clearedFields  map[string]struct{}
+	done           bool
+	oldValue       func(context.Context) (*GeoFence, error)
+	predicates     []predicate.GeoFence
+}
+
+var _ ent.Mutation = (*GeoFenceMutation)(nil)
+
+// geofenceOption allows management of the mutation configuration using functional options.
+type geofenceOption func(*GeoFenceMutation)
+
+// newGeoFenceMutation creates new mutation for the GeoFence entity.
+func newGeoFenceMutation(c config, op Op, opts ...geofenceOption) *GeoFenceMutation {
+	m := &GeoFenceMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeGeoFence,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withGeoFenceID sets the ID field of the mutation.
+func withGeoFenceID(id uuid.UUID) geofenceOption {
+	return func(m *GeoFenceMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *GeoFence
+		)
+		m.oldValue = func(ctx context.Context) (*GeoFence, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().GeoFence.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withGeoFence sets the old GeoFence of the mutation.
+func withGeoFence(node *GeoFence) geofenceOption {
+	return func(m *GeoFenceMutation) {
+		m.oldValue = func(context.Context) (*GeoFence, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m GeoFenceMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m GeoFenceMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of GeoFence entities.
+func (m *GeoFenceMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *GeoFenceMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *GeoFenceMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().GeoFence.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetTenantID sets the "tenant_id" field.
+func (m *GeoFenceMutation) SetTenantID(u uuid.UUID) {
+	m.tenant_id = &u
+}
+
+// TenantID returns the value of the "tenant_id" field in the mutation.
+func (m *GeoFenceMutation) TenantID() (r uuid.UUID, exists bool) {
+	v := m.tenant_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTenantID returns the old "tenant_id" field's value of the GeoFence entity.
+// If the GeoFence object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GeoFenceMutation) OldTenantID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTenantID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTenantID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTenantID: %w", err)
+	}
+	return oldValue.TenantID, nil
+}
+
+// ResetTenantID resets all changes to the "tenant_id" field.
+func (m *GeoFenceMutation) ResetTenantID() {
+	m.tenant_id = nil
+}
+
+// SetName sets the "name" field.
+func (m *GeoFenceMutation) SetName(s string) {
+	m.name = &s
+}
+
+// Name returns the value of the "name" field in the mutation.
+func (m *GeoFenceMutation) Name() (r string, exists bool) {
+	v := m.name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldName returns the old "name" field's value of the GeoFence entity.
+// If the GeoFence object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GeoFenceMutation) OldName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldName: %w", err)
+	}
+	return oldValue.Name, nil
+}
+
+// ResetName resets all changes to the "name" field.
+func (m *GeoFenceMutation) ResetName() {
+	m.name = nil
+}
+
+// SetZoneType sets the "zone_type" field.
+func (m *GeoFenceMutation) SetZoneType(s string) {
+	m.zone_type = &s
+}
+
+// ZoneType returns the value of the "zone_type" field in the mutation.
+func (m *GeoFenceMutation) ZoneType() (r string, exists bool) {
+	v := m.zone_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldZoneType returns the old "zone_type" field's value of the GeoFence entity.
+// If the GeoFence object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GeoFenceMutation) OldZoneType(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldZoneType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldZoneType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldZoneType: %w", err)
+	}
+	return oldValue.ZoneType, nil
+}
+
+// ResetZoneType resets all changes to the "zone_type" field.
+func (m *GeoFenceMutation) ResetZoneType() {
+	m.zone_type = nil
+}
+
+// SetStatus sets the "status" field.
+func (m *GeoFenceMutation) SetStatus(s string) {
+	m.status = &s
+}
+
+// Status returns the value of the "status" field in the mutation.
+func (m *GeoFenceMutation) Status() (r string, exists bool) {
+	v := m.status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStatus returns the old "status" field's value of the GeoFence entity.
+// If the GeoFence object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GeoFenceMutation) OldStatus(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
+	}
+	return oldValue.Status, nil
+}
+
+// ResetStatus resets all changes to the "status" field.
+func (m *GeoFenceMutation) ResetStatus() {
+	m.status = nil
+}
+
+// SetBoundary sets the "boundary" field.
+func (m *GeoFenceMutation) SetBoundary(f [][]float64) {
+	m.boundary = &f
+	m.appendboundary = nil
+}
+
+// Boundary returns the value of the "boundary" field in the mutation.
+func (m *GeoFenceMutation) Boundary() (r [][]float64, exists bool) {
+	v := m.boundary
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBoundary returns the old "boundary" field's value of the GeoFence entity.
+// If the GeoFence object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GeoFenceMutation) OldBoundary(ctx context.Context) (v [][]float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBoundary is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBoundary requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBoundary: %w", err)
+	}
+	return oldValue.Boundary, nil
+}
+
+// AppendBoundary adds f to the "boundary" field.
+func (m *GeoFenceMutation) AppendBoundary(f [][]float64) {
+	m.appendboundary = append(m.appendboundary, f...)
+}
+
+// AppendedBoundary returns the list of values that were appended to the "boundary" field in this mutation.
+func (m *GeoFenceMutation) AppendedBoundary() ([][]float64, bool) {
+	if len(m.appendboundary) == 0 {
+		return nil, false
+	}
+	return m.appendboundary, true
+}
+
+// ResetBoundary resets all changes to the "boundary" field.
+func (m *GeoFenceMutation) ResetBoundary() {
+	m.boundary = nil
+	m.appendboundary = nil
+}
+
+// SetColor sets the "color" field.
+func (m *GeoFenceMutation) SetColor(s string) {
+	m.color = &s
+}
+
+// Color returns the value of the "color" field in the mutation.
+func (m *GeoFenceMutation) Color() (r string, exists bool) {
+	v := m.color
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldColor returns the old "color" field's value of the GeoFence entity.
+// If the GeoFence object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GeoFenceMutation) OldColor(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldColor is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldColor requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldColor: %w", err)
+	}
+	return oldValue.Color, nil
+}
+
+// ClearColor clears the value of the "color" field.
+func (m *GeoFenceMutation) ClearColor() {
+	m.color = nil
+	m.clearedFields[geofence.FieldColor] = struct{}{}
+}
+
+// ColorCleared returns if the "color" field was cleared in this mutation.
+func (m *GeoFenceMutation) ColorCleared() bool {
+	_, ok := m.clearedFields[geofence.FieldColor]
+	return ok
+}
+
+// ResetColor resets all changes to the "color" field.
+func (m *GeoFenceMutation) ResetColor() {
+	m.color = nil
+	delete(m.clearedFields, geofence.FieldColor)
+}
+
+// SetMetadata sets the "metadata" field.
+func (m *GeoFenceMutation) SetMetadata(value map[string]interface{}) {
+	m.metadata = &value
+}
+
+// Metadata returns the value of the "metadata" field in the mutation.
+func (m *GeoFenceMutation) Metadata() (r map[string]interface{}, exists bool) {
+	v := m.metadata
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMetadata returns the old "metadata" field's value of the GeoFence entity.
+// If the GeoFence object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GeoFenceMutation) OldMetadata(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMetadata is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMetadata requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMetadata: %w", err)
+	}
+	return oldValue.Metadata, nil
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (m *GeoFenceMutation) ClearMetadata() {
+	m.metadata = nil
+	m.clearedFields[geofence.FieldMetadata] = struct{}{}
+}
+
+// MetadataCleared returns if the "metadata" field was cleared in this mutation.
+func (m *GeoFenceMutation) MetadataCleared() bool {
+	_, ok := m.clearedFields[geofence.FieldMetadata]
+	return ok
+}
+
+// ResetMetadata resets all changes to the "metadata" field.
+func (m *GeoFenceMutation) ResetMetadata() {
+	m.metadata = nil
+	delete(m.clearedFields, geofence.FieldMetadata)
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *GeoFenceMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *GeoFenceMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the GeoFence entity.
+// If the GeoFence object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GeoFenceMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *GeoFenceMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *GeoFenceMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *GeoFenceMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the GeoFence entity.
+// If the GeoFence object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GeoFenceMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *GeoFenceMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// Where appends a list predicates to the GeoFenceMutation builder.
+func (m *GeoFenceMutation) Where(ps ...predicate.GeoFence) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the GeoFenceMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *GeoFenceMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.GeoFence, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *GeoFenceMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *GeoFenceMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (GeoFence).
+func (m *GeoFenceMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *GeoFenceMutation) Fields() []string {
+	fields := make([]string, 0, 9)
+	if m.tenant_id != nil {
+		fields = append(fields, geofence.FieldTenantID)
+	}
+	if m.name != nil {
+		fields = append(fields, geofence.FieldName)
+	}
+	if m.zone_type != nil {
+		fields = append(fields, geofence.FieldZoneType)
+	}
+	if m.status != nil {
+		fields = append(fields, geofence.FieldStatus)
+	}
+	if m.boundary != nil {
+		fields = append(fields, geofence.FieldBoundary)
+	}
+	if m.color != nil {
+		fields = append(fields, geofence.FieldColor)
+	}
+	if m.metadata != nil {
+		fields = append(fields, geofence.FieldMetadata)
+	}
+	if m.created_at != nil {
+		fields = append(fields, geofence.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, geofence.FieldUpdatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *GeoFenceMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case geofence.FieldTenantID:
+		return m.TenantID()
+	case geofence.FieldName:
+		return m.Name()
+	case geofence.FieldZoneType:
+		return m.ZoneType()
+	case geofence.FieldStatus:
+		return m.Status()
+	case geofence.FieldBoundary:
+		return m.Boundary()
+	case geofence.FieldColor:
+		return m.Color()
+	case geofence.FieldMetadata:
+		return m.Metadata()
+	case geofence.FieldCreatedAt:
+		return m.CreatedAt()
+	case geofence.FieldUpdatedAt:
+		return m.UpdatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *GeoFenceMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case geofence.FieldTenantID:
+		return m.OldTenantID(ctx)
+	case geofence.FieldName:
+		return m.OldName(ctx)
+	case geofence.FieldZoneType:
+		return m.OldZoneType(ctx)
+	case geofence.FieldStatus:
+		return m.OldStatus(ctx)
+	case geofence.FieldBoundary:
+		return m.OldBoundary(ctx)
+	case geofence.FieldColor:
+		return m.OldColor(ctx)
+	case geofence.FieldMetadata:
+		return m.OldMetadata(ctx)
+	case geofence.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case geofence.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown GeoFence field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *GeoFenceMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case geofence.FieldTenantID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTenantID(v)
+		return nil
+	case geofence.FieldName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetName(v)
+		return nil
+	case geofence.FieldZoneType:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetZoneType(v)
+		return nil
+	case geofence.FieldStatus:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStatus(v)
+		return nil
+	case geofence.FieldBoundary:
+		v, ok := value.([][]float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBoundary(v)
+		return nil
+	case geofence.FieldColor:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetColor(v)
+		return nil
+	case geofence.FieldMetadata:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMetadata(v)
+		return nil
+	case geofence.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case geofence.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown GeoFence field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *GeoFenceMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *GeoFenceMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *GeoFenceMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown GeoFence numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *GeoFenceMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(geofence.FieldColor) {
+		fields = append(fields, geofence.FieldColor)
+	}
+	if m.FieldCleared(geofence.FieldMetadata) {
+		fields = append(fields, geofence.FieldMetadata)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *GeoFenceMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *GeoFenceMutation) ClearField(name string) error {
+	switch name {
+	case geofence.FieldColor:
+		m.ClearColor()
+		return nil
+	case geofence.FieldMetadata:
+		m.ClearMetadata()
+		return nil
+	}
+	return fmt.Errorf("unknown GeoFence nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *GeoFenceMutation) ResetField(name string) error {
+	switch name {
+	case geofence.FieldTenantID:
+		m.ResetTenantID()
+		return nil
+	case geofence.FieldName:
+		m.ResetName()
+		return nil
+	case geofence.FieldZoneType:
+		m.ResetZoneType()
+		return nil
+	case geofence.FieldStatus:
+		m.ResetStatus()
+		return nil
+	case geofence.FieldBoundary:
+		m.ResetBoundary()
+		return nil
+	case geofence.FieldColor:
+		m.ResetColor()
+		return nil
+	case geofence.FieldMetadata:
+		m.ResetMetadata()
+		return nil
+	case geofence.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case geofence.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown GeoFence field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *GeoFenceMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *GeoFenceMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *GeoFenceMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *GeoFenceMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *GeoFenceMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *GeoFenceMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *GeoFenceMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown GeoFence unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *GeoFenceMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown GeoFence edge %s", name)
 }
 
 // IntegrationSettingMutation represents an operation that mutates the IntegrationSetting nodes in the graph.
