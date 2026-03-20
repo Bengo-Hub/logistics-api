@@ -117,6 +117,21 @@ Per-tenant provider settings via `/v1/{tenant}/integrations/providers` (future):
 }
 ```
 
+## Rate Limiting
+
+All routing and tracking endpoints are rate-limited per tenant based on their subscription plan. Limits are read from JWT `subscription_limits` claims and enforced via Redis sliding window counters.
+
+| Feature Key | Starter | Growth | Professional |
+|-------------|---------|--------|--------------|
+| `routing_requests_per_day` | 100 | 1,000 | 10,000 |
+| `live_tracking_requests_per_day` | 500 | 5,000 | Unlimited |
+| `live_tracking_duration_minutes` | 30 | 120 | Unlimited |
+| `map_loads_per_day` | 200 | 2,000 | Unlimited |
+
+When a limit is exceeded, the API returns `429 Too Many Requests` with:
+- `X-RateLimit-Limit` / `X-RateLimit-Remaining` / `X-RateLimit-Feature` headers
+- JSON body with `upgrade_url` for tenant admins
+
 ## Error Handling
 - 4xx: validation errors → return `400` with safe messages.
 - 5xx: transient provider outage → retry with backoff; fail over to fallback provider.
