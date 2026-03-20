@@ -22,6 +22,11 @@ func (Task) Fields() []ent.Field {
 			Default(uuid.New).
 			Immutable(),
 		field.UUID("tenant_id", uuid.UUID{}),
+		field.String("tracking_code").
+			MaxLen(20).
+			Optional().
+			Unique().
+			Comment("Public tracking code (waybill) e.g. CV-20260320-A3F8K2"),
 		field.String("external_reference").
 			Optional().
 			Comment("Reference to upstream orders/transfers"),
@@ -70,5 +75,6 @@ func (Task) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("tenant_id", "external_reference"),
 		index.Fields("status"),
+		index.Fields("tracking_code"),
 	}
 }

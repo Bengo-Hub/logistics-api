@@ -2,7 +2,10 @@ package tasks
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
+	"math/big"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -79,8 +82,11 @@ func (s *Service) CreateTask(ctx context.Context, tenantID uuid.UUID, req Create
 		taskType = "delivery"
 	}
 
+	trackingCode := generateTrackingCode()
+
 	builder := s.client.Task.Create().
 		SetTenantID(tenantID).
+		SetTrackingCode(trackingCode).
 		SetTaskType(taskType).
 		SetStatus("pending").
 		SetPriority(req.Priority)
@@ -339,4 +345,42 @@ func (s *Service) getOrCreateDefaultFleet(ctx context.Context, tenantID uuid.UUI
 		SetType("internal").
 		SetStatus("active").
 		Save(ctx)
+}
+
+// GetTaskByTrackingCode looks up a task by its public tracking code (no tenant scoping).
+func (s *Service) GetTaskByTrackingCode(ctx context.Context, code string) (*ent.Task, error) {
+	t, err := s.client.Task.Query().
+		Where(task.TrackingCode(code)).
+		WithAssignments(func(q *ent.TaskAssignmentQuery) {
+			q.Order(ent.Desc(taskassignment.FieldAssignedAt)).Limit(1)
+		}).
+		WithSteps().
+		WithEvents().
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, fmt.Errorf("tasks: tracking code not found")
+		}
+		return nil, fmt.Errorf("tasks: tracking lookup: %w", err)
+	}
+	return t, nil
+}
+
+// generateTrackingCode creates a unique tracking code in format CV-YYYYMMDD-XXXXXX.
+func generateTrackingCode() string {
+	const charset = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789" // No 0/O/1/I for readability
+	now := time.Now()
+	dateStr := now.Format("20060102")
+
+	var b strings.Builder
+	b.WriteString("CV-")
+	b.WriteString(dateStr)
+	b.WriteRune('-')
+
+	for i := 0; i < 6; i++ {
+		n, _ := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
+		b.WriteByte(charset[n.Int64()])
+	}
+
+	return b.String()
 }

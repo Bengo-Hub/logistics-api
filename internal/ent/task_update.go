@@ -47,6 +47,26 @@ func (_u *TaskUpdate) SetNillableTenantID(v *uuid.UUID) *TaskUpdate {
 	return _u
 }
 
+// SetTrackingCode sets the "tracking_code" field.
+func (_u *TaskUpdate) SetTrackingCode(v string) *TaskUpdate {
+	_u.mutation.SetTrackingCode(v)
+	return _u
+}
+
+// SetNillableTrackingCode sets the "tracking_code" field if the given value is not nil.
+func (_u *TaskUpdate) SetNillableTrackingCode(v *string) *TaskUpdate {
+	if v != nil {
+		_u.SetTrackingCode(*v)
+	}
+	return _u
+}
+
+// ClearTrackingCode clears the value of the "tracking_code" field.
+func (_u *TaskUpdate) ClearTrackingCode() *TaskUpdate {
+	_u.mutation.ClearTrackingCode()
+	return _u
+}
+
 // SetExternalReference sets the "external_reference" field.
 func (_u *TaskUpdate) SetExternalReference(v string) *TaskUpdate {
 	_u.mutation.SetExternalReference(v)
@@ -382,7 +402,20 @@ func (_u *TaskUpdate) defaults() {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (_u *TaskUpdate) check() error {
+	if v, ok := _u.mutation.TrackingCode(); ok {
+		if err := task.TrackingCodeValidator(v); err != nil {
+			return &ValidationError{Name: "tracking_code", err: fmt.Errorf(`ent: validator failed for field "Task.tracking_code": %w`, err)}
+		}
+	}
+	return nil
+}
+
 func (_u *TaskUpdate) sqlSave(ctx context.Context) (_node int, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(task.Table, task.Columns, sqlgraph.NewFieldSpec(task.FieldID, field.TypeUUID))
 	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
@@ -393,6 +426,12 @@ func (_u *TaskUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.TenantID(); ok {
 		_spec.SetField(task.FieldTenantID, field.TypeUUID, value)
+	}
+	if value, ok := _u.mutation.TrackingCode(); ok {
+		_spec.SetField(task.FieldTrackingCode, field.TypeString, value)
+	}
+	if _u.mutation.TrackingCodeCleared() {
+		_spec.ClearField(task.FieldTrackingCode, field.TypeString)
 	}
 	if value, ok := _u.mutation.ExternalReference(); ok {
 		_spec.SetField(task.FieldExternalReference, field.TypeString, value)
@@ -637,6 +676,26 @@ func (_u *TaskUpdateOne) SetNillableTenantID(v *uuid.UUID) *TaskUpdateOne {
 	if v != nil {
 		_u.SetTenantID(*v)
 	}
+	return _u
+}
+
+// SetTrackingCode sets the "tracking_code" field.
+func (_u *TaskUpdateOne) SetTrackingCode(v string) *TaskUpdateOne {
+	_u.mutation.SetTrackingCode(v)
+	return _u
+}
+
+// SetNillableTrackingCode sets the "tracking_code" field if the given value is not nil.
+func (_u *TaskUpdateOne) SetNillableTrackingCode(v *string) *TaskUpdateOne {
+	if v != nil {
+		_u.SetTrackingCode(*v)
+	}
+	return _u
+}
+
+// ClearTrackingCode clears the value of the "tracking_code" field.
+func (_u *TaskUpdateOne) ClearTrackingCode() *TaskUpdateOne {
+	_u.mutation.ClearTrackingCode()
 	return _u
 }
 
@@ -988,7 +1047,20 @@ func (_u *TaskUpdateOne) defaults() {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (_u *TaskUpdateOne) check() error {
+	if v, ok := _u.mutation.TrackingCode(); ok {
+		if err := task.TrackingCodeValidator(v); err != nil {
+			return &ValidationError{Name: "tracking_code", err: fmt.Errorf(`ent: validator failed for field "Task.tracking_code": %w`, err)}
+		}
+	}
+	return nil
+}
+
 func (_u *TaskUpdateOne) sqlSave(ctx context.Context) (_node *Task, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(task.Table, task.Columns, sqlgraph.NewFieldSpec(task.FieldID, field.TypeUUID))
 	id, ok := _u.mutation.ID()
 	if !ok {
@@ -1016,6 +1088,12 @@ func (_u *TaskUpdateOne) sqlSave(ctx context.Context) (_node *Task, err error) {
 	}
 	if value, ok := _u.mutation.TenantID(); ok {
 		_spec.SetField(task.FieldTenantID, field.TypeUUID, value)
+	}
+	if value, ok := _u.mutation.TrackingCode(); ok {
+		_spec.SetField(task.FieldTrackingCode, field.TypeString, value)
+	}
+	if _u.mutation.TrackingCodeCleared() {
+		_spec.ClearField(task.FieldTrackingCode, field.TypeString)
 	}
 	if value, ok := _u.mutation.ExternalReference(); ok {
 		_spec.SetField(task.FieldExternalReference, field.TypeString, value)

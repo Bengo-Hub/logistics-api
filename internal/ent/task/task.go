@@ -17,6 +17,8 @@ const (
 	FieldID = "id"
 	// FieldTenantID holds the string denoting the tenant_id field in the database.
 	FieldTenantID = "tenant_id"
+	// FieldTrackingCode holds the string denoting the tracking_code field in the database.
+	FieldTrackingCode = "tracking_code"
 	// FieldExternalReference holds the string denoting the external_reference field in the database.
 	FieldExternalReference = "external_reference"
 	// FieldSourceService holds the string denoting the source_service field in the database.
@@ -83,6 +85,7 @@ const (
 var Columns = []string{
 	FieldID,
 	FieldTenantID,
+	FieldTrackingCode,
 	FieldExternalReference,
 	FieldSourceService,
 	FieldTaskType,
@@ -118,6 +121,8 @@ func ValidColumn(column string) bool {
 }
 
 var (
+	// TrackingCodeValidator is a validator for the "tracking_code" field. It is called by the builders before save.
+	TrackingCodeValidator func(string) error
 	// DefaultTaskType holds the default value on creation for the "task_type" field.
 	DefaultTaskType string
 	// DefaultPriority holds the default value on creation for the "priority" field.
@@ -147,6 +152,11 @@ func ByID(opts ...sql.OrderTermOption) OrderOption {
 // ByTenantID orders the results by the tenant_id field.
 func ByTenantID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldTenantID, opts...).ToFunc()
+}
+
+// ByTrackingCode orders the results by the tracking_code field.
+func ByTrackingCode(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTrackingCode, opts...).ToFunc()
 }
 
 // ByExternalReference orders the results by the external_reference field.

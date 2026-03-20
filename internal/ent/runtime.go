@@ -276,28 +276,32 @@ func init() {
 	proofofdelivery.DefaultID = proofofdeliveryDescID.Default.(func() uuid.UUID)
 	taskFields := schema.Task{}.Fields()
 	_ = taskFields
+	// taskDescTrackingCode is the schema descriptor for tracking_code field.
+	taskDescTrackingCode := taskFields[2].Descriptor()
+	// task.TrackingCodeValidator is a validator for the "tracking_code" field. It is called by the builders before save.
+	task.TrackingCodeValidator = taskDescTrackingCode.Validators[0].(func(string) error)
 	// taskDescTaskType is the schema descriptor for task_type field.
-	taskDescTaskType := taskFields[4].Descriptor()
+	taskDescTaskType := taskFields[5].Descriptor()
 	// task.DefaultTaskType holds the default value on creation for the task_type field.
 	task.DefaultTaskType = taskDescTaskType.Default.(string)
 	// taskDescPriority is the schema descriptor for priority field.
-	taskDescPriority := taskFields[5].Descriptor()
+	taskDescPriority := taskFields[6].Descriptor()
 	// task.DefaultPriority holds the default value on creation for the priority field.
 	task.DefaultPriority = taskDescPriority.Default.(int)
 	// taskDescStatus is the schema descriptor for status field.
-	taskDescStatus := taskFields[6].Descriptor()
+	taskDescStatus := taskFields[7].Descriptor()
 	// task.DefaultStatus holds the default value on creation for the status field.
 	task.DefaultStatus = taskDescStatus.Default.(string)
 	// taskDescMetadata is the schema descriptor for metadata field.
-	taskDescMetadata := taskFields[10].Descriptor()
+	taskDescMetadata := taskFields[11].Descriptor()
 	// task.DefaultMetadata holds the default value on creation for the metadata field.
 	task.DefaultMetadata = taskDescMetadata.Default.(map[string]interface{})
 	// taskDescCreatedAt is the schema descriptor for created_at field.
-	taskDescCreatedAt := taskFields[11].Descriptor()
+	taskDescCreatedAt := taskFields[12].Descriptor()
 	// task.DefaultCreatedAt holds the default value on creation for the created_at field.
 	task.DefaultCreatedAt = taskDescCreatedAt.Default.(func() time.Time)
 	// taskDescUpdatedAt is the schema descriptor for updated_at field.
-	taskDescUpdatedAt := taskFields[12].Descriptor()
+	taskDescUpdatedAt := taskFields[13].Descriptor()
 	// task.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	task.DefaultUpdatedAt = taskDescUpdatedAt.Default.(func() time.Time)
 	// task.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

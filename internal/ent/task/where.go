@@ -61,6 +61,11 @@ func TenantID(v uuid.UUID) predicate.Task {
 	return predicate.Task(sql.FieldEQ(FieldTenantID, v))
 }
 
+// TrackingCode applies equality check predicate on the "tracking_code" field. It's identical to TrackingCodeEQ.
+func TrackingCode(v string) predicate.Task {
+	return predicate.Task(sql.FieldEQ(FieldTrackingCode, v))
+}
+
 // ExternalReference applies equality check predicate on the "external_reference" field. It's identical to ExternalReferenceEQ.
 func ExternalReference(v string) predicate.Task {
 	return predicate.Task(sql.FieldEQ(FieldExternalReference, v))
@@ -149,6 +154,81 @@ func TenantIDLT(v uuid.UUID) predicate.Task {
 // TenantIDLTE applies the LTE predicate on the "tenant_id" field.
 func TenantIDLTE(v uuid.UUID) predicate.Task {
 	return predicate.Task(sql.FieldLTE(FieldTenantID, v))
+}
+
+// TrackingCodeEQ applies the EQ predicate on the "tracking_code" field.
+func TrackingCodeEQ(v string) predicate.Task {
+	return predicate.Task(sql.FieldEQ(FieldTrackingCode, v))
+}
+
+// TrackingCodeNEQ applies the NEQ predicate on the "tracking_code" field.
+func TrackingCodeNEQ(v string) predicate.Task {
+	return predicate.Task(sql.FieldNEQ(FieldTrackingCode, v))
+}
+
+// TrackingCodeIn applies the In predicate on the "tracking_code" field.
+func TrackingCodeIn(vs ...string) predicate.Task {
+	return predicate.Task(sql.FieldIn(FieldTrackingCode, vs...))
+}
+
+// TrackingCodeNotIn applies the NotIn predicate on the "tracking_code" field.
+func TrackingCodeNotIn(vs ...string) predicate.Task {
+	return predicate.Task(sql.FieldNotIn(FieldTrackingCode, vs...))
+}
+
+// TrackingCodeGT applies the GT predicate on the "tracking_code" field.
+func TrackingCodeGT(v string) predicate.Task {
+	return predicate.Task(sql.FieldGT(FieldTrackingCode, v))
+}
+
+// TrackingCodeGTE applies the GTE predicate on the "tracking_code" field.
+func TrackingCodeGTE(v string) predicate.Task {
+	return predicate.Task(sql.FieldGTE(FieldTrackingCode, v))
+}
+
+// TrackingCodeLT applies the LT predicate on the "tracking_code" field.
+func TrackingCodeLT(v string) predicate.Task {
+	return predicate.Task(sql.FieldLT(FieldTrackingCode, v))
+}
+
+// TrackingCodeLTE applies the LTE predicate on the "tracking_code" field.
+func TrackingCodeLTE(v string) predicate.Task {
+	return predicate.Task(sql.FieldLTE(FieldTrackingCode, v))
+}
+
+// TrackingCodeContains applies the Contains predicate on the "tracking_code" field.
+func TrackingCodeContains(v string) predicate.Task {
+	return predicate.Task(sql.FieldContains(FieldTrackingCode, v))
+}
+
+// TrackingCodeHasPrefix applies the HasPrefix predicate on the "tracking_code" field.
+func TrackingCodeHasPrefix(v string) predicate.Task {
+	return predicate.Task(sql.FieldHasPrefix(FieldTrackingCode, v))
+}
+
+// TrackingCodeHasSuffix applies the HasSuffix predicate on the "tracking_code" field.
+func TrackingCodeHasSuffix(v string) predicate.Task {
+	return predicate.Task(sql.FieldHasSuffix(FieldTrackingCode, v))
+}
+
+// TrackingCodeIsNil applies the IsNil predicate on the "tracking_code" field.
+func TrackingCodeIsNil() predicate.Task {
+	return predicate.Task(sql.FieldIsNull(FieldTrackingCode))
+}
+
+// TrackingCodeNotNil applies the NotNil predicate on the "tracking_code" field.
+func TrackingCodeNotNil() predicate.Task {
+	return predicate.Task(sql.FieldNotNull(FieldTrackingCode))
+}
+
+// TrackingCodeEqualFold applies the EqualFold predicate on the "tracking_code" field.
+func TrackingCodeEqualFold(v string) predicate.Task {
+	return predicate.Task(sql.FieldEqualFold(FieldTrackingCode, v))
+}
+
+// TrackingCodeContainsFold applies the ContainsFold predicate on the "tracking_code" field.
+func TrackingCodeContainsFold(v string) predicate.Task {
+	return predicate.Task(sql.FieldContainsFold(FieldTrackingCode, v))
 }
 
 // ExternalReferenceEQ applies the EQ predicate on the "external_reference" field.

@@ -8158,6 +8158,7 @@ type TaskMutation struct {
 	typ                      string
 	id                       *uuid.UUID
 	tenant_id                *uuid.UUID
+	tracking_code            *string
 	external_reference       *string
 	source_service           *string
 	task_type                *string
@@ -8325,6 +8326,55 @@ func (m *TaskMutation) OldTenantID(ctx context.Context) (v uuid.UUID, err error)
 // ResetTenantID resets all changes to the "tenant_id" field.
 func (m *TaskMutation) ResetTenantID() {
 	m.tenant_id = nil
+}
+
+// SetTrackingCode sets the "tracking_code" field.
+func (m *TaskMutation) SetTrackingCode(s string) {
+	m.tracking_code = &s
+}
+
+// TrackingCode returns the value of the "tracking_code" field in the mutation.
+func (m *TaskMutation) TrackingCode() (r string, exists bool) {
+	v := m.tracking_code
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTrackingCode returns the old "tracking_code" field's value of the Task entity.
+// If the Task object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TaskMutation) OldTrackingCode(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTrackingCode is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTrackingCode requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTrackingCode: %w", err)
+	}
+	return oldValue.TrackingCode, nil
+}
+
+// ClearTrackingCode clears the value of the "tracking_code" field.
+func (m *TaskMutation) ClearTrackingCode() {
+	m.tracking_code = nil
+	m.clearedFields[task.FieldTrackingCode] = struct{}{}
+}
+
+// TrackingCodeCleared returns if the "tracking_code" field was cleared in this mutation.
+func (m *TaskMutation) TrackingCodeCleared() bool {
+	_, ok := m.clearedFields[task.FieldTrackingCode]
+	return ok
+}
+
+// ResetTrackingCode resets all changes to the "tracking_code" field.
+func (m *TaskMutation) ResetTrackingCode() {
+	m.tracking_code = nil
+	delete(m.clearedFields, task.FieldTrackingCode)
 }
 
 // SetExternalReference sets the "external_reference" field.
@@ -9043,9 +9093,12 @@ func (m *TaskMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TaskMutation) Fields() []string {
-	fields := make([]string, 0, 12)
+	fields := make([]string, 0, 13)
 	if m.tenant_id != nil {
 		fields = append(fields, task.FieldTenantID)
+	}
+	if m.tracking_code != nil {
+		fields = append(fields, task.FieldTrackingCode)
 	}
 	if m.external_reference != nil {
 		fields = append(fields, task.FieldExternalReference)
@@ -9090,6 +9143,8 @@ func (m *TaskMutation) Field(name string) (ent.Value, bool) {
 	switch name {
 	case task.FieldTenantID:
 		return m.TenantID()
+	case task.FieldTrackingCode:
+		return m.TrackingCode()
 	case task.FieldExternalReference:
 		return m.ExternalReference()
 	case task.FieldSourceService:
@@ -9123,6 +9178,8 @@ func (m *TaskMutation) OldField(ctx context.Context, name string) (ent.Value, er
 	switch name {
 	case task.FieldTenantID:
 		return m.OldTenantID(ctx)
+	case task.FieldTrackingCode:
+		return m.OldTrackingCode(ctx)
 	case task.FieldExternalReference:
 		return m.OldExternalReference(ctx)
 	case task.FieldSourceService:
@@ -9160,6 +9217,13 @@ func (m *TaskMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetTenantID(v)
+		return nil
+	case task.FieldTrackingCode:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTrackingCode(v)
 		return nil
 	case task.FieldExternalReference:
 		v, ok := value.(string)
@@ -9283,6 +9347,9 @@ func (m *TaskMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *TaskMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(task.FieldTrackingCode) {
+		fields = append(fields, task.FieldTrackingCode)
+	}
 	if m.FieldCleared(task.FieldExternalReference) {
 		fields = append(fields, task.FieldExternalReference)
 	}
@@ -9312,6 +9379,9 @@ func (m *TaskMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *TaskMutation) ClearField(name string) error {
 	switch name {
+	case task.FieldTrackingCode:
+		m.ClearTrackingCode()
+		return nil
 	case task.FieldExternalReference:
 		m.ClearExternalReference()
 		return nil
@@ -9337,6 +9407,9 @@ func (m *TaskMutation) ResetField(name string) error {
 	switch name {
 	case task.FieldTenantID:
 		m.ResetTenantID()
+		return nil
+	case task.FieldTrackingCode:
+		m.ResetTrackingCode()
 		return nil
 	case task.FieldExternalReference:
 		m.ResetExternalReference()

@@ -262,6 +262,7 @@ var (
 	TasksColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "tenant_id", Type: field.TypeUUID},
+		{Name: "tracking_code", Type: field.TypeString, Unique: true, Nullable: true, Size: 20},
 		{Name: "external_reference", Type: field.TypeString, Nullable: true},
 		{Name: "source_service", Type: field.TypeString, Nullable: true},
 		{Name: "task_type", Type: field.TypeString, Default: "delivery"},
@@ -283,7 +284,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "tasks_users_tasks",
-				Columns:    []*schema.Column{TasksColumns[13]},
+				Columns:    []*schema.Column{TasksColumns[14]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -292,12 +293,17 @@ var (
 			{
 				Name:    "task_tenant_id_external_reference",
 				Unique:  false,
-				Columns: []*schema.Column{TasksColumns[1], TasksColumns[2]},
+				Columns: []*schema.Column{TasksColumns[1], TasksColumns[3]},
 			},
 			{
 				Name:    "task_status",
 				Unique:  false,
-				Columns: []*schema.Column{TasksColumns[6]},
+				Columns: []*schema.Column{TasksColumns[7]},
+			},
+			{
+				Name:    "task_tracking_code",
+				Unique:  false,
+				Columns: []*schema.Column{TasksColumns[2]},
 			},
 		},
 	}

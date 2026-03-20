@@ -26,6 +26,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/modules/consumers"
 	fleetmod "github.com/bengobox/logistics-service/internal/modules/fleet"
 	"github.com/bengobox/logistics-service/internal/modules/identity"
+	"github.com/bengobox/logistics-service/internal/modules/routing"
 	"github.com/bengobox/logistics-service/internal/modules/tasks"
 	"github.com/bengobox/logistics-service/internal/modules/tenant"
 	"github.com/bengobox/logistics-service/internal/platform/cache"
@@ -116,7 +117,15 @@ func New(ctx context.Context) (*App, error) {
 
 	orderConsumer := consumers.NewOrderReadyConsumer(log, taskSvc)
 
-	chiRouter := router.New(log, healthHandler, authMiddleware, identitySvc, logisticsHandler, cfg)
+	// Initialize routing engine (Valhalla primary, no fallback initially)
+	valhallaProvider := routing.NewValhallaProvider(cfg.Routing.PrimaryURL, cfg.Routing.RequestTimeout)
+	routingSvc := routing.NewService(valhallaProvider, nil, redisClient, cfg.Routing.CacheTTL, log)
+	routingHandler := handlers.NewRoutingHandler(routingSvc, log)
+
+	// Public tracking handler (no auth)
+	trackingHandler := handlers.NewTrackingHandler(taskSvc, log)
+
+	chiRouter := router.New(log, healthHandler, authMiddleware, identitySvc, logisticsHandler, routingHandler, trackingHandler, cfg)
 
 	httpServer := &http.Server{
 		Addr:              fmt.Sprintf("%s:%d", cfg.HTTP.Host, cfg.HTTP.Port),

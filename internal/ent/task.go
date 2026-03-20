@@ -22,6 +22,8 @@ type Task struct {
 	ID uuid.UUID `json:"id,omitempty"`
 	// TenantID holds the value of the "tenant_id" field.
 	TenantID uuid.UUID `json:"tenant_id,omitempty"`
+	// Public tracking code (waybill) e.g. CV-20260320-A3F8K2
+	TrackingCode string `json:"tracking_code,omitempty"`
 	// Reference to upstream orders/transfers
 	ExternalReference string `json:"external_reference,omitempty"`
 	// cafe-backend | inventory-service | pos-service
@@ -113,7 +115,7 @@ func (*Task) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case task.FieldPriority:
 			values[i] = new(sql.NullInt64)
-		case task.FieldExternalReference, task.FieldSourceService, task.FieldTaskType, task.FieldStatus:
+		case task.FieldTrackingCode, task.FieldExternalReference, task.FieldSourceService, task.FieldTaskType, task.FieldStatus:
 			values[i] = new(sql.NullString)
 		case task.FieldSLADueAt, task.FieldRequestedPickupAt, task.FieldRequestedDropoffAt, task.FieldCreatedAt, task.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -147,6 +149,12 @@ func (_m *Task) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field tenant_id", values[i])
 			} else if value != nil {
 				_m.TenantID = *value
+			}
+		case task.FieldTrackingCode:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field tracking_code", values[i])
+			} else if value.Valid {
+				_m.TrackingCode = value.String
 			}
 		case task.FieldExternalReference:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -284,6 +292,9 @@ func (_m *Task) String() string {
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("tenant_id=")
 	builder.WriteString(fmt.Sprintf("%v", _m.TenantID))
+	builder.WriteString(", ")
+	builder.WriteString("tracking_code=")
+	builder.WriteString(_m.TrackingCode)
 	builder.WriteString(", ")
 	builder.WriteString("external_reference=")
 	builder.WriteString(_m.ExternalReference)

@@ -19,7 +19,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/config"
 )
 
-func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authclient.AuthMiddleware, idSvc *identity.Service, lh *handlers.LogisticsHandler, cfg *config.Config) http.Handler {
+func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authclient.AuthMiddleware, idSvc *identity.Service, lh *handlers.LogisticsHandler, rh *handlers.RoutingHandler, th *handlers.TrackingHandler, cfg *config.Config) http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(middleware.RequestID)
@@ -49,6 +49,11 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 	if cfg != nil {
 		fs := http.StripPrefix("/media/", http.FileServer(http.Dir(cfg.Media.Root)))
 		r.Handle("/media/*", fs)
+	}
+
+	// Public tracking endpoint (no auth required)
+	if th != nil {
+		r.Get("/api/v1/track/{trackingCode}", th.TrackByCode)
 	}
 
 	r.Route("/api/v1", func(api chi.Router) {
@@ -101,6 +106,16 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 				riders.Get("/me", idHandler.GetMe)
 				riders.Patch("/me/profile", idHandler.UpdateProfile)
 			})
+
+			if rh != nil {
+				tenant.Route("/routing", func(routeR chi.Router) {
+					routeR.Get("/route", rh.GetRoute)
+					routeR.Get("/eta", rh.GetETA)
+					routeR.Post("/matrix", rh.GetMatrix)
+					routeR.Get("/isochrone", rh.GetIsochrone)
+					routeR.Get("/health", rh.HealthCheck)
+				})
+			}
 
 			if lh != nil {
 				tenant.Route("/tasks", func(taskR chi.Router) {

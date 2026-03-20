@@ -34,6 +34,20 @@ func (_c *TaskCreate) SetTenantID(v uuid.UUID) *TaskCreate {
 	return _c
 }
 
+// SetTrackingCode sets the "tracking_code" field.
+func (_c *TaskCreate) SetTrackingCode(v string) *TaskCreate {
+	_c.mutation.SetTrackingCode(v)
+	return _c
+}
+
+// SetNillableTrackingCode sets the "tracking_code" field if the given value is not nil.
+func (_c *TaskCreate) SetNillableTrackingCode(v *string) *TaskCreate {
+	if v != nil {
+		_c.SetTrackingCode(*v)
+	}
+	return _c
+}
+
 // SetExternalReference sets the "external_reference" field.
 func (_c *TaskCreate) SetExternalReference(v string) *TaskCreate {
 	_c.mutation.SetExternalReference(v)
@@ -328,6 +342,11 @@ func (_c *TaskCreate) check() error {
 	if _, ok := _c.mutation.TenantID(); !ok {
 		return &ValidationError{Name: "tenant_id", err: errors.New(`ent: missing required field "Task.tenant_id"`)}
 	}
+	if v, ok := _c.mutation.TrackingCode(); ok {
+		if err := task.TrackingCodeValidator(v); err != nil {
+			return &ValidationError{Name: "tracking_code", err: fmt.Errorf(`ent: validator failed for field "Task.tracking_code": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.TaskType(); !ok {
 		return &ValidationError{Name: "task_type", err: errors.New(`ent: missing required field "Task.task_type"`)}
 	}
@@ -385,6 +404,10 @@ func (_c *TaskCreate) createSpec() (*Task, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.TenantID(); ok {
 		_spec.SetField(task.FieldTenantID, field.TypeUUID, value)
 		_node.TenantID = value
+	}
+	if value, ok := _c.mutation.TrackingCode(); ok {
+		_spec.SetField(task.FieldTrackingCode, field.TypeString, value)
+		_node.TrackingCode = value
 	}
 	if value, ok := _c.mutation.ExternalReference(); ok {
 		_spec.SetField(task.FieldExternalReference, field.TypeString, value)
@@ -555,6 +578,24 @@ func (u *TaskUpsert) SetTenantID(v uuid.UUID) *TaskUpsert {
 // UpdateTenantID sets the "tenant_id" field to the value that was provided on create.
 func (u *TaskUpsert) UpdateTenantID() *TaskUpsert {
 	u.SetExcluded(task.FieldTenantID)
+	return u
+}
+
+// SetTrackingCode sets the "tracking_code" field.
+func (u *TaskUpsert) SetTrackingCode(v string) *TaskUpsert {
+	u.Set(task.FieldTrackingCode, v)
+	return u
+}
+
+// UpdateTrackingCode sets the "tracking_code" field to the value that was provided on create.
+func (u *TaskUpsert) UpdateTrackingCode() *TaskUpsert {
+	u.SetExcluded(task.FieldTrackingCode)
+	return u
+}
+
+// ClearTrackingCode clears the value of the "tracking_code" field.
+func (u *TaskUpsert) ClearTrackingCode() *TaskUpsert {
+	u.SetNull(task.FieldTrackingCode)
 	return u
 }
 
@@ -776,6 +817,27 @@ func (u *TaskUpsertOne) SetTenantID(v uuid.UUID) *TaskUpsertOne {
 func (u *TaskUpsertOne) UpdateTenantID() *TaskUpsertOne {
 	return u.Update(func(s *TaskUpsert) {
 		s.UpdateTenantID()
+	})
+}
+
+// SetTrackingCode sets the "tracking_code" field.
+func (u *TaskUpsertOne) SetTrackingCode(v string) *TaskUpsertOne {
+	return u.Update(func(s *TaskUpsert) {
+		s.SetTrackingCode(v)
+	})
+}
+
+// UpdateTrackingCode sets the "tracking_code" field to the value that was provided on create.
+func (u *TaskUpsertOne) UpdateTrackingCode() *TaskUpsertOne {
+	return u.Update(func(s *TaskUpsert) {
+		s.UpdateTrackingCode()
+	})
+}
+
+// ClearTrackingCode clears the value of the "tracking_code" field.
+func (u *TaskUpsertOne) ClearTrackingCode() *TaskUpsertOne {
+	return u.Update(func(s *TaskUpsert) {
+		s.ClearTrackingCode()
 	})
 }
 
@@ -1190,6 +1252,27 @@ func (u *TaskUpsertBulk) SetTenantID(v uuid.UUID) *TaskUpsertBulk {
 func (u *TaskUpsertBulk) UpdateTenantID() *TaskUpsertBulk {
 	return u.Update(func(s *TaskUpsert) {
 		s.UpdateTenantID()
+	})
+}
+
+// SetTrackingCode sets the "tracking_code" field.
+func (u *TaskUpsertBulk) SetTrackingCode(v string) *TaskUpsertBulk {
+	return u.Update(func(s *TaskUpsert) {
+		s.SetTrackingCode(v)
+	})
+}
+
+// UpdateTrackingCode sets the "tracking_code" field to the value that was provided on create.
+func (u *TaskUpsertBulk) UpdateTrackingCode() *TaskUpsertBulk {
+	return u.Update(func(s *TaskUpsert) {
+		s.UpdateTrackingCode()
+	})
+}
+
+// ClearTrackingCode clears the value of the "tracking_code" field.
+func (u *TaskUpsertBulk) ClearTrackingCode() *TaskUpsertBulk {
+	return u.Update(func(s *TaskUpsert) {
+		s.ClearTrackingCode()
 	})
 }
 

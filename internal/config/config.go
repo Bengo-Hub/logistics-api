@@ -21,6 +21,19 @@ type Config struct {
 	Auth          AuthConfig
 	Media         MediaConfig
 	Subscriptions SubscriptionsConfig
+	Routing       RoutingConfig
+}
+
+// RoutingConfig holds configuration for the routing engine (Valhalla/OSRM).
+type RoutingConfig struct {
+	// Primary routing engine URL (Valhalla in-cluster)
+	PrimaryURL string `envconfig:"ROUTING_PRIMARY_URL" default:"http://valhalla.logistics.svc.cluster.local:8002"`
+	// Fallback routing engine URL (OSRM or Google Maps proxy)
+	FallbackURL string `envconfig:"ROUTING_FALLBACK_URL"`
+	// Request timeout for routing calls
+	RequestTimeout time.Duration `envconfig:"ROUTING_REQUEST_TIMEOUT" default:"10s"`
+	// Cache TTL for route results in Redis
+	CacheTTL time.Duration `envconfig:"ROUTING_CACHE_TTL" default:"5m"`
 }
 
 // SubscriptionsConfig holds configuration for the subscriptions enforcement client.
