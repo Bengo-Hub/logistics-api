@@ -10,6 +10,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent"
 	entfleet "github.com/bengobox/logistics-service/internal/ent/fleet"
 	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
+	"github.com/bengobox/logistics-service/internal/platform/events"
 )
 
 // InviteMemberRequest is the DTO for adding a rider to a fleet.
@@ -22,16 +23,28 @@ type InviteMemberRequest struct {
 
 // Service handles fleet and fleet member business logic.
 type Service struct {
-	client *ent.Client
-	log    *zap.Logger
+	client    *ent.Client
+	log       *zap.Logger
+	publisher *events.Publisher
 }
 
 // NewService creates a new fleet service.
-func NewService(client *ent.Client, log *zap.Logger) *Service {
+func NewService(client *ent.Client, log *zap.Logger, publisher *events.Publisher) *Service {
 	return &Service{
-		client: client,
-		log:    log.Named("fleet.service"),
+		client:    client,
+		log:       log.Named("fleet.service"),
+		publisher: publisher,
 	}
+}
+
+// resolveUserInfo looks up user email and name from the local User table.
+func (s *Service) resolveUserInfo(ctx context.Context, userID uuid.UUID) (email, name string) {
+	u, err := s.client.User.Get(ctx, userID)
+	if err != nil {
+		s.log.Warn("could not resolve user for event", zap.String("user_id", userID.String()), zap.Error(err))
+		return "", ""
+	}
+	return u.Email, u.FullName
 }
 
 // GetOrCreateFleet returns the tenant's active fleet, creating one if none exists.
@@ -141,6 +154,20 @@ func (s *Service) InviteMember(ctx context.Context, tenantID uuid.UUID, tenantSl
 		zap.String("member_id", m.ID.String()),
 		zap.String("user_id", req.UserID.String()),
 	)
+
+	// Publish fleet member invited event
+	if s.publisher != nil {
+		email, name := s.resolveUserInfo(ctx, req.UserID)
+		if email != "" {
+			if pubErr := s.publisher.PublishFleetMemberInvited(ctx, tenantID, events.FleetMemberEventData{
+				MemberID: m.ID.String(), UserID: req.UserID.String(),
+				FleetID: fleetID.String(), UserEmail: email, UserName: name,
+			}); pubErr != nil {
+				s.log.Warn("failed to publish fleet.member_invited", zap.Error(pubErr))
+			}
+		}
+	}
+
 	return m, nil
 }
 
@@ -159,6 +186,20 @@ func (s *Service) ApproveMember(ctx context.Context, tenantID, memberID uuid.UUI
 	if err != nil {
 		return nil, fmt.Errorf("fleet: approve: %w", err)
 	}
+
+	// Publish fleet member approved event
+	if s.publisher != nil {
+		email, name := s.resolveUserInfo(ctx, m.UserID)
+		if email != "" {
+			if pubErr := s.publisher.PublishFleetMemberApproved(ctx, tenantID, events.FleetMemberEventData{
+				MemberID: memberID.String(), UserID: m.UserID.String(),
+				FleetID: m.FleetID.String(), UserEmail: email, UserName: name,
+			}); pubErr != nil {
+				s.log.Warn("failed to publish fleet.member_approved", zap.Error(pubErr))
+			}
+		}
+	}
+
 	return updated, nil
 }
 
@@ -177,5 +218,19 @@ func (s *Service) SuspendMember(ctx context.Context, tenantID, memberID uuid.UUI
 	if err != nil {
 		return nil, fmt.Errorf("fleet: suspend: %w", err)
 	}
+
+	// Publish fleet member suspended event
+	if s.publisher != nil {
+		email, name := s.resolveUserInfo(ctx, m.UserID)
+		if email != "" {
+			if pubErr := s.publisher.PublishFleetMemberSuspended(ctx, tenantID, events.FleetMemberEventData{
+				MemberID: memberID.String(), UserID: m.UserID.String(),
+				FleetID: m.FleetID.String(), UserEmail: email, UserName: name,
+			}); pubErr != nil {
+				s.log.Warn("failed to publish fleet.member_suspended", zap.Error(pubErr))
+			}
+		}
+	}
+
 	return updated, nil
 }

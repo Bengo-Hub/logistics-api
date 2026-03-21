@@ -71,6 +71,13 @@ func New(ctx context.Context) (*App, error) {
 		log.Warn("event bus connection failed", zap.Error(err))
 	}
 
+	// Ensure logistics JetStream stream exists (for fleet events)
+	if natsConn != nil {
+		if streamErr := events.EnsureStream(ctx, natsConn, cfg.Events); streamErr != nil {
+			log.Warn("failed to ensure logistics stream", zap.Error(streamErr))
+		}
+	}
+
 	healthHandler := handlers.NewHealthHandler(log, dbPool, redisClient, natsConn)
 
 	// Initialize auth-service JWT validator
@@ -112,8 +119,14 @@ func New(ctx context.Context) (*App, error) {
 	tenantSyncer := tenant.NewSyncer(entClient)
 	identitySvc := identity.NewService(entClient, tenantSyncer)
 
+	// Create event publisher for fleet lifecycle events
+	var eventPublisher *events.Publisher
+	if natsConn != nil {
+		eventPublisher = events.NewPublisher(natsConn, log)
+	}
+
 	taskSvc := tasks.NewService(entClient, log)
-	fleetSvc := fleetmod.NewService(entClient, log)
+	fleetSvc := fleetmod.NewService(entClient, log, eventPublisher)
 	logisticsHandler := handlers.NewLogisticsHandler(log, taskSvc, fleetSvc)
 
 	orderConsumer := consumers.NewOrderReadyConsumer(log, taskSvc)

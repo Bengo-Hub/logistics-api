@@ -31,14 +31,23 @@ func EnsureStream(ctx context.Context, nc *nats.Conn, cfg config.EventsConfig) e
 		return fmt.Errorf("jetstream init: %w", err)
 	}
 
-	_, err = js.StreamInfo(cfg.StreamName)
+	desiredSubjects := []string{"logistics.>"}
+
+	info, err := js.StreamInfo(cfg.StreamName)
 	if err == nil {
+		// Stream exists — update subjects if they changed (e.g. "logistics.*" → "logistics.>")
+		if len(info.Config.Subjects) != len(desiredSubjects) || info.Config.Subjects[0] != desiredSubjects[0] {
+			info.Config.Subjects = desiredSubjects
+			if _, updateErr := js.UpdateStream(&info.Config); updateErr != nil {
+				return fmt.Errorf("update stream subjects: %w", updateErr)
+			}
+		}
 		return nil
 	}
 
 	_, err = js.AddStream(&nats.StreamConfig{
 		Name:     cfg.StreamName,
-		Subjects: []string{"logistics.*"},
+		Subjects: desiredSubjects,
 		Replicas: 1,
 	})
 	return err
