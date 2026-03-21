@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	sharedcache "github.com/Bengo-Hub/cache"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
@@ -34,6 +35,7 @@ type UpdateZoneRequest struct {
 // Service handles geo-fence/zone business logic.
 type Service struct {
 	client *ent.Client
+	cache  *sharedcache.Aside
 	log    *zap.Logger
 }
 
@@ -43,6 +45,11 @@ func NewService(client *ent.Client, log *zap.Logger) *Service {
 		client: client,
 		log:    log.Named("zones.service"),
 	}
+}
+
+// SetCache injects the cache helper (optional; caching is skipped if nil).
+func (s *Service) SetCache(c *sharedcache.Aside) {
+	s.cache = c
 }
 
 // CreateZone creates a new delivery zone.
@@ -105,16 +112,20 @@ func (s *Service) GetZone(ctx context.Context, tenantID, zoneID uuid.UUID) (*ent
 	return zone, nil
 }
 
-// ListZones returns all zones for a tenant.
+// ListZones returns all zones for a tenant (cached 5 min).
 func (s *Service) ListZones(ctx context.Context, tenantID uuid.UUID) ([]*ent.GeoFence, error) {
-	zones, err := s.client.GeoFence.Query().
-		Where(geofence.TenantID(tenantID)).
-		Order(ent.Asc(geofence.FieldName)).
-		All(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("zones: list: %w", err)
+	key := sharedcache.Key("log", "zones", tenantID.String())
+	fetch := func(ctx context.Context) ([]*ent.GeoFence, error) {
+		zones, err := s.client.GeoFence.Query().
+			Where(geofence.TenantID(tenantID)).
+			Order(ent.Asc(geofence.FieldName)).
+			All(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("zones: list: %w", err)
+		}
+		return zones, nil
 	}
-	return zones, nil
+	return sharedcache.GetOrSet(ctx, s.cache, key, sharedcache.TTLReference, fetch)
 }
 
 // UpdateZone updates an existing zone.

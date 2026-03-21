@@ -17,6 +17,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
+	sharedcache "github.com/Bengo-Hub/cache"
 	authclient "github.com/Bengo-Hub/shared-auth-client"
 	"github.com/bengobox/logistics-service/internal/config"
 	"github.com/bengobox/logistics-service/internal/ent"
@@ -139,8 +140,12 @@ func New(ctx context.Context) (*App, error) {
 	// Public tracking handler (no auth)
 	trackingHandler := handlers.NewTrackingHandler(taskSvc, log)
 
+	// Initialize cache helper for read-heavy queries
+	cacheAside := sharedcache.New(redisClient, log)
+
 	// Zone management
 	zoneSvc := zonesmod.NewService(entClient, log)
+	zoneSvc.SetCache(cacheAside)
 	zonesHandler := handlers.NewZonesHandler(zoneSvc, log)
 
 	chiRouter := router.New(log, healthHandler, authMiddleware, identitySvc, logisticsHandler, routingHandler, trackingHandler, zonesHandler, redisClient, cfg, cfg.HTTP.AllowedOrigins)
