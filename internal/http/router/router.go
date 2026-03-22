@@ -61,11 +61,24 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 	}
 
 	r.Route("/api/v1", func(api chi.Router) {
-		// Apply auth middleware to all v1 routes
+		// Apply auth + subscription enforcement with granular control:
+		// GET requests: auth required, subscription check skipped (read-only)
+		// Mutation requests: both auth and subscription enforcement required
 		if authMiddleware != nil {
-			api.Use(authMiddleware.RequireAuth)
-			// Layer 2: Subscription enforcement — reject expired/cancelled tenants
-			api.Use(authclient.RequireActiveSubscription())
+			api.Use(func(next http.Handler) http.Handler {
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					// Always require authentication
+					authMiddleware.RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						// Skip subscription check for GET requests (read-only)
+						if r.Method == http.MethodGet {
+							next.ServeHTTP(w, r)
+							return
+						}
+						// Enforce subscription for mutation requests
+						authclient.RequireActiveSubscription()(next).ServeHTTP(w, r)
+					})).ServeHTTP(w, r)
+				})
+			})
 		}
 
 		if idSvc != nil {
