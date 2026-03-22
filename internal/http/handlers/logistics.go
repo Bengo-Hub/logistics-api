@@ -359,13 +359,5 @@ func (h *LogisticsHandler) SuspendMember(w http.ResponseWriter, r *http.Request)
 }
 
 // --- helpers ---
-
-func tenantIDFromClaims(r *http.Request) uuid.UUID {
-	claims, ok := authclient.ClaimsFromContext(r.Context())
-	if !ok || claims.TenantID == "" {
-		return uuid.Nil
-	}
-	id, _ := uuid.Parse(claims.TenantID)
-	return id
-}
+// tenantIDFromClaims is now defined in tenant.go with platform-owner override support.
 
