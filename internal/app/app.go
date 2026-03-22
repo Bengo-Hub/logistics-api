@@ -136,6 +136,7 @@ func New(ctx context.Context) (*App, error) {
 	}
 
 	taskSvc := tasks.NewService(entClient, log)
+	taskSvc.SetPublisher(eventPublisher)
 	fleetSvc := fleetmod.NewService(entClient, log, eventPublisher)
 	logisticsHandler := handlers.NewLogisticsHandler(log, taskSvc, fleetSvc)
 
