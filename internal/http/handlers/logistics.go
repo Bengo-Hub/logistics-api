@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
+	"github.com/bengobox/logistics-service/internal/ent"
 	"github.com/bengobox/logistics-service/internal/modules/fleet"
 	"github.com/bengobox/logistics-service/internal/modules/tasks"
 )
@@ -273,13 +274,36 @@ func (h *LogisticsHandler) InviteMember(w http.ResponseWriter, r *http.Request) 
 		slug = claims.GetTenantSlug()
 	}
 
-	var req fleet.InviteMemberRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	// Support both formats: {email, id_number} or {user_id, ...}
+	var raw map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	m, err := h.fleetSvc.InviteMember(r.Context(), tenantID, slug, req)
+	var m *ent.FleetMember
+	var err error
+
+	email, hasEmail := raw["email"].(string)
+	userIDStr, hasUserID := raw["user_id"].(string)
+
+	if hasEmail && email != "" && (!hasUserID || userIDStr == "") {
+		// Simplified invite by email
+		idNumber, _ := raw["id_number"].(string)
+		m, err = h.fleetSvc.InviteMemberByEmail(r.Context(), tenantID, slug, fleet.InviteByEmailRequest{
+			Email:    email,
+			IDNumber: idNumber,
+		})
+	} else {
+		// Legacy invite by user_id
+		rawJSON, _ := json.Marshal(raw)
+		var req fleet.InviteMemberRequest
+		if jsonErr := json.Unmarshal(rawJSON, &req); jsonErr != nil {
+			http.Error(w, "invalid request body", http.StatusBadRequest)
+			return
+		}
+		m, err = h.fleetSvc.InviteMember(r.Context(), tenantID, slug, req)
+	}
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

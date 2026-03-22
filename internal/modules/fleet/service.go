@@ -10,6 +10,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent"
 	entfleet "github.com/bengobox/logistics-service/internal/ent/fleet"
 	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
+	entuser "github.com/bengobox/logistics-service/internal/ent/user"
 	"github.com/bengobox/logistics-service/internal/platform/events"
 )
 
@@ -111,6 +112,51 @@ func (s *Service) GetMember(ctx context.Context, tenantID, memberID uuid.UUID) (
 		return nil, fmt.Errorf("fleet: get member: %w", err)
 	}
 	return m, nil
+}
+
+// InviteByEmailRequest is the simplified DTO for inviting a rider by email.
+type InviteByEmailRequest struct {
+	Email    string `json:"email"`
+	IDNumber string `json:"id_number,omitempty"`
+}
+
+// InviteMemberByEmail invites a rider using just email and ID number.
+// Creates a stub User if one doesn't exist for the tenant.
+func (s *Service) InviteMemberByEmail(ctx context.Context, tenantID uuid.UUID, tenantSlug string, req InviteByEmailRequest) (*ent.FleetMember, error) {
+	// Look up existing user by email + tenant
+	existing, err := s.client.User.Query().
+		Where(entuser.TenantID(tenantID), entuser.Email(req.Email)).
+		First(ctx)
+	if err != nil && !ent.IsNotFound(err) {
+		return nil, fmt.Errorf("fleet: query user by email: %w", err)
+	}
+
+	var userID uuid.UUID
+	if existing != nil {
+		userID = existing.ID
+	} else {
+		// Create a stub user with "invited" status
+		stub, createErr := s.client.User.Create().
+			SetTenantID(tenantID).
+			SetEmail(req.Email).
+			SetFullName(req.Email). // Placeholder until SSO registration
+			SetStatus("invited").
+			SetSyncStatus("pending").
+			Save(ctx)
+		if createErr != nil {
+			return nil, fmt.Errorf("fleet: create stub user: %w", createErr)
+		}
+		userID = stub.ID
+		s.log.Info("stub user created for rider invite",
+			zap.String("email", req.Email),
+			zap.String("user_id", userID.String()),
+		)
+	}
+
+	return s.InviteMember(ctx, tenantID, tenantSlug, InviteMemberRequest{
+		UserID:   userID,
+		IDNumber: req.IDNumber,
+	})
 }
 
 // InviteMember adds a rider to the fleet in "pending" status.
