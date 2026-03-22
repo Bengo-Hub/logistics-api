@@ -299,12 +299,12 @@ func (_q *ProofOfDeliveryQuery) WithTask(opts ...func(*TaskQuery)) *ProofOfDeliv
 // Example:
 //
 //	var v []struct {
-//		TaskID uuid.UUID `json:"task_id,omitempty"`
+//		TenantID uuid.UUID `json:"tenant_id,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.ProofOfDelivery.Query().
-//		GroupBy(proofofdelivery.FieldTaskID).
+//		GroupBy(proofofdelivery.FieldTenantID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (_q *ProofOfDeliveryQuery) GroupBy(field string, fields ...string) *ProofOfDeliveryGroupBy {
@@ -322,11 +322,11 @@ func (_q *ProofOfDeliveryQuery) GroupBy(field string, fields ...string) *ProofOf
 // Example:
 //
 //	var v []struct {
-//		TaskID uuid.UUID `json:"task_id,omitempty"`
+//		TenantID uuid.UUID `json:"tenant_id,omitempty"`
 //	}
 //
 //	client.ProofOfDelivery.Query().
-//		Select(proofofdelivery.FieldTaskID).
+//		Select(proofofdelivery.FieldTenantID).
 //		Scan(ctx, &v)
 func (_q *ProofOfDeliveryQuery) Select(fields ...string) *ProofOfDeliverySelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)

@@ -25,8 +25,9 @@ func (h *IdentityHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	authID, _ := uuid.Parse(claims.Subject)
-	
-	u, err := h.svc.GetRiderProfile(r.Context(), authID)
+	tenantID, _ := uuid.Parse(claims.TenantID)
+
+	u, err := h.svc.GetRiderProfile(r.Context(), authID, tenantID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -60,6 +61,7 @@ func (h *IdentityHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) 
 	}
 
 	authID, _ := uuid.Parse(claims.Subject)
+	tenantID, _ := uuid.Parse(claims.TenantID)
 
 	var req identity.UpdateRiderProfileRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -67,7 +69,7 @@ func (h *IdentityHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	u, err := h.svc.UpdateRiderProfile(r.Context(), authID, req)
+	u, err := h.svc.UpdateRiderProfile(r.Context(), authID, tenantID, req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

@@ -44,23 +44,26 @@ func NewService(client *ent.Client, tenantSyncer *tenant.Syncer) *Service {
 // If the user doesn't exist locally, it creates them. If the tenant doesn't exist,
 // it syncs it from the auth-service first.
 func (s *Service) EnsureUserFromToken(ctx context.Context, authServiceID uuid.UUID, tenantSlug string, claims map[string]any) (*ent.User, error) {
-	// 1. Check if user exists by auth_service_id
+	// 1. Ensure tenant exists first (needed for tenant-scoped lookup)
+	tenantID, err := s.tenantSyncer.SyncTenant(ctx, tenantSlug)
+	if err != nil {
+		return nil, fmt.Errorf("identity.Service: sync tenant %q: %w", tenantSlug, err)
+	}
+
+	// 2. Check if user exists by auth_service_id scoped to tenant
 	u, err := s.client.User.Query().
-		Where(user.AuthServiceUserIDEQ(authServiceID)).
+		Where(
+			user.AuthServiceUserIDEQ(authServiceID),
+			user.TenantID(tenantID),
+		).
 		Only(ctx)
-	
+
 	if err == nil {
 		return u, nil
 	}
 
 	if !ent.IsNotFound(err) {
 		return nil, fmt.Errorf("identity.Service: query user: %w", err)
-	}
-
-	// 2. User not found, ensure tenant exists
-	tenantID, err := s.tenantSyncer.SyncTenant(ctx, tenantSlug)
-	if err != nil {
-		return nil, fmt.Errorf("identity.Service: sync tenant %q: %w", tenantSlug, err)
 	}
 
 	// 3. Create user; platform admin (codevertex + superuser) gets admin role (all permissions).
@@ -89,45 +92,60 @@ func (s *Service) EnsureUserFromToken(ctx context.Context, authServiceID uuid.UU
 }
 
 // roleFromClaims returns the service-level role for JIT-created users.
-// Platform admin (codevertex + superuser) gets "admin".
+// Platform owners with superuser role get "admin".
 // Uses "driver" as the universal role for delivery/courier/taxi use cases.
-func roleFromClaims(tenantSlug string, claims map[string]any) string {
-	if tenantSlug == "codevertex" && hasSuperuser(claims) {
+func roleFromClaims(_ string, claims map[string]any) string {
+	isPlatformOwner, _ := claims["is_platform_owner"].(bool)
+	roles := extractRoles(claims)
+
+	if isPlatformOwner && containsRole(roles, "superuser") {
 		return "admin"
 	}
-	// Extract role from JWT claims if available
-	if roles, ok := claims["roles"].([]interface{}); ok {
-		for _, r := range roles {
-			if s, _ := r.(string); s != "" {
-				switch s {
-				case "superuser", "admin":
-					return "admin"
-				case "staff":
-					return "staff"
-				case "driver", "rider":
-					return RoleDriver
-				}
-			}
+	for _, r := range roles {
+		switch r {
+		case "superuser", "admin":
+			return "admin"
+		case "staff":
+			return "staff"
+		case "driver", "rider":
+			return RoleDriver
 		}
 	}
 	// Default for fleet members: universal driver role
 	return RoleDriver
 }
 
-func hasSuperuser(claims map[string]any) bool {
-	if roles, ok := claims["roles"].([]interface{}); ok {
-		for _, r := range roles {
-			if s, _ := r.(string); s == "superuser" {
-				return true
+func extractRoles(claims map[string]any) []string {
+	switch v := claims["roles"].(type) {
+	case []interface{}:
+		out := make([]string, 0, len(v))
+		for _, r := range v {
+			if s, _ := r.(string); s != "" {
+				out = append(out, s)
 			}
+		}
+		return out
+	case []string:
+		return v
+	}
+	return nil
+}
+
+func containsRole(roles []string, target string) bool {
+	for _, r := range roles {
+		if r == target {
+			return true
 		}
 	}
 	return false
 }
 // GetRiderProfile retrieves the user and their associated fleet/vehicle info.
-func (s *Service) GetRiderProfile(ctx context.Context, authServiceID uuid.UUID) (*ent.User, error) {
+func (s *Service) GetRiderProfile(ctx context.Context, authServiceID, tenantID uuid.UUID) (*ent.User, error) {
 	return s.client.User.Query().
-		Where(user.AuthServiceUserIDEQ(authServiceID)).
+		Where(
+			user.AuthServiceUserIDEQ(authServiceID),
+			user.TenantID(tenantID),
+		).
 		WithFleetMemberships(func(q *ent.FleetMemberQuery) {
 			q.WithVehicle()
 		}).
@@ -135,7 +153,7 @@ func (s *Service) GetRiderProfile(ctx context.Context, authServiceID uuid.UUID) 
 }
 
 // UpdateRiderProfile updates a rider's contact and KYC details.
-func (s *Service) UpdateRiderProfile(ctx context.Context, authServiceID uuid.UUID, req UpdateRiderProfileRequest) (*ent.User, error) {
+func (s *Service) UpdateRiderProfile(ctx context.Context, authServiceID, tenantID uuid.UUID, req UpdateRiderProfileRequest) (*ent.User, error) {
 	tx, err := s.client.Tx(ctx)
 	if err != nil {
 		return nil, err
@@ -143,7 +161,10 @@ func (s *Service) UpdateRiderProfile(ctx context.Context, authServiceID uuid.UUI
 	defer tx.Rollback()
 
 	u, err := tx.User.Query().
-		Where(user.AuthServiceUserIDEQ(authServiceID)).
+		Where(
+			user.AuthServiceUserIDEQ(authServiceID),
+			user.TenantID(tenantID),
+		).
 		Only(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("user not found: %w", err)
@@ -207,5 +228,5 @@ func (s *Service) UpdateRiderProfile(ctx context.Context, authServiceID uuid.UUI
 		return nil, err
 	}
 
-	return s.GetRiderProfile(ctx, authServiceID)
+	return s.GetRiderProfile(ctx, authServiceID, tenantID)
 }

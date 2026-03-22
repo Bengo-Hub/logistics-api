@@ -15,6 +15,8 @@ const (
 	Label = "proof_of_delivery"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
+	// FieldTenantID holds the string denoting the tenant_id field in the database.
+	FieldTenantID = "tenant_id"
 	// FieldTaskID holds the string denoting the task_id field in the database.
 	FieldTaskID = "task_id"
 	// FieldFleetMemberID holds the string denoting the fleet_member_id field in the database.
@@ -45,6 +47,7 @@ const (
 // Columns holds all SQL columns for proofofdelivery fields.
 var Columns = []string{
 	FieldID,
+	FieldTenantID,
 	FieldTaskID,
 	FieldFleetMemberID,
 	FieldSignatureURL,
@@ -79,6 +82,11 @@ type OrderOption func(*sql.Selector)
 // ByID orders the results by the id field.
 func ByID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByTenantID orders the results by the tenant_id field.
+func ByTenantID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTenantID, opts...).ToFunc()
 }
 
 // ByTaskID orders the results by the task_id field.

@@ -6,6 +6,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
+	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
 )
 
@@ -20,6 +21,8 @@ func (ProofOfDelivery) Fields() []ent.Field {
 		field.UUID("id", uuid.UUID{}).
 			Default(uuid.New).
 			Immutable(),
+		field.UUID("tenant_id", uuid.UUID{}).
+			Comment("Tenant isolation — ensures PoD records cannot leak across tenants"),
 		field.UUID("task_id", uuid.UUID{}),
 		field.UUID("fleet_member_id", uuid.UUID{}),
 		field.String("signature_url").
@@ -43,5 +46,13 @@ func (ProofOfDelivery) Edges() []ent.Edge {
 			Field("task_id").
 			Unique().
 			Required(),
+	}
+}
+
+// Indexes of the ProofOfDelivery.
+func (ProofOfDelivery) Indexes() []ent.Index {
+	return []ent.Index{
+		index.Fields("tenant_id"),
+		index.Fields("tenant_id", "task_id"),
 	}
 }

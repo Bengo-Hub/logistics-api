@@ -30,6 +30,20 @@ func (_u *ProofOfDeliveryUpdate) Where(ps ...predicate.ProofOfDelivery) *ProofOf
 	return _u
 }
 
+// SetTenantID sets the "tenant_id" field.
+func (_u *ProofOfDeliveryUpdate) SetTenantID(v uuid.UUID) *ProofOfDeliveryUpdate {
+	_u.mutation.SetTenantID(v)
+	return _u
+}
+
+// SetNillableTenantID sets the "tenant_id" field if the given value is not nil.
+func (_u *ProofOfDeliveryUpdate) SetNillableTenantID(v *uuid.UUID) *ProofOfDeliveryUpdate {
+	if v != nil {
+		_u.SetTenantID(*v)
+	}
+	return _u
+}
+
 // SetTaskID sets the "task_id" field.
 func (_u *ProofOfDeliveryUpdate) SetTaskID(v uuid.UUID) *ProofOfDeliveryUpdate {
 	_u.mutation.SetTaskID(v)
@@ -201,6 +215,9 @@ func (_u *ProofOfDeliveryUpdate) sqlSave(ctx context.Context) (_node int, err er
 			}
 		}
 	}
+	if value, ok := _u.mutation.TenantID(); ok {
+		_spec.SetField(proofofdelivery.FieldTenantID, field.TypeUUID, value)
+	}
 	if value, ok := _u.mutation.FleetMemberID(); ok {
 		_spec.SetField(proofofdelivery.FieldFleetMemberID, field.TypeUUID, value)
 	}
@@ -275,6 +292,20 @@ type ProofOfDeliveryUpdateOne struct {
 	fields   []string
 	hooks    []Hook
 	mutation *ProofOfDeliveryMutation
+}
+
+// SetTenantID sets the "tenant_id" field.
+func (_u *ProofOfDeliveryUpdateOne) SetTenantID(v uuid.UUID) *ProofOfDeliveryUpdateOne {
+	_u.mutation.SetTenantID(v)
+	return _u
+}
+
+// SetNillableTenantID sets the "tenant_id" field if the given value is not nil.
+func (_u *ProofOfDeliveryUpdateOne) SetNillableTenantID(v *uuid.UUID) *ProofOfDeliveryUpdateOne {
+	if v != nil {
+		_u.SetTenantID(*v)
+	}
+	return _u
 }
 
 // SetTaskID sets the "task_id" field.
@@ -477,6 +508,9 @@ func (_u *ProofOfDeliveryUpdateOne) sqlSave(ctx context.Context) (_node *ProofOf
 				ps[i](selector)
 			}
 		}
+	}
+	if value, ok := _u.mutation.TenantID(); ok {
+		_spec.SetField(proofofdelivery.FieldTenantID, field.TypeUUID, value)
 	}
 	if value, ok := _u.mutation.FleetMemberID(); ok {
 		_spec.SetField(proofofdelivery.FieldFleetMemberID, field.TypeUUID, value)

@@ -20,8 +20,13 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
 	"github.com/bengobox/logistics-service/internal/ent/geofence"
 	"github.com/bengobox/logistics-service/internal/ent/integrationsetting"
+	"github.com/bengobox/logistics-service/internal/ent/logisticspermission"
+	"github.com/bengobox/logistics-service/internal/ent/logisticsrole"
 	"github.com/bengobox/logistics-service/internal/ent/outboxevent"
 	"github.com/bengobox/logistics-service/internal/ent/proofofdelivery"
+	"github.com/bengobox/logistics-service/internal/ent/ratelimitconfig"
+	"github.com/bengobox/logistics-service/internal/ent/rolepermission"
+	"github.com/bengobox/logistics-service/internal/ent/serviceconfig"
 	"github.com/bengobox/logistics-service/internal/ent/task"
 	"github.com/bengobox/logistics-service/internal/ent/taskassignment"
 	"github.com/bengobox/logistics-service/internal/ent/taskevent"
@@ -31,6 +36,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/tenant"
 	"github.com/bengobox/logistics-service/internal/ent/tenantsyncevent"
 	"github.com/bengobox/logistics-service/internal/ent/user"
+	"github.com/bengobox/logistics-service/internal/ent/userroleassignment"
 	"github.com/bengobox/logistics-service/internal/ent/vehicle"
 )
 
@@ -92,26 +98,32 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
-			billingevent.Table:       billingevent.ValidColumn,
-			carrierjob.Table:         carrierjob.ValidColumn,
-			carrierpartner.Table:     carrierpartner.ValidColumn,
-			earningsstatement.Table:  earningsstatement.ValidColumn,
-			fleet.Table:              fleet.ValidColumn,
-			fleetmember.Table:        fleetmember.ValidColumn,
-			geofence.Table:           geofence.ValidColumn,
-			integrationsetting.Table: integrationsetting.ValidColumn,
-			outboxevent.Table:        outboxevent.ValidColumn,
-			proofofdelivery.Table:    proofofdelivery.ValidColumn,
-			task.Table:               task.ValidColumn,
-			taskassignment.Table:     taskassignment.ValidColumn,
-			taskevent.Table:          taskevent.ValidColumn,
-			taskstep.Table:           taskstep.ValidColumn,
-			telemetrypoint.Table:     telemetrypoint.ValidColumn,
-			telemetrystream.Table:    telemetrystream.ValidColumn,
-			tenant.Table:             tenant.ValidColumn,
-			tenantsyncevent.Table:    tenantsyncevent.ValidColumn,
-			user.Table:               user.ValidColumn,
-			vehicle.Table:            vehicle.ValidColumn,
+			billingevent.Table:        billingevent.ValidColumn,
+			carrierjob.Table:          carrierjob.ValidColumn,
+			carrierpartner.Table:      carrierpartner.ValidColumn,
+			earningsstatement.Table:   earningsstatement.ValidColumn,
+			fleet.Table:               fleet.ValidColumn,
+			fleetmember.Table:         fleetmember.ValidColumn,
+			geofence.Table:            geofence.ValidColumn,
+			integrationsetting.Table:  integrationsetting.ValidColumn,
+			logisticspermission.Table: logisticspermission.ValidColumn,
+			logisticsrole.Table:       logisticsrole.ValidColumn,
+			outboxevent.Table:         outboxevent.ValidColumn,
+			proofofdelivery.Table:     proofofdelivery.ValidColumn,
+			ratelimitconfig.Table:     ratelimitconfig.ValidColumn,
+			rolepermission.Table:      rolepermission.ValidColumn,
+			serviceconfig.Table:       serviceconfig.ValidColumn,
+			task.Table:                task.ValidColumn,
+			taskassignment.Table:      taskassignment.ValidColumn,
+			taskevent.Table:           taskevent.ValidColumn,
+			taskstep.Table:            taskstep.ValidColumn,
+			telemetrypoint.Table:      telemetrypoint.ValidColumn,
+			telemetrystream.Table:     telemetrystream.ValidColumn,
+			tenant.Table:              tenant.ValidColumn,
+			tenantsyncevent.Table:     tenantsyncevent.ValidColumn,
+			user.Table:                user.ValidColumn,
+			userroleassignment.Table:  userroleassignment.ValidColumn,
+			vehicle.Table:             vehicle.ValidColumn,
 		})
 	})
 	return columnCheck(t, c)

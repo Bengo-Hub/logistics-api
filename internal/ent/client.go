@@ -24,8 +24,13 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
 	"github.com/bengobox/logistics-service/internal/ent/geofence"
 	"github.com/bengobox/logistics-service/internal/ent/integrationsetting"
+	"github.com/bengobox/logistics-service/internal/ent/logisticspermission"
+	"github.com/bengobox/logistics-service/internal/ent/logisticsrole"
 	"github.com/bengobox/logistics-service/internal/ent/outboxevent"
 	"github.com/bengobox/logistics-service/internal/ent/proofofdelivery"
+	"github.com/bengobox/logistics-service/internal/ent/ratelimitconfig"
+	"github.com/bengobox/logistics-service/internal/ent/rolepermission"
+	"github.com/bengobox/logistics-service/internal/ent/serviceconfig"
 	"github.com/bengobox/logistics-service/internal/ent/task"
 	"github.com/bengobox/logistics-service/internal/ent/taskassignment"
 	"github.com/bengobox/logistics-service/internal/ent/taskevent"
@@ -35,6 +40,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/tenant"
 	"github.com/bengobox/logistics-service/internal/ent/tenantsyncevent"
 	"github.com/bengobox/logistics-service/internal/ent/user"
+	"github.com/bengobox/logistics-service/internal/ent/userroleassignment"
 	"github.com/bengobox/logistics-service/internal/ent/vehicle"
 )
 
@@ -59,10 +65,20 @@ type Client struct {
 	GeoFence *GeoFenceClient
 	// IntegrationSetting is the client for interacting with the IntegrationSetting builders.
 	IntegrationSetting *IntegrationSettingClient
+	// LogisticsPermission is the client for interacting with the LogisticsPermission builders.
+	LogisticsPermission *LogisticsPermissionClient
+	// LogisticsRole is the client for interacting with the LogisticsRole builders.
+	LogisticsRole *LogisticsRoleClient
 	// OutboxEvent is the client for interacting with the OutboxEvent builders.
 	OutboxEvent *OutboxEventClient
 	// ProofOfDelivery is the client for interacting with the ProofOfDelivery builders.
 	ProofOfDelivery *ProofOfDeliveryClient
+	// RateLimitConfig is the client for interacting with the RateLimitConfig builders.
+	RateLimitConfig *RateLimitConfigClient
+	// RolePermission is the client for interacting with the RolePermission builders.
+	RolePermission *RolePermissionClient
+	// ServiceConfig is the client for interacting with the ServiceConfig builders.
+	ServiceConfig *ServiceConfigClient
 	// Task is the client for interacting with the Task builders.
 	Task *TaskClient
 	// TaskAssignment is the client for interacting with the TaskAssignment builders.
@@ -81,6 +97,8 @@ type Client struct {
 	TenantSyncEvent *TenantSyncEventClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
+	// UserRoleAssignment is the client for interacting with the UserRoleAssignment builders.
+	UserRoleAssignment *UserRoleAssignmentClient
 	// Vehicle is the client for interacting with the Vehicle builders.
 	Vehicle *VehicleClient
 }
@@ -102,8 +120,13 @@ func (c *Client) init() {
 	c.FleetMember = NewFleetMemberClient(c.config)
 	c.GeoFence = NewGeoFenceClient(c.config)
 	c.IntegrationSetting = NewIntegrationSettingClient(c.config)
+	c.LogisticsPermission = NewLogisticsPermissionClient(c.config)
+	c.LogisticsRole = NewLogisticsRoleClient(c.config)
 	c.OutboxEvent = NewOutboxEventClient(c.config)
 	c.ProofOfDelivery = NewProofOfDeliveryClient(c.config)
+	c.RateLimitConfig = NewRateLimitConfigClient(c.config)
+	c.RolePermission = NewRolePermissionClient(c.config)
+	c.ServiceConfig = NewServiceConfigClient(c.config)
 	c.Task = NewTaskClient(c.config)
 	c.TaskAssignment = NewTaskAssignmentClient(c.config)
 	c.TaskEvent = NewTaskEventClient(c.config)
@@ -113,6 +136,7 @@ func (c *Client) init() {
 	c.Tenant = NewTenantClient(c.config)
 	c.TenantSyncEvent = NewTenantSyncEventClient(c.config)
 	c.User = NewUserClient(c.config)
+	c.UserRoleAssignment = NewUserRoleAssignmentClient(c.config)
 	c.Vehicle = NewVehicleClient(c.config)
 }
 
@@ -204,28 +228,34 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:                ctx,
-		config:             cfg,
-		BillingEvent:       NewBillingEventClient(cfg),
-		CarrierJob:         NewCarrierJobClient(cfg),
-		CarrierPartner:     NewCarrierPartnerClient(cfg),
-		EarningsStatement:  NewEarningsStatementClient(cfg),
-		Fleet:              NewFleetClient(cfg),
-		FleetMember:        NewFleetMemberClient(cfg),
-		GeoFence:           NewGeoFenceClient(cfg),
-		IntegrationSetting: NewIntegrationSettingClient(cfg),
-		OutboxEvent:        NewOutboxEventClient(cfg),
-		ProofOfDelivery:    NewProofOfDeliveryClient(cfg),
-		Task:               NewTaskClient(cfg),
-		TaskAssignment:     NewTaskAssignmentClient(cfg),
-		TaskEvent:          NewTaskEventClient(cfg),
-		TaskStep:           NewTaskStepClient(cfg),
-		TelemetryPoint:     NewTelemetryPointClient(cfg),
-		TelemetryStream:    NewTelemetryStreamClient(cfg),
-		Tenant:             NewTenantClient(cfg),
-		TenantSyncEvent:    NewTenantSyncEventClient(cfg),
-		User:               NewUserClient(cfg),
-		Vehicle:            NewVehicleClient(cfg),
+		ctx:                 ctx,
+		config:              cfg,
+		BillingEvent:        NewBillingEventClient(cfg),
+		CarrierJob:          NewCarrierJobClient(cfg),
+		CarrierPartner:      NewCarrierPartnerClient(cfg),
+		EarningsStatement:   NewEarningsStatementClient(cfg),
+		Fleet:               NewFleetClient(cfg),
+		FleetMember:         NewFleetMemberClient(cfg),
+		GeoFence:            NewGeoFenceClient(cfg),
+		IntegrationSetting:  NewIntegrationSettingClient(cfg),
+		LogisticsPermission: NewLogisticsPermissionClient(cfg),
+		LogisticsRole:       NewLogisticsRoleClient(cfg),
+		OutboxEvent:         NewOutboxEventClient(cfg),
+		ProofOfDelivery:     NewProofOfDeliveryClient(cfg),
+		RateLimitConfig:     NewRateLimitConfigClient(cfg),
+		RolePermission:      NewRolePermissionClient(cfg),
+		ServiceConfig:       NewServiceConfigClient(cfg),
+		Task:                NewTaskClient(cfg),
+		TaskAssignment:      NewTaskAssignmentClient(cfg),
+		TaskEvent:           NewTaskEventClient(cfg),
+		TaskStep:            NewTaskStepClient(cfg),
+		TelemetryPoint:      NewTelemetryPointClient(cfg),
+		TelemetryStream:     NewTelemetryStreamClient(cfg),
+		Tenant:              NewTenantClient(cfg),
+		TenantSyncEvent:     NewTenantSyncEventClient(cfg),
+		User:                NewUserClient(cfg),
+		UserRoleAssignment:  NewUserRoleAssignmentClient(cfg),
+		Vehicle:             NewVehicleClient(cfg),
 	}, nil
 }
 
@@ -243,28 +273,34 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:                ctx,
-		config:             cfg,
-		BillingEvent:       NewBillingEventClient(cfg),
-		CarrierJob:         NewCarrierJobClient(cfg),
-		CarrierPartner:     NewCarrierPartnerClient(cfg),
-		EarningsStatement:  NewEarningsStatementClient(cfg),
-		Fleet:              NewFleetClient(cfg),
-		FleetMember:        NewFleetMemberClient(cfg),
-		GeoFence:           NewGeoFenceClient(cfg),
-		IntegrationSetting: NewIntegrationSettingClient(cfg),
-		OutboxEvent:        NewOutboxEventClient(cfg),
-		ProofOfDelivery:    NewProofOfDeliveryClient(cfg),
-		Task:               NewTaskClient(cfg),
-		TaskAssignment:     NewTaskAssignmentClient(cfg),
-		TaskEvent:          NewTaskEventClient(cfg),
-		TaskStep:           NewTaskStepClient(cfg),
-		TelemetryPoint:     NewTelemetryPointClient(cfg),
-		TelemetryStream:    NewTelemetryStreamClient(cfg),
-		Tenant:             NewTenantClient(cfg),
-		TenantSyncEvent:    NewTenantSyncEventClient(cfg),
-		User:               NewUserClient(cfg),
-		Vehicle:            NewVehicleClient(cfg),
+		ctx:                 ctx,
+		config:              cfg,
+		BillingEvent:        NewBillingEventClient(cfg),
+		CarrierJob:          NewCarrierJobClient(cfg),
+		CarrierPartner:      NewCarrierPartnerClient(cfg),
+		EarningsStatement:   NewEarningsStatementClient(cfg),
+		Fleet:               NewFleetClient(cfg),
+		FleetMember:         NewFleetMemberClient(cfg),
+		GeoFence:            NewGeoFenceClient(cfg),
+		IntegrationSetting:  NewIntegrationSettingClient(cfg),
+		LogisticsPermission: NewLogisticsPermissionClient(cfg),
+		LogisticsRole:       NewLogisticsRoleClient(cfg),
+		OutboxEvent:         NewOutboxEventClient(cfg),
+		ProofOfDelivery:     NewProofOfDeliveryClient(cfg),
+		RateLimitConfig:     NewRateLimitConfigClient(cfg),
+		RolePermission:      NewRolePermissionClient(cfg),
+		ServiceConfig:       NewServiceConfigClient(cfg),
+		Task:                NewTaskClient(cfg),
+		TaskAssignment:      NewTaskAssignmentClient(cfg),
+		TaskEvent:           NewTaskEventClient(cfg),
+		TaskStep:            NewTaskStepClient(cfg),
+		TelemetryPoint:      NewTelemetryPointClient(cfg),
+		TelemetryStream:     NewTelemetryStreamClient(cfg),
+		Tenant:              NewTenantClient(cfg),
+		TenantSyncEvent:     NewTenantSyncEventClient(cfg),
+		User:                NewUserClient(cfg),
+		UserRoleAssignment:  NewUserRoleAssignmentClient(cfg),
+		Vehicle:             NewVehicleClient(cfg),
 	}, nil
 }
 
@@ -295,10 +331,11 @@ func (c *Client) Close() error {
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.BillingEvent, c.CarrierJob, c.CarrierPartner, c.EarningsStatement, c.Fleet,
-		c.FleetMember, c.GeoFence, c.IntegrationSetting, c.OutboxEvent,
-		c.ProofOfDelivery, c.Task, c.TaskAssignment, c.TaskEvent, c.TaskStep,
-		c.TelemetryPoint, c.TelemetryStream, c.Tenant, c.TenantSyncEvent, c.User,
-		c.Vehicle,
+		c.FleetMember, c.GeoFence, c.IntegrationSetting, c.LogisticsPermission,
+		c.LogisticsRole, c.OutboxEvent, c.ProofOfDelivery, c.RateLimitConfig,
+		c.RolePermission, c.ServiceConfig, c.Task, c.TaskAssignment, c.TaskEvent,
+		c.TaskStep, c.TelemetryPoint, c.TelemetryStream, c.Tenant, c.TenantSyncEvent,
+		c.User, c.UserRoleAssignment, c.Vehicle,
 	} {
 		n.Use(hooks...)
 	}
@@ -309,10 +346,11 @@ func (c *Client) Use(hooks ...Hook) {
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.BillingEvent, c.CarrierJob, c.CarrierPartner, c.EarningsStatement, c.Fleet,
-		c.FleetMember, c.GeoFence, c.IntegrationSetting, c.OutboxEvent,
-		c.ProofOfDelivery, c.Task, c.TaskAssignment, c.TaskEvent, c.TaskStep,
-		c.TelemetryPoint, c.TelemetryStream, c.Tenant, c.TenantSyncEvent, c.User,
-		c.Vehicle,
+		c.FleetMember, c.GeoFence, c.IntegrationSetting, c.LogisticsPermission,
+		c.LogisticsRole, c.OutboxEvent, c.ProofOfDelivery, c.RateLimitConfig,
+		c.RolePermission, c.ServiceConfig, c.Task, c.TaskAssignment, c.TaskEvent,
+		c.TaskStep, c.TelemetryPoint, c.TelemetryStream, c.Tenant, c.TenantSyncEvent,
+		c.User, c.UserRoleAssignment, c.Vehicle,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -337,10 +375,20 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.GeoFence.mutate(ctx, m)
 	case *IntegrationSettingMutation:
 		return c.IntegrationSetting.mutate(ctx, m)
+	case *LogisticsPermissionMutation:
+		return c.LogisticsPermission.mutate(ctx, m)
+	case *LogisticsRoleMutation:
+		return c.LogisticsRole.mutate(ctx, m)
 	case *OutboxEventMutation:
 		return c.OutboxEvent.mutate(ctx, m)
 	case *ProofOfDeliveryMutation:
 		return c.ProofOfDelivery.mutate(ctx, m)
+	case *RateLimitConfigMutation:
+		return c.RateLimitConfig.mutate(ctx, m)
+	case *RolePermissionMutation:
+		return c.RolePermission.mutate(ctx, m)
+	case *ServiceConfigMutation:
+		return c.ServiceConfig.mutate(ctx, m)
 	case *TaskMutation:
 		return c.Task.mutate(ctx, m)
 	case *TaskAssignmentMutation:
@@ -359,6 +407,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.TenantSyncEvent.mutate(ctx, m)
 	case *UserMutation:
 		return c.User.mutate(ctx, m)
+	case *UserRoleAssignmentMutation:
+		return c.UserRoleAssignment.mutate(ctx, m)
 	case *VehicleMutation:
 		return c.Vehicle.mutate(ctx, m)
 	default:
@@ -1526,6 +1576,352 @@ func (c *IntegrationSettingClient) mutate(ctx context.Context, m *IntegrationSet
 	}
 }
 
+// LogisticsPermissionClient is a client for the LogisticsPermission schema.
+type LogisticsPermissionClient struct {
+	config
+}
+
+// NewLogisticsPermissionClient returns a client for the LogisticsPermission from the given config.
+func NewLogisticsPermissionClient(c config) *LogisticsPermissionClient {
+	return &LogisticsPermissionClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `logisticspermission.Hooks(f(g(h())))`.
+func (c *LogisticsPermissionClient) Use(hooks ...Hook) {
+	c.hooks.LogisticsPermission = append(c.hooks.LogisticsPermission, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `logisticspermission.Intercept(f(g(h())))`.
+func (c *LogisticsPermissionClient) Intercept(interceptors ...Interceptor) {
+	c.inters.LogisticsPermission = append(c.inters.LogisticsPermission, interceptors...)
+}
+
+// Create returns a builder for creating a LogisticsPermission entity.
+func (c *LogisticsPermissionClient) Create() *LogisticsPermissionCreate {
+	mutation := newLogisticsPermissionMutation(c.config, OpCreate)
+	return &LogisticsPermissionCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of LogisticsPermission entities.
+func (c *LogisticsPermissionClient) CreateBulk(builders ...*LogisticsPermissionCreate) *LogisticsPermissionCreateBulk {
+	return &LogisticsPermissionCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *LogisticsPermissionClient) MapCreateBulk(slice any, setFunc func(*LogisticsPermissionCreate, int)) *LogisticsPermissionCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &LogisticsPermissionCreateBulk{err: fmt.Errorf("calling to LogisticsPermissionClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*LogisticsPermissionCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &LogisticsPermissionCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for LogisticsPermission.
+func (c *LogisticsPermissionClient) Update() *LogisticsPermissionUpdate {
+	mutation := newLogisticsPermissionMutation(c.config, OpUpdate)
+	return &LogisticsPermissionUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *LogisticsPermissionClient) UpdateOne(_m *LogisticsPermission) *LogisticsPermissionUpdateOne {
+	mutation := newLogisticsPermissionMutation(c.config, OpUpdateOne, withLogisticsPermission(_m))
+	return &LogisticsPermissionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *LogisticsPermissionClient) UpdateOneID(id uuid.UUID) *LogisticsPermissionUpdateOne {
+	mutation := newLogisticsPermissionMutation(c.config, OpUpdateOne, withLogisticsPermissionID(id))
+	return &LogisticsPermissionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for LogisticsPermission.
+func (c *LogisticsPermissionClient) Delete() *LogisticsPermissionDelete {
+	mutation := newLogisticsPermissionMutation(c.config, OpDelete)
+	return &LogisticsPermissionDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *LogisticsPermissionClient) DeleteOne(_m *LogisticsPermission) *LogisticsPermissionDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *LogisticsPermissionClient) DeleteOneID(id uuid.UUID) *LogisticsPermissionDeleteOne {
+	builder := c.Delete().Where(logisticspermission.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &LogisticsPermissionDeleteOne{builder}
+}
+
+// Query returns a query builder for LogisticsPermission.
+func (c *LogisticsPermissionClient) Query() *LogisticsPermissionQuery {
+	return &LogisticsPermissionQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeLogisticsPermission},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a LogisticsPermission entity by its id.
+func (c *LogisticsPermissionClient) Get(ctx context.Context, id uuid.UUID) (*LogisticsPermission, error) {
+	return c.Query().Where(logisticspermission.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *LogisticsPermissionClient) GetX(ctx context.Context, id uuid.UUID) *LogisticsPermission {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryRoles queries the roles edge of a LogisticsPermission.
+func (c *LogisticsPermissionClient) QueryRoles(_m *LogisticsPermission) *LogisticsRoleQuery {
+	query := (&LogisticsRoleClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(logisticspermission.Table, logisticspermission.FieldID, id),
+			sqlgraph.To(logisticsrole.Table, logisticsrole.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, logisticspermission.RolesTable, logisticspermission.RolesPrimaryKey...),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryRolePermissions queries the role_permissions edge of a LogisticsPermission.
+func (c *LogisticsPermissionClient) QueryRolePermissions(_m *LogisticsPermission) *RolePermissionQuery {
+	query := (&RolePermissionClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(logisticspermission.Table, logisticspermission.FieldID, id),
+			sqlgraph.To(rolepermission.Table, rolepermission.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, logisticspermission.RolePermissionsTable, logisticspermission.RolePermissionsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *LogisticsPermissionClient) Hooks() []Hook {
+	return c.hooks.LogisticsPermission
+}
+
+// Interceptors returns the client interceptors.
+func (c *LogisticsPermissionClient) Interceptors() []Interceptor {
+	return c.inters.LogisticsPermission
+}
+
+func (c *LogisticsPermissionClient) mutate(ctx context.Context, m *LogisticsPermissionMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&LogisticsPermissionCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&LogisticsPermissionUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&LogisticsPermissionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&LogisticsPermissionDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown LogisticsPermission mutation op: %q", m.Op())
+	}
+}
+
+// LogisticsRoleClient is a client for the LogisticsRole schema.
+type LogisticsRoleClient struct {
+	config
+}
+
+// NewLogisticsRoleClient returns a client for the LogisticsRole from the given config.
+func NewLogisticsRoleClient(c config) *LogisticsRoleClient {
+	return &LogisticsRoleClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `logisticsrole.Hooks(f(g(h())))`.
+func (c *LogisticsRoleClient) Use(hooks ...Hook) {
+	c.hooks.LogisticsRole = append(c.hooks.LogisticsRole, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `logisticsrole.Intercept(f(g(h())))`.
+func (c *LogisticsRoleClient) Intercept(interceptors ...Interceptor) {
+	c.inters.LogisticsRole = append(c.inters.LogisticsRole, interceptors...)
+}
+
+// Create returns a builder for creating a LogisticsRole entity.
+func (c *LogisticsRoleClient) Create() *LogisticsRoleCreate {
+	mutation := newLogisticsRoleMutation(c.config, OpCreate)
+	return &LogisticsRoleCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of LogisticsRole entities.
+func (c *LogisticsRoleClient) CreateBulk(builders ...*LogisticsRoleCreate) *LogisticsRoleCreateBulk {
+	return &LogisticsRoleCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *LogisticsRoleClient) MapCreateBulk(slice any, setFunc func(*LogisticsRoleCreate, int)) *LogisticsRoleCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &LogisticsRoleCreateBulk{err: fmt.Errorf("calling to LogisticsRoleClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*LogisticsRoleCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &LogisticsRoleCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for LogisticsRole.
+func (c *LogisticsRoleClient) Update() *LogisticsRoleUpdate {
+	mutation := newLogisticsRoleMutation(c.config, OpUpdate)
+	return &LogisticsRoleUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *LogisticsRoleClient) UpdateOne(_m *LogisticsRole) *LogisticsRoleUpdateOne {
+	mutation := newLogisticsRoleMutation(c.config, OpUpdateOne, withLogisticsRole(_m))
+	return &LogisticsRoleUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *LogisticsRoleClient) UpdateOneID(id uuid.UUID) *LogisticsRoleUpdateOne {
+	mutation := newLogisticsRoleMutation(c.config, OpUpdateOne, withLogisticsRoleID(id))
+	return &LogisticsRoleUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for LogisticsRole.
+func (c *LogisticsRoleClient) Delete() *LogisticsRoleDelete {
+	mutation := newLogisticsRoleMutation(c.config, OpDelete)
+	return &LogisticsRoleDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *LogisticsRoleClient) DeleteOne(_m *LogisticsRole) *LogisticsRoleDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *LogisticsRoleClient) DeleteOneID(id uuid.UUID) *LogisticsRoleDeleteOne {
+	builder := c.Delete().Where(logisticsrole.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &LogisticsRoleDeleteOne{builder}
+}
+
+// Query returns a query builder for LogisticsRole.
+func (c *LogisticsRoleClient) Query() *LogisticsRoleQuery {
+	return &LogisticsRoleQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeLogisticsRole},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a LogisticsRole entity by its id.
+func (c *LogisticsRoleClient) Get(ctx context.Context, id uuid.UUID) (*LogisticsRole, error) {
+	return c.Query().Where(logisticsrole.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *LogisticsRoleClient) GetX(ctx context.Context, id uuid.UUID) *LogisticsRole {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryPermissions queries the permissions edge of a LogisticsRole.
+func (c *LogisticsRoleClient) QueryPermissions(_m *LogisticsRole) *LogisticsPermissionQuery {
+	query := (&LogisticsPermissionClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(logisticsrole.Table, logisticsrole.FieldID, id),
+			sqlgraph.To(logisticspermission.Table, logisticspermission.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, logisticsrole.PermissionsTable, logisticsrole.PermissionsPrimaryKey...),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryUserAssignments queries the user_assignments edge of a LogisticsRole.
+func (c *LogisticsRoleClient) QueryUserAssignments(_m *LogisticsRole) *UserRoleAssignmentQuery {
+	query := (&UserRoleAssignmentClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(logisticsrole.Table, logisticsrole.FieldID, id),
+			sqlgraph.To(userroleassignment.Table, userroleassignment.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, logisticsrole.UserAssignmentsTable, logisticsrole.UserAssignmentsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryRolePermissions queries the role_permissions edge of a LogisticsRole.
+func (c *LogisticsRoleClient) QueryRolePermissions(_m *LogisticsRole) *RolePermissionQuery {
+	query := (&RolePermissionClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(logisticsrole.Table, logisticsrole.FieldID, id),
+			sqlgraph.To(rolepermission.Table, rolepermission.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, logisticsrole.RolePermissionsTable, logisticsrole.RolePermissionsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *LogisticsRoleClient) Hooks() []Hook {
+	return c.hooks.LogisticsRole
+}
+
+// Interceptors returns the client interceptors.
+func (c *LogisticsRoleClient) Interceptors() []Interceptor {
+	return c.inters.LogisticsRole
+}
+
+func (c *LogisticsRoleClient) mutate(ctx context.Context, m *LogisticsRoleMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&LogisticsRoleCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&LogisticsRoleUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&LogisticsRoleUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&LogisticsRoleDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown LogisticsRole mutation op: %q", m.Op())
+	}
+}
+
 // OutboxEventClient is a client for the OutboxEvent schema.
 type OutboxEventClient struct {
 	config
@@ -1805,6 +2201,437 @@ func (c *ProofOfDeliveryClient) mutate(ctx context.Context, m *ProofOfDeliveryMu
 		return (&ProofOfDeliveryDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown ProofOfDelivery mutation op: %q", m.Op())
+	}
+}
+
+// RateLimitConfigClient is a client for the RateLimitConfig schema.
+type RateLimitConfigClient struct {
+	config
+}
+
+// NewRateLimitConfigClient returns a client for the RateLimitConfig from the given config.
+func NewRateLimitConfigClient(c config) *RateLimitConfigClient {
+	return &RateLimitConfigClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `ratelimitconfig.Hooks(f(g(h())))`.
+func (c *RateLimitConfigClient) Use(hooks ...Hook) {
+	c.hooks.RateLimitConfig = append(c.hooks.RateLimitConfig, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `ratelimitconfig.Intercept(f(g(h())))`.
+func (c *RateLimitConfigClient) Intercept(interceptors ...Interceptor) {
+	c.inters.RateLimitConfig = append(c.inters.RateLimitConfig, interceptors...)
+}
+
+// Create returns a builder for creating a RateLimitConfig entity.
+func (c *RateLimitConfigClient) Create() *RateLimitConfigCreate {
+	mutation := newRateLimitConfigMutation(c.config, OpCreate)
+	return &RateLimitConfigCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of RateLimitConfig entities.
+func (c *RateLimitConfigClient) CreateBulk(builders ...*RateLimitConfigCreate) *RateLimitConfigCreateBulk {
+	return &RateLimitConfigCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *RateLimitConfigClient) MapCreateBulk(slice any, setFunc func(*RateLimitConfigCreate, int)) *RateLimitConfigCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &RateLimitConfigCreateBulk{err: fmt.Errorf("calling to RateLimitConfigClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*RateLimitConfigCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &RateLimitConfigCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for RateLimitConfig.
+func (c *RateLimitConfigClient) Update() *RateLimitConfigUpdate {
+	mutation := newRateLimitConfigMutation(c.config, OpUpdate)
+	return &RateLimitConfigUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *RateLimitConfigClient) UpdateOne(_m *RateLimitConfig) *RateLimitConfigUpdateOne {
+	mutation := newRateLimitConfigMutation(c.config, OpUpdateOne, withRateLimitConfig(_m))
+	return &RateLimitConfigUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *RateLimitConfigClient) UpdateOneID(id uuid.UUID) *RateLimitConfigUpdateOne {
+	mutation := newRateLimitConfigMutation(c.config, OpUpdateOne, withRateLimitConfigID(id))
+	return &RateLimitConfigUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for RateLimitConfig.
+func (c *RateLimitConfigClient) Delete() *RateLimitConfigDelete {
+	mutation := newRateLimitConfigMutation(c.config, OpDelete)
+	return &RateLimitConfigDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *RateLimitConfigClient) DeleteOne(_m *RateLimitConfig) *RateLimitConfigDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *RateLimitConfigClient) DeleteOneID(id uuid.UUID) *RateLimitConfigDeleteOne {
+	builder := c.Delete().Where(ratelimitconfig.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &RateLimitConfigDeleteOne{builder}
+}
+
+// Query returns a query builder for RateLimitConfig.
+func (c *RateLimitConfigClient) Query() *RateLimitConfigQuery {
+	return &RateLimitConfigQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeRateLimitConfig},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a RateLimitConfig entity by its id.
+func (c *RateLimitConfigClient) Get(ctx context.Context, id uuid.UUID) (*RateLimitConfig, error) {
+	return c.Query().Where(ratelimitconfig.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *RateLimitConfigClient) GetX(ctx context.Context, id uuid.UUID) *RateLimitConfig {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *RateLimitConfigClient) Hooks() []Hook {
+	return c.hooks.RateLimitConfig
+}
+
+// Interceptors returns the client interceptors.
+func (c *RateLimitConfigClient) Interceptors() []Interceptor {
+	return c.inters.RateLimitConfig
+}
+
+func (c *RateLimitConfigClient) mutate(ctx context.Context, m *RateLimitConfigMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&RateLimitConfigCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&RateLimitConfigUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&RateLimitConfigUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&RateLimitConfigDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown RateLimitConfig mutation op: %q", m.Op())
+	}
+}
+
+// RolePermissionClient is a client for the RolePermission schema.
+type RolePermissionClient struct {
+	config
+}
+
+// NewRolePermissionClient returns a client for the RolePermission from the given config.
+func NewRolePermissionClient(c config) *RolePermissionClient {
+	return &RolePermissionClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `rolepermission.Hooks(f(g(h())))`.
+func (c *RolePermissionClient) Use(hooks ...Hook) {
+	c.hooks.RolePermission = append(c.hooks.RolePermission, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `rolepermission.Intercept(f(g(h())))`.
+func (c *RolePermissionClient) Intercept(interceptors ...Interceptor) {
+	c.inters.RolePermission = append(c.inters.RolePermission, interceptors...)
+}
+
+// Create returns a builder for creating a RolePermission entity.
+func (c *RolePermissionClient) Create() *RolePermissionCreate {
+	mutation := newRolePermissionMutation(c.config, OpCreate)
+	return &RolePermissionCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of RolePermission entities.
+func (c *RolePermissionClient) CreateBulk(builders ...*RolePermissionCreate) *RolePermissionCreateBulk {
+	return &RolePermissionCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *RolePermissionClient) MapCreateBulk(slice any, setFunc func(*RolePermissionCreate, int)) *RolePermissionCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &RolePermissionCreateBulk{err: fmt.Errorf("calling to RolePermissionClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*RolePermissionCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &RolePermissionCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for RolePermission.
+func (c *RolePermissionClient) Update() *RolePermissionUpdate {
+	mutation := newRolePermissionMutation(c.config, OpUpdate)
+	return &RolePermissionUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *RolePermissionClient) UpdateOne(_m *RolePermission) *RolePermissionUpdateOne {
+	mutation := newRolePermissionMutation(c.config, OpUpdateOne, withRolePermission(_m))
+	return &RolePermissionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *RolePermissionClient) UpdateOneID(id int) *RolePermissionUpdateOne {
+	mutation := newRolePermissionMutation(c.config, OpUpdateOne, withRolePermissionID(id))
+	return &RolePermissionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for RolePermission.
+func (c *RolePermissionClient) Delete() *RolePermissionDelete {
+	mutation := newRolePermissionMutation(c.config, OpDelete)
+	return &RolePermissionDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *RolePermissionClient) DeleteOne(_m *RolePermission) *RolePermissionDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *RolePermissionClient) DeleteOneID(id int) *RolePermissionDeleteOne {
+	builder := c.Delete().Where(rolepermission.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &RolePermissionDeleteOne{builder}
+}
+
+// Query returns a query builder for RolePermission.
+func (c *RolePermissionClient) Query() *RolePermissionQuery {
+	return &RolePermissionQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeRolePermission},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a RolePermission entity by its id.
+func (c *RolePermissionClient) Get(ctx context.Context, id int) (*RolePermission, error) {
+	return c.Query().Where(rolepermission.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *RolePermissionClient) GetX(ctx context.Context, id int) *RolePermission {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryRole queries the role edge of a RolePermission.
+func (c *RolePermissionClient) QueryRole(_m *RolePermission) *LogisticsRoleQuery {
+	query := (&LogisticsRoleClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(rolepermission.Table, rolepermission.FieldID, id),
+			sqlgraph.To(logisticsrole.Table, logisticsrole.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, rolepermission.RoleTable, rolepermission.RoleColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryPermission queries the permission edge of a RolePermission.
+func (c *RolePermissionClient) QueryPermission(_m *RolePermission) *LogisticsPermissionQuery {
+	query := (&LogisticsPermissionClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(rolepermission.Table, rolepermission.FieldID, id),
+			sqlgraph.To(logisticspermission.Table, logisticspermission.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, rolepermission.PermissionTable, rolepermission.PermissionColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *RolePermissionClient) Hooks() []Hook {
+	return c.hooks.RolePermission
+}
+
+// Interceptors returns the client interceptors.
+func (c *RolePermissionClient) Interceptors() []Interceptor {
+	return c.inters.RolePermission
+}
+
+func (c *RolePermissionClient) mutate(ctx context.Context, m *RolePermissionMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&RolePermissionCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&RolePermissionUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&RolePermissionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&RolePermissionDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown RolePermission mutation op: %q", m.Op())
+	}
+}
+
+// ServiceConfigClient is a client for the ServiceConfig schema.
+type ServiceConfigClient struct {
+	config
+}
+
+// NewServiceConfigClient returns a client for the ServiceConfig from the given config.
+func NewServiceConfigClient(c config) *ServiceConfigClient {
+	return &ServiceConfigClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `serviceconfig.Hooks(f(g(h())))`.
+func (c *ServiceConfigClient) Use(hooks ...Hook) {
+	c.hooks.ServiceConfig = append(c.hooks.ServiceConfig, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `serviceconfig.Intercept(f(g(h())))`.
+func (c *ServiceConfigClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ServiceConfig = append(c.inters.ServiceConfig, interceptors...)
+}
+
+// Create returns a builder for creating a ServiceConfig entity.
+func (c *ServiceConfigClient) Create() *ServiceConfigCreate {
+	mutation := newServiceConfigMutation(c.config, OpCreate)
+	return &ServiceConfigCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ServiceConfig entities.
+func (c *ServiceConfigClient) CreateBulk(builders ...*ServiceConfigCreate) *ServiceConfigCreateBulk {
+	return &ServiceConfigCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ServiceConfigClient) MapCreateBulk(slice any, setFunc func(*ServiceConfigCreate, int)) *ServiceConfigCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ServiceConfigCreateBulk{err: fmt.Errorf("calling to ServiceConfigClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ServiceConfigCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ServiceConfigCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ServiceConfig.
+func (c *ServiceConfigClient) Update() *ServiceConfigUpdate {
+	mutation := newServiceConfigMutation(c.config, OpUpdate)
+	return &ServiceConfigUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ServiceConfigClient) UpdateOne(_m *ServiceConfig) *ServiceConfigUpdateOne {
+	mutation := newServiceConfigMutation(c.config, OpUpdateOne, withServiceConfig(_m))
+	return &ServiceConfigUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ServiceConfigClient) UpdateOneID(id uuid.UUID) *ServiceConfigUpdateOne {
+	mutation := newServiceConfigMutation(c.config, OpUpdateOne, withServiceConfigID(id))
+	return &ServiceConfigUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ServiceConfig.
+func (c *ServiceConfigClient) Delete() *ServiceConfigDelete {
+	mutation := newServiceConfigMutation(c.config, OpDelete)
+	return &ServiceConfigDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ServiceConfigClient) DeleteOne(_m *ServiceConfig) *ServiceConfigDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ServiceConfigClient) DeleteOneID(id uuid.UUID) *ServiceConfigDeleteOne {
+	builder := c.Delete().Where(serviceconfig.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ServiceConfigDeleteOne{builder}
+}
+
+// Query returns a query builder for ServiceConfig.
+func (c *ServiceConfigClient) Query() *ServiceConfigQuery {
+	return &ServiceConfigQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeServiceConfig},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ServiceConfig entity by its id.
+func (c *ServiceConfigClient) Get(ctx context.Context, id uuid.UUID) (*ServiceConfig, error) {
+	return c.Query().Where(serviceconfig.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ServiceConfigClient) GetX(ctx context.Context, id uuid.UUID) *ServiceConfig {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *ServiceConfigClient) Hooks() []Hook {
+	return c.hooks.ServiceConfig
+}
+
+// Interceptors returns the client interceptors.
+func (c *ServiceConfigClient) Interceptors() []Interceptor {
+	return c.inters.ServiceConfig
+}
+
+func (c *ServiceConfigClient) mutate(ctx context.Context, m *ServiceConfigMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ServiceConfigCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ServiceConfigUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ServiceConfigUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ServiceConfigDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ServiceConfig mutation op: %q", m.Op())
 	}
 }
 
@@ -3229,6 +4056,171 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 	}
 }
 
+// UserRoleAssignmentClient is a client for the UserRoleAssignment schema.
+type UserRoleAssignmentClient struct {
+	config
+}
+
+// NewUserRoleAssignmentClient returns a client for the UserRoleAssignment from the given config.
+func NewUserRoleAssignmentClient(c config) *UserRoleAssignmentClient {
+	return &UserRoleAssignmentClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `userroleassignment.Hooks(f(g(h())))`.
+func (c *UserRoleAssignmentClient) Use(hooks ...Hook) {
+	c.hooks.UserRoleAssignment = append(c.hooks.UserRoleAssignment, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `userroleassignment.Intercept(f(g(h())))`.
+func (c *UserRoleAssignmentClient) Intercept(interceptors ...Interceptor) {
+	c.inters.UserRoleAssignment = append(c.inters.UserRoleAssignment, interceptors...)
+}
+
+// Create returns a builder for creating a UserRoleAssignment entity.
+func (c *UserRoleAssignmentClient) Create() *UserRoleAssignmentCreate {
+	mutation := newUserRoleAssignmentMutation(c.config, OpCreate)
+	return &UserRoleAssignmentCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of UserRoleAssignment entities.
+func (c *UserRoleAssignmentClient) CreateBulk(builders ...*UserRoleAssignmentCreate) *UserRoleAssignmentCreateBulk {
+	return &UserRoleAssignmentCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *UserRoleAssignmentClient) MapCreateBulk(slice any, setFunc func(*UserRoleAssignmentCreate, int)) *UserRoleAssignmentCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &UserRoleAssignmentCreateBulk{err: fmt.Errorf("calling to UserRoleAssignmentClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*UserRoleAssignmentCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &UserRoleAssignmentCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for UserRoleAssignment.
+func (c *UserRoleAssignmentClient) Update() *UserRoleAssignmentUpdate {
+	mutation := newUserRoleAssignmentMutation(c.config, OpUpdate)
+	return &UserRoleAssignmentUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *UserRoleAssignmentClient) UpdateOne(_m *UserRoleAssignment) *UserRoleAssignmentUpdateOne {
+	mutation := newUserRoleAssignmentMutation(c.config, OpUpdateOne, withUserRoleAssignment(_m))
+	return &UserRoleAssignmentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *UserRoleAssignmentClient) UpdateOneID(id uuid.UUID) *UserRoleAssignmentUpdateOne {
+	mutation := newUserRoleAssignmentMutation(c.config, OpUpdateOne, withUserRoleAssignmentID(id))
+	return &UserRoleAssignmentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for UserRoleAssignment.
+func (c *UserRoleAssignmentClient) Delete() *UserRoleAssignmentDelete {
+	mutation := newUserRoleAssignmentMutation(c.config, OpDelete)
+	return &UserRoleAssignmentDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *UserRoleAssignmentClient) DeleteOne(_m *UserRoleAssignment) *UserRoleAssignmentDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *UserRoleAssignmentClient) DeleteOneID(id uuid.UUID) *UserRoleAssignmentDeleteOne {
+	builder := c.Delete().Where(userroleassignment.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &UserRoleAssignmentDeleteOne{builder}
+}
+
+// Query returns a query builder for UserRoleAssignment.
+func (c *UserRoleAssignmentClient) Query() *UserRoleAssignmentQuery {
+	return &UserRoleAssignmentQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeUserRoleAssignment},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a UserRoleAssignment entity by its id.
+func (c *UserRoleAssignmentClient) Get(ctx context.Context, id uuid.UUID) (*UserRoleAssignment, error) {
+	return c.Query().Where(userroleassignment.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *UserRoleAssignmentClient) GetX(ctx context.Context, id uuid.UUID) *UserRoleAssignment {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryUser queries the user edge of a UserRoleAssignment.
+func (c *UserRoleAssignmentClient) QueryUser(_m *UserRoleAssignment) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(userroleassignment.Table, userroleassignment.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, userroleassignment.UserTable, userroleassignment.UserColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryRole queries the role edge of a UserRoleAssignment.
+func (c *UserRoleAssignmentClient) QueryRole(_m *UserRoleAssignment) *LogisticsRoleQuery {
+	query := (&LogisticsRoleClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(userroleassignment.Table, userroleassignment.FieldID, id),
+			sqlgraph.To(logisticsrole.Table, logisticsrole.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, userroleassignment.RoleTable, userroleassignment.RoleColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *UserRoleAssignmentClient) Hooks() []Hook {
+	return c.hooks.UserRoleAssignment
+}
+
+// Interceptors returns the client interceptors.
+func (c *UserRoleAssignmentClient) Interceptors() []Interceptor {
+	return c.inters.UserRoleAssignment
+}
+
+func (c *UserRoleAssignmentClient) mutate(ctx context.Context, m *UserRoleAssignmentMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&UserRoleAssignmentCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&UserRoleAssignmentUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&UserRoleAssignmentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&UserRoleAssignmentDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown UserRoleAssignment mutation op: %q", m.Op())
+	}
+}
+
 // VehicleClient is a client for the Vehicle schema.
 type VehicleClient struct {
 	config
@@ -3398,14 +4390,16 @@ func (c *VehicleClient) mutate(ctx context.Context, m *VehicleMutation) (Value, 
 type (
 	hooks struct {
 		BillingEvent, CarrierJob, CarrierPartner, EarningsStatement, Fleet, FleetMember,
-		GeoFence, IntegrationSetting, OutboxEvent, ProofOfDelivery, Task,
+		GeoFence, IntegrationSetting, LogisticsPermission, LogisticsRole, OutboxEvent,
+		ProofOfDelivery, RateLimitConfig, RolePermission, ServiceConfig, Task,
 		TaskAssignment, TaskEvent, TaskStep, TelemetryPoint, TelemetryStream, Tenant,
-		TenantSyncEvent, User, Vehicle []ent.Hook
+		TenantSyncEvent, User, UserRoleAssignment, Vehicle []ent.Hook
 	}
 	inters struct {
 		BillingEvent, CarrierJob, CarrierPartner, EarningsStatement, Fleet, FleetMember,
-		GeoFence, IntegrationSetting, OutboxEvent, ProofOfDelivery, Task,
+		GeoFence, IntegrationSetting, LogisticsPermission, LogisticsRole, OutboxEvent,
+		ProofOfDelivery, RateLimitConfig, RolePermission, ServiceConfig, Task,
 		TaskAssignment, TaskEvent, TaskStep, TelemetryPoint, TelemetryStream, Tenant,
-		TenantSyncEvent, User, Vehicle []ent.Interceptor
+		TenantSyncEvent, User, UserRoleAssignment, Vehicle []ent.Interceptor
 	}
 )

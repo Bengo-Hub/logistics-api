@@ -51,6 +51,7 @@ logistics-api/
       docs/                  -- Swagger/OpenAPI
     modules/
       fleet/                 -- fleet service + repo
+      rbac/                  -- RBAC service, repository, models
       task/                  -- task service + repo
       tracking/              -- Redis-based location tracking
       outbox/                -- outbox repo (pgx)

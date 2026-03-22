@@ -191,11 +191,29 @@ This section defines how Logistics Service entities relate to other services to 
   - Avoid inter-zone shipments when inventory indicates local availability.
   - Query inventory in real-time during dispatch, never caching stock levels locally.
 
+## RBAC & Configuration
+
+| Table | Key Columns | Description |
+|-------|-------------|-------------|
+| `logistics_permissions` | `id`, `permission_code`, `name`, `module`, `action`, `resource`, `description`, `created_at` | Granular permission definitions. Code format: `logistics.{module}.{action}`. |
+| `logistics_roles` | `id`, `tenant_id`, `role_code`, `name`, `description`, `is_system_role`, `created_at`, `updated_at` | Tenant-scoped role definitions (logistics_admin, dispatcher, fleet_manager, rider, viewer). |
+| `role_permissions` | `role_id`, `permission_id` | Junction table linking roles to permissions. |
+| `user_role_assignments` | `id`, `tenant_id`, `user_id`, `role_id`, `assigned_by`, `assigned_at`, `expires_at` | Assigns roles to users with optional expiry. |
+| `rate_limit_configs` | `id`, `service_name`, `key_type`, `endpoint_pattern`, `requests_per_window`, `window_seconds`, `burst_multiplier`, `is_active`, `description`, `created_at`, `updated_at` | DB-driven rate limit rules per service/endpoint. |
+| `service_configs` | `id`, `tenant_id` (nullable), `config_key`, `config_value`, `config_type`, `description`, `is_secret`, `created_at`, `updated_at` | Platform-level defaults and tenant-specific overrides for service configuration. |
+
+- `user_role_assignments.user_id` references `users.id` (the existing logistics user table).
+- `logistics_roles` are tenant-scoped; `logistics_permissions` are global (shared across tenants).
+- `service_configs` with `tenant_id = NULL` are platform defaults; non-null entries are tenant overrides.
+
 ## Seed & Reference Data
 
 - Demo fleets (`urban_internal`, `third_party`) seeded for Urban Café pilot.
 - Default dispatch rules: nearest driver, batch route, and marketplace fallback.
 - Sample tariff profiles (standard delivery, express, bulk) for testing treasury integrations.
+- RBAC permissions seeded for 11 modules (tasks, fleet, vehicles, zones, geofences, carriers, routing, telemetry, earnings, config, users) with 9 actions each (99 permissions total).
+- Rate limit configs for tenant, IP, user, and per-endpoint patterns.
+- Service configs for task timeouts, fleet sizes, geofence radii, telemetry intervals, and more.
 
 ---
 

@@ -20,6 +20,8 @@ type ProofOfDelivery struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
+	// Tenant isolation — ensures PoD records cannot leak across tenants
+	TenantID uuid.UUID `json:"tenant_id,omitempty"`
 	// TaskID holds the value of the "task_id" field.
 	TaskID uuid.UUID `json:"task_id,omitempty"`
 	// FleetMemberID holds the value of the "fleet_member_id" field.
@@ -71,7 +73,7 @@ func (*ProofOfDelivery) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullString)
 		case proofofdelivery.FieldCapturedAt:
 			values[i] = new(sql.NullTime)
-		case proofofdelivery.FieldID, proofofdelivery.FieldTaskID, proofofdelivery.FieldFleetMemberID:
+		case proofofdelivery.FieldID, proofofdelivery.FieldTenantID, proofofdelivery.FieldTaskID, proofofdelivery.FieldFleetMemberID:
 			values[i] = new(uuid.UUID)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -93,6 +95,12 @@ func (_m *ProofOfDelivery) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field id", values[i])
 			} else if value != nil {
 				_m.ID = *value
+			}
+		case proofofdelivery.FieldTenantID:
+			if value, ok := values[i].(*uuid.UUID); !ok {
+				return fmt.Errorf("unexpected type %T for field tenant_id", values[i])
+			} else if value != nil {
+				_m.TenantID = *value
 			}
 		case proofofdelivery.FieldTaskID:
 			if value, ok := values[i].(*uuid.UUID); !ok {
@@ -179,6 +187,9 @@ func (_m *ProofOfDelivery) String() string {
 	var builder strings.Builder
 	builder.WriteString("ProofOfDelivery(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
+	builder.WriteString("tenant_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.TenantID))
+	builder.WriteString(", ")
 	builder.WriteString("task_id=")
 	builder.WriteString(fmt.Sprintf("%v", _m.TaskID))
 	builder.WriteString(", ")

@@ -28,10 +28,20 @@ type Tx struct {
 	GeoFence *GeoFenceClient
 	// IntegrationSetting is the client for interacting with the IntegrationSetting builders.
 	IntegrationSetting *IntegrationSettingClient
+	// LogisticsPermission is the client for interacting with the LogisticsPermission builders.
+	LogisticsPermission *LogisticsPermissionClient
+	// LogisticsRole is the client for interacting with the LogisticsRole builders.
+	LogisticsRole *LogisticsRoleClient
 	// OutboxEvent is the client for interacting with the OutboxEvent builders.
 	OutboxEvent *OutboxEventClient
 	// ProofOfDelivery is the client for interacting with the ProofOfDelivery builders.
 	ProofOfDelivery *ProofOfDeliveryClient
+	// RateLimitConfig is the client for interacting with the RateLimitConfig builders.
+	RateLimitConfig *RateLimitConfigClient
+	// RolePermission is the client for interacting with the RolePermission builders.
+	RolePermission *RolePermissionClient
+	// ServiceConfig is the client for interacting with the ServiceConfig builders.
+	ServiceConfig *ServiceConfigClient
 	// Task is the client for interacting with the Task builders.
 	Task *TaskClient
 	// TaskAssignment is the client for interacting with the TaskAssignment builders.
@@ -50,6 +60,8 @@ type Tx struct {
 	TenantSyncEvent *TenantSyncEventClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
+	// UserRoleAssignment is the client for interacting with the UserRoleAssignment builders.
+	UserRoleAssignment *UserRoleAssignmentClient
 	// Vehicle is the client for interacting with the Vehicle builders.
 	Vehicle *VehicleClient
 
@@ -191,8 +203,13 @@ func (tx *Tx) init() {
 	tx.FleetMember = NewFleetMemberClient(tx.config)
 	tx.GeoFence = NewGeoFenceClient(tx.config)
 	tx.IntegrationSetting = NewIntegrationSettingClient(tx.config)
+	tx.LogisticsPermission = NewLogisticsPermissionClient(tx.config)
+	tx.LogisticsRole = NewLogisticsRoleClient(tx.config)
 	tx.OutboxEvent = NewOutboxEventClient(tx.config)
 	tx.ProofOfDelivery = NewProofOfDeliveryClient(tx.config)
+	tx.RateLimitConfig = NewRateLimitConfigClient(tx.config)
+	tx.RolePermission = NewRolePermissionClient(tx.config)
+	tx.ServiceConfig = NewServiceConfigClient(tx.config)
 	tx.Task = NewTaskClient(tx.config)
 	tx.TaskAssignment = NewTaskAssignmentClient(tx.config)
 	tx.TaskEvent = NewTaskEventClient(tx.config)
@@ -202,6 +219,7 @@ func (tx *Tx) init() {
 	tx.Tenant = NewTenantClient(tx.config)
 	tx.TenantSyncEvent = NewTenantSyncEventClient(tx.config)
 	tx.User = NewUserClient(tx.config)
+	tx.UserRoleAssignment = NewUserRoleAssignmentClient(tx.config)
 	tx.Vehicle = NewVehicleClient(tx.config)
 }
 

@@ -258,6 +258,7 @@ func (s *Service) SubmitPoD(ctx context.Context, tenantID, taskID uuid.UUID, req
 	}
 
 	builder := s.client.ProofOfDelivery.Create().
+		SetTenantID(tenantID).
 		SetTaskID(taskID).
 		SetFleetMemberID(req.FleetMemberID).
 		SetCapturedAt(time.Now()).

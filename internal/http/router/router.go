@@ -22,7 +22,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/config"
 )
 
-func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authclient.AuthMiddleware, idSvc *identity.Service, lh *handlers.LogisticsHandler, rh *handlers.RoutingHandler, th *handlers.TrackingHandler, zh *handlers.ZonesHandler, rdb *redis.Client, cfg *config.Config, allowedOrigins []string) http.Handler {
+func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authclient.AuthMiddleware, idSvc *identity.Service, lh *handlers.LogisticsHandler, rh *handlers.RoutingHandler, th *handlers.TrackingHandler, zh *handlers.ZonesHandler, rbacH *handlers.RBACHandler, rdb *redis.Client, cfg *config.Config, allowedOrigins []string) http.Handler {
 	rl := appmw.NewRateLimiter(rdb)
 	r := chi.NewRouter()
 
@@ -77,7 +77,9 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 						slug := claims.GetTenantSlug()
 						if slug != "" {
 							_, err := idSvc.EnsureUserFromToken(r.Context(), subject, slug, map[string]any{
-								"email": claims.Email,
+								"email":             claims.Email,
+								"roles":             claims.Roles,
+								"is_platform_owner": claims.IsPlatformOwner,
 							})
 							if err != nil {
 								log.Warn("jit provisioning failed", zap.Error(err))
@@ -123,7 +125,7 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 
 			if rh != nil {
 				tenant.Route("/routing", func(routeR chi.Router) {
-					routeR.Use(appmw.RequireRateLimit(rl, "routing_requests_per_day"))
+					routeR.Use(appmw.RequireRateLimit(rl, "routing_requests_per_day", cfg.Subscriptions.ServiceURL+"/upgrade"))
 					routeR.Get("/route", rh.GetRoute)
 					routeR.Get("/eta", rh.GetETA)
 					routeR.Post("/matrix", rh.GetMatrix)
@@ -134,9 +136,13 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 
 			if th != nil {
 				tenant.Route("/tracking", func(trackR chi.Router) {
-					trackR.Use(appmw.RequireRateLimit(rl, "live_tracking_requests_per_day"))
+					trackR.Use(appmw.RequireRateLimit(rl, "live_tracking_requests_per_day", cfg.Subscriptions.ServiceURL+"/upgrade"))
 					trackR.Get("/{taskId}", th.TrackByCode)
 				})
+			}
+
+			if rbacH != nil {
+				rbacH.RegisterRoutes(tenant)
 			}
 
 			if lh != nil {

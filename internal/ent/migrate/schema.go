@@ -238,6 +238,79 @@ var (
 			},
 		},
 	}
+	// LogisticsPermissionsColumns holds the columns for the "logistics_permissions" table.
+	LogisticsPermissionsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "permission_code", Type: field.TypeString, Unique: true},
+		{Name: "name", Type: field.TypeString},
+		{Name: "module", Type: field.TypeString},
+		{Name: "action", Type: field.TypeString},
+		{Name: "resource", Type: field.TypeString, Nullable: true},
+		{Name: "description", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "created_at", Type: field.TypeTime},
+	}
+	// LogisticsPermissionsTable holds the schema information for the "logistics_permissions" table.
+	LogisticsPermissionsTable = &schema.Table{
+		Name:       "logistics_permissions",
+		Columns:    LogisticsPermissionsColumns,
+		PrimaryKey: []*schema.Column{LogisticsPermissionsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "logisticspermission_permission_code",
+				Unique:  true,
+				Columns: []*schema.Column{LogisticsPermissionsColumns[1]},
+			},
+			{
+				Name:    "logisticspermission_module",
+				Unique:  false,
+				Columns: []*schema.Column{LogisticsPermissionsColumns[3]},
+			},
+			{
+				Name:    "logisticspermission_action",
+				Unique:  false,
+				Columns: []*schema.Column{LogisticsPermissionsColumns[4]},
+			},
+			{
+				Name:    "logisticspermission_module_action",
+				Unique:  false,
+				Columns: []*schema.Column{LogisticsPermissionsColumns[3], LogisticsPermissionsColumns[4]},
+			},
+		},
+	}
+	// LogisticsRolesColumns holds the columns for the "logistics_roles" table.
+	LogisticsRolesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID},
+		{Name: "role_code", Type: field.TypeString},
+		{Name: "name", Type: field.TypeString},
+		{Name: "description", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "is_system_role", Type: field.TypeBool, Default: false},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// LogisticsRolesTable holds the schema information for the "logistics_roles" table.
+	LogisticsRolesTable = &schema.Table{
+		Name:       "logistics_roles",
+		Columns:    LogisticsRolesColumns,
+		PrimaryKey: []*schema.Column{LogisticsRolesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "logisticsrole_tenant_id",
+				Unique:  false,
+				Columns: []*schema.Column{LogisticsRolesColumns[1]},
+			},
+			{
+				Name:    "logisticsrole_tenant_id_role_code",
+				Unique:  true,
+				Columns: []*schema.Column{LogisticsRolesColumns[1], LogisticsRolesColumns[2]},
+			},
+			{
+				Name:    "logisticsrole_is_system_role",
+				Unique:  false,
+				Columns: []*schema.Column{LogisticsRolesColumns[5]},
+			},
+		},
+	}
 	// OutboxEventsColumns holds the columns for the "outbox_events" table.
 	OutboxEventsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -272,6 +345,7 @@ var (
 	// ProofOfDeliveriesColumns holds the columns for the "proof_of_deliveries" table.
 	ProofOfDeliveriesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID},
 		{Name: "fleet_member_id", Type: field.TypeUUID},
 		{Name: "signature_url", Type: field.TypeString, Nullable: true},
 		{Name: "photo_url", Type: field.TypeString, Nullable: true},
@@ -288,9 +362,131 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "proof_of_deliveries_tasks_proof_of_delivery",
-				Columns:    []*schema.Column{ProofOfDeliveriesColumns[7]},
+				Columns:    []*schema.Column{ProofOfDeliveriesColumns[8]},
 				RefColumns: []*schema.Column{TasksColumns[0]},
 				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "proofofdelivery_tenant_id",
+				Unique:  false,
+				Columns: []*schema.Column{ProofOfDeliveriesColumns[1]},
+			},
+			{
+				Name:    "proofofdelivery_tenant_id_task_id",
+				Unique:  false,
+				Columns: []*schema.Column{ProofOfDeliveriesColumns[1], ProofOfDeliveriesColumns[8]},
+			},
+		},
+	}
+	// RateLimitConfigsColumns holds the columns for the "rate_limit_configs" table.
+	RateLimitConfigsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "service_name", Type: field.TypeString},
+		{Name: "key_type", Type: field.TypeString},
+		{Name: "endpoint_pattern", Type: field.TypeString, Default: "*"},
+		{Name: "requests_per_window", Type: field.TypeInt, Default: 60},
+		{Name: "window_seconds", Type: field.TypeInt, Default: 60},
+		{Name: "burst_multiplier", Type: field.TypeFloat64, Default: 1.5},
+		{Name: "is_active", Type: field.TypeBool, Default: true},
+		{Name: "description", Type: field.TypeString, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// RateLimitConfigsTable holds the schema information for the "rate_limit_configs" table.
+	RateLimitConfigsTable = &schema.Table{
+		Name:       "rate_limit_configs",
+		Columns:    RateLimitConfigsColumns,
+		PrimaryKey: []*schema.Column{RateLimitConfigsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "ratelimitconfig_service_name_key_type_endpoint_pattern",
+				Unique:  true,
+				Columns: []*schema.Column{RateLimitConfigsColumns[1], RateLimitConfigsColumns[2], RateLimitConfigsColumns[3]},
+			},
+			{
+				Name:    "ratelimitconfig_service_name",
+				Unique:  false,
+				Columns: []*schema.Column{RateLimitConfigsColumns[1]},
+			},
+			{
+				Name:    "ratelimitconfig_is_active",
+				Unique:  false,
+				Columns: []*schema.Column{RateLimitConfigsColumns[7]},
+			},
+		},
+	}
+	// RolePermissionsColumns holds the columns for the "role_permissions" table.
+	RolePermissionsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "role_id", Type: field.TypeUUID},
+		{Name: "permission_id", Type: field.TypeUUID},
+	}
+	// RolePermissionsTable holds the schema information for the "role_permissions" table.
+	RolePermissionsTable = &schema.Table{
+		Name:       "role_permissions",
+		Columns:    RolePermissionsColumns,
+		PrimaryKey: []*schema.Column{RolePermissionsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "role_permissions_logistics_roles_role",
+				Columns:    []*schema.Column{RolePermissionsColumns[1]},
+				RefColumns: []*schema.Column{LogisticsRolesColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "role_permissions_logistics_permissions_permission",
+				Columns:    []*schema.Column{RolePermissionsColumns[2]},
+				RefColumns: []*schema.Column{LogisticsPermissionsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "rolepermission_role_id_permission_id",
+				Unique:  true,
+				Columns: []*schema.Column{RolePermissionsColumns[1], RolePermissionsColumns[2]},
+			},
+			{
+				Name:    "rolepermission_role_id",
+				Unique:  false,
+				Columns: []*schema.Column{RolePermissionsColumns[1]},
+			},
+			{
+				Name:    "rolepermission_permission_id",
+				Unique:  false,
+				Columns: []*schema.Column{RolePermissionsColumns[2]},
+			},
+		},
+	}
+	// ServiceConfigsColumns holds the columns for the "service_configs" table.
+	ServiceConfigsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "config_key", Type: field.TypeString},
+		{Name: "config_value", Type: field.TypeString, Size: 2147483647},
+		{Name: "config_type", Type: field.TypeString, Default: "string"},
+		{Name: "description", Type: field.TypeString, Nullable: true},
+		{Name: "is_secret", Type: field.TypeBool, Default: false},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// ServiceConfigsTable holds the schema information for the "service_configs" table.
+	ServiceConfigsTable = &schema.Table{
+		Name:       "service_configs",
+		Columns:    ServiceConfigsColumns,
+		PrimaryKey: []*schema.Column{ServiceConfigsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "serviceconfig_tenant_id_config_key",
+				Unique:  true,
+				Columns: []*schema.Column{ServiceConfigsColumns[1], ServiceConfigsColumns[2]},
+			},
+			{
+				Name:    "serviceconfig_config_key",
+				Unique:  false,
+				Columns: []*schema.Column{ServiceConfigsColumns[2]},
 			},
 		},
 	}
@@ -581,6 +777,70 @@ var (
 			},
 		},
 	}
+	// UserRoleAssignmentsColumns holds the columns for the "user_role_assignments" table.
+	UserRoleAssignmentsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID},
+		{Name: "assigned_by", Type: field.TypeUUID},
+		{Name: "assigned_at", Type: field.TypeTime},
+		{Name: "expires_at", Type: field.TypeTime, Nullable: true},
+		{Name: "logistics_role_user_assignments", Type: field.TypeUUID, Nullable: true},
+		{Name: "user_id", Type: field.TypeUUID},
+		{Name: "role_id", Type: field.TypeUUID},
+	}
+	// UserRoleAssignmentsTable holds the schema information for the "user_role_assignments" table.
+	UserRoleAssignmentsTable = &schema.Table{
+		Name:       "user_role_assignments",
+		Columns:    UserRoleAssignmentsColumns,
+		PrimaryKey: []*schema.Column{UserRoleAssignmentsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "user_role_assignments_logistics_roles_user_assignments",
+				Columns:    []*schema.Column{UserRoleAssignmentsColumns[5]},
+				RefColumns: []*schema.Column{LogisticsRolesColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "user_role_assignments_users_user",
+				Columns:    []*schema.Column{UserRoleAssignmentsColumns[6]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "user_role_assignments_logistics_roles_role",
+				Columns:    []*schema.Column{UserRoleAssignmentsColumns[7]},
+				RefColumns: []*schema.Column{LogisticsRolesColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "userroleassignment_tenant_id_user_id_role_id",
+				Unique:  true,
+				Columns: []*schema.Column{UserRoleAssignmentsColumns[1], UserRoleAssignmentsColumns[6], UserRoleAssignmentsColumns[7]},
+			},
+			{
+				Name:    "userroleassignment_tenant_id",
+				Unique:  false,
+				Columns: []*schema.Column{UserRoleAssignmentsColumns[1]},
+			},
+			{
+				Name:    "userroleassignment_user_id",
+				Unique:  false,
+				Columns: []*schema.Column{UserRoleAssignmentsColumns[6]},
+			},
+			{
+				Name:    "userroleassignment_role_id",
+				Unique:  false,
+				Columns: []*schema.Column{UserRoleAssignmentsColumns[7]},
+			},
+			{
+				Name:    "userroleassignment_expires_at",
+				Unique:  false,
+				Columns: []*schema.Column{UserRoleAssignmentsColumns[4]},
+			},
+		},
+	}
 	// VehiclesColumns holds the columns for the "vehicles" table.
 	VehiclesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -630,8 +890,13 @@ var (
 		FleetMembersTable,
 		GeoFencesTable,
 		IntegrationSettingsTable,
+		LogisticsPermissionsTable,
+		LogisticsRolesTable,
 		OutboxEventsTable,
 		ProofOfDeliveriesTable,
+		RateLimitConfigsTable,
+		RolePermissionsTable,
+		ServiceConfigsTable,
 		TasksTable,
 		TaskAssignmentsTable,
 		TaskEventsTable,
@@ -641,6 +906,7 @@ var (
 		TenantsTable,
 		TenantSyncEventsTable,
 		UsersTable,
+		UserRoleAssignmentsTable,
 		VehiclesTable,
 	}
 )
@@ -650,6 +916,8 @@ func init() {
 	FleetMembersTable.ForeignKeys[1].RefTable = VehiclesTable
 	FleetMembersTable.ForeignKeys[2].RefTable = UsersTable
 	ProofOfDeliveriesTable.ForeignKeys[0].RefTable = TasksTable
+	RolePermissionsTable.ForeignKeys[0].RefTable = LogisticsRolesTable
+	RolePermissionsTable.ForeignKeys[1].RefTable = LogisticsPermissionsTable
 	TasksTable.ForeignKeys[0].RefTable = UsersTable
 	TaskAssignmentsTable.ForeignKeys[0].RefTable = FleetMembersTable
 	TaskAssignmentsTable.ForeignKeys[1].RefTable = TasksTable
@@ -657,5 +925,8 @@ func init() {
 	TaskStepsTable.ForeignKeys[0].RefTable = TasksTable
 	TelemetryPointsTable.ForeignKeys[0].RefTable = TelemetryStreamsTable
 	UsersTable.ForeignKeys[0].RefTable = TenantsTable
+	UserRoleAssignmentsTable.ForeignKeys[0].RefTable = LogisticsRolesTable
+	UserRoleAssignmentsTable.ForeignKeys[1].RefTable = UsersTable
+	UserRoleAssignmentsTable.ForeignKeys[2].RefTable = LogisticsRolesTable
 	VehiclesTable.ForeignKeys[0].RefTable = FleetsTable
 }

@@ -23,7 +23,7 @@ type TenantSyncEvent struct {
 	TenantID uuid.UUID `json:"tenant_id,omitempty"`
 	// TenantSlug holds the value of the "tenant_slug" field.
 	TenantSlug string `json:"tenant_slug,omitempty"`
-	// The service that emitted the sync event (auth-api, cafe-backend, etc.)
+	// The service that emitted the sync event (auth-api, ordering-backend, etc.)
 	SourceService string `json:"source_service,omitempty"`
 	// Payload holds the value of the "payload" field.
 	Payload map[string]interface{} `json:"payload,omitempty"`

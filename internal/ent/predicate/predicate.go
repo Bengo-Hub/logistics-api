@@ -30,11 +30,26 @@ type GeoFence func(*sql.Selector)
 // IntegrationSetting is the predicate function for integrationsetting builders.
 type IntegrationSetting func(*sql.Selector)
 
+// LogisticsPermission is the predicate function for logisticspermission builders.
+type LogisticsPermission func(*sql.Selector)
+
+// LogisticsRole is the predicate function for logisticsrole builders.
+type LogisticsRole func(*sql.Selector)
+
 // OutboxEvent is the predicate function for outboxevent builders.
 type OutboxEvent func(*sql.Selector)
 
 // ProofOfDelivery is the predicate function for proofofdelivery builders.
 type ProofOfDelivery func(*sql.Selector)
+
+// RateLimitConfig is the predicate function for ratelimitconfig builders.
+type RateLimitConfig func(*sql.Selector)
+
+// RolePermission is the predicate function for rolepermission builders.
+type RolePermission func(*sql.Selector)
+
+// ServiceConfig is the predicate function for serviceconfig builders.
+type ServiceConfig func(*sql.Selector)
 
 // Task is the predicate function for task builders.
 type Task func(*sql.Selector)
@@ -62,6 +77,9 @@ type TenantSyncEvent func(*sql.Selector)
 
 // User is the predicate function for user builders.
 type User func(*sql.Selector)
+
+// UserRoleAssignment is the predicate function for userroleassignment builders.
+type UserRoleAssignment func(*sql.Selector)
 
 // Vehicle is the predicate function for vehicle builders.
 type Vehicle func(*sql.Selector)

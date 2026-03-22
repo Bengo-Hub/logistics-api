@@ -67,7 +67,8 @@ func (rl *RateLimiter) Check(ctx context.Context, tenantID, feature string, limi
 
 // RequireRateLimit returns middleware that enforces a rate limit for a given feature.
 // The limit is read from JWT claims via Claims.GetLimit(featureKey).
-func RequireRateLimit(rl *RateLimiter, featureKey string) func(http.Handler) http.Handler {
+// upgradeURL is the subscription upgrade endpoint shown when limits are exceeded.
+func RequireRateLimit(rl *RateLimiter, featureKey string, upgradeURL string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			claims, ok := authclient.ClaimsFromContext(r.Context())
@@ -101,7 +102,7 @@ func RequireRateLimit(rl *RateLimiter, featureKey string) func(http.Handler) htt
 					"feature":     result.Feature,
 					"limit":       result.Limit,
 					"used":        result.Used,
-					"upgrade_url": "https://pricingapi.codevertexitsolutions.com/upgrade",
+					"upgrade_url": upgradeURL,
 					"message":     fmt.Sprintf("Daily %s limit reached. Upgrade your plan or add overage.", featureKey),
 				})
 				return

@@ -25,6 +25,12 @@ type ProofOfDeliveryCreate struct {
 	conflict []sql.ConflictOption
 }
 
+// SetTenantID sets the "tenant_id" field.
+func (_c *ProofOfDeliveryCreate) SetTenantID(v uuid.UUID) *ProofOfDeliveryCreate {
+	_c.mutation.SetTenantID(v)
+	return _c
+}
+
 // SetTaskID sets the "task_id" field.
 func (_c *ProofOfDeliveryCreate) SetTaskID(v uuid.UUID) *ProofOfDeliveryCreate {
 	_c.mutation.SetTaskID(v)
@@ -169,6 +175,9 @@ func (_c *ProofOfDeliveryCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_c *ProofOfDeliveryCreate) check() error {
+	if _, ok := _c.mutation.TenantID(); !ok {
+		return &ValidationError{Name: "tenant_id", err: errors.New(`ent: missing required field "ProofOfDelivery.tenant_id"`)}
+	}
 	if _, ok := _c.mutation.TaskID(); !ok {
 		return &ValidationError{Name: "task_id", err: errors.New(`ent: missing required field "ProofOfDelivery.task_id"`)}
 	}
@@ -220,6 +229,10 @@ func (_c *ProofOfDeliveryCreate) createSpec() (*ProofOfDelivery, *sqlgraph.Creat
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
+	if value, ok := _c.mutation.TenantID(); ok {
+		_spec.SetField(proofofdelivery.FieldTenantID, field.TypeUUID, value)
+		_node.TenantID = value
+	}
 	if value, ok := _c.mutation.FleetMemberID(); ok {
 		_spec.SetField(proofofdelivery.FieldFleetMemberID, field.TypeUUID, value)
 		_node.FleetMemberID = value
@@ -268,7 +281,7 @@ func (_c *ProofOfDeliveryCreate) createSpec() (*ProofOfDelivery, *sqlgraph.Creat
 // of the `INSERT` statement. For example:
 //
 //	client.ProofOfDelivery.Create().
-//		SetTaskID(v).
+//		SetTenantID(v).
 //		OnConflict(
 //			// Update the row with the new values
 //			// the was proposed for insertion.
@@ -277,7 +290,7 @@ func (_c *ProofOfDeliveryCreate) createSpec() (*ProofOfDelivery, *sqlgraph.Creat
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.ProofOfDeliveryUpsert) {
-//			SetTaskID(v+v).
+//			SetTenantID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *ProofOfDeliveryCreate) OnConflict(opts ...sql.ConflictOption) *ProofOfDeliveryUpsertOne {
@@ -312,6 +325,18 @@ type (
 		*sql.UpdateSet
 	}
 )
+
+// SetTenantID sets the "tenant_id" field.
+func (u *ProofOfDeliveryUpsert) SetTenantID(v uuid.UUID) *ProofOfDeliveryUpsert {
+	u.Set(proofofdelivery.FieldTenantID, v)
+	return u
+}
+
+// UpdateTenantID sets the "tenant_id" field to the value that was provided on create.
+func (u *ProofOfDeliveryUpsert) UpdateTenantID() *ProofOfDeliveryUpsert {
+	u.SetExcluded(proofofdelivery.FieldTenantID)
+	return u
+}
 
 // SetTaskID sets the "task_id" field.
 func (u *ProofOfDeliveryUpsert) SetTaskID(v uuid.UUID) *ProofOfDeliveryUpsert {
@@ -461,6 +486,20 @@ func (u *ProofOfDeliveryUpsertOne) Update(set func(*ProofOfDeliveryUpsert)) *Pro
 		set(&ProofOfDeliveryUpsert{UpdateSet: update})
 	}))
 	return u
+}
+
+// SetTenantID sets the "tenant_id" field.
+func (u *ProofOfDeliveryUpsertOne) SetTenantID(v uuid.UUID) *ProofOfDeliveryUpsertOne {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.SetTenantID(v)
+	})
+}
+
+// UpdateTenantID sets the "tenant_id" field to the value that was provided on create.
+func (u *ProofOfDeliveryUpsertOne) UpdateTenantID() *ProofOfDeliveryUpsertOne {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.UpdateTenantID()
+	})
 }
 
 // SetTaskID sets the "task_id" field.
@@ -718,7 +757,7 @@ func (_c *ProofOfDeliveryCreateBulk) ExecX(ctx context.Context) {
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.ProofOfDeliveryUpsert) {
-//			SetTaskID(v+v).
+//			SetTenantID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *ProofOfDeliveryCreateBulk) OnConflict(opts ...sql.ConflictOption) *ProofOfDeliveryUpsertBulk {
@@ -795,6 +834,20 @@ func (u *ProofOfDeliveryUpsertBulk) Update(set func(*ProofOfDeliveryUpsert)) *Pr
 		set(&ProofOfDeliveryUpsert{UpdateSet: update})
 	}))
 	return u
+}
+
+// SetTenantID sets the "tenant_id" field.
+func (u *ProofOfDeliveryUpsertBulk) SetTenantID(v uuid.UUID) *ProofOfDeliveryUpsertBulk {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.SetTenantID(v)
+	})
+}
+
+// UpdateTenantID sets the "tenant_id" field to the value that was provided on create.
+func (u *ProofOfDeliveryUpsertBulk) UpdateTenantID() *ProofOfDeliveryUpsertBulk {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.UpdateTenantID()
+	})
 }
 
 // SetTaskID sets the "task_id" field.

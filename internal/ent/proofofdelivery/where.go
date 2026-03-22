@@ -56,6 +56,11 @@ func IDLTE(id uuid.UUID) predicate.ProofOfDelivery {
 	return predicate.ProofOfDelivery(sql.FieldLTE(FieldID, id))
 }
 
+// TenantID applies equality check predicate on the "tenant_id" field. It's identical to TenantIDEQ.
+func TenantID(v uuid.UUID) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldEQ(FieldTenantID, v))
+}
+
 // TaskID applies equality check predicate on the "task_id" field. It's identical to TaskIDEQ.
 func TaskID(v uuid.UUID) predicate.ProofOfDelivery {
 	return predicate.ProofOfDelivery(sql.FieldEQ(FieldTaskID, v))
@@ -84,6 +89,46 @@ func OtpCode(v string) predicate.ProofOfDelivery {
 // CapturedAt applies equality check predicate on the "captured_at" field. It's identical to CapturedAtEQ.
 func CapturedAt(v time.Time) predicate.ProofOfDelivery {
 	return predicate.ProofOfDelivery(sql.FieldEQ(FieldCapturedAt, v))
+}
+
+// TenantIDEQ applies the EQ predicate on the "tenant_id" field.
+func TenantIDEQ(v uuid.UUID) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldEQ(FieldTenantID, v))
+}
+
+// TenantIDNEQ applies the NEQ predicate on the "tenant_id" field.
+func TenantIDNEQ(v uuid.UUID) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldNEQ(FieldTenantID, v))
+}
+
+// TenantIDIn applies the In predicate on the "tenant_id" field.
+func TenantIDIn(vs ...uuid.UUID) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldIn(FieldTenantID, vs...))
+}
+
+// TenantIDNotIn applies the NotIn predicate on the "tenant_id" field.
+func TenantIDNotIn(vs ...uuid.UUID) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldNotIn(FieldTenantID, vs...))
+}
+
+// TenantIDGT applies the GT predicate on the "tenant_id" field.
+func TenantIDGT(v uuid.UUID) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldGT(FieldTenantID, v))
+}
+
+// TenantIDGTE applies the GTE predicate on the "tenant_id" field.
+func TenantIDGTE(v uuid.UUID) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldGTE(FieldTenantID, v))
+}
+
+// TenantIDLT applies the LT predicate on the "tenant_id" field.
+func TenantIDLT(v uuid.UUID) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldLT(FieldTenantID, v))
+}
+
+// TenantIDLTE applies the LTE predicate on the "tenant_id" field.
+func TenantIDLTE(v uuid.UUID) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldLTE(FieldTenantID, v))
 }
 
 // TaskIDEQ applies the EQ predicate on the "task_id" field.

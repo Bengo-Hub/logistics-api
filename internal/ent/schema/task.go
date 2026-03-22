@@ -32,7 +32,7 @@ func (Task) Fields() []ent.Field {
 			Comment("Reference to upstream orders/transfers"),
 		field.String("source_service").
 			Optional().
-			Comment("cafe-backend | inventory-service | pos-service"),
+			Comment("ordering-backend | inventory-service | pos-service"),
 		field.String("task_type").
 			Default("delivery").
 			Comment("delivery | pickup | return | transfer | ride"),

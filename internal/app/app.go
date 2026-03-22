@@ -27,6 +27,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/modules/consumers"
 	fleetmod "github.com/bengobox/logistics-service/internal/modules/fleet"
 	"github.com/bengobox/logistics-service/internal/modules/identity"
+	rbacmod "github.com/bengobox/logistics-service/internal/modules/rbac"
 	"github.com/bengobox/logistics-service/internal/modules/routing"
 	"github.com/bengobox/logistics-service/internal/modules/tasks"
 	"github.com/bengobox/logistics-service/internal/modules/tenant"
@@ -117,7 +118,7 @@ func New(ctx context.Context) (*App, error) {
 		RequestTimeout: cfg.Subscriptions.RequestTimeout,
 	})
 
-	tenantSyncer := tenant.NewSyncer(entClient)
+	tenantSyncer := tenant.NewSyncer(entClient, cfg.Auth.ServiceURL)
 	identitySvc := identity.NewService(entClient, tenantSyncer)
 
 	// Subscribe to auth-service events for identity sync
@@ -156,7 +157,12 @@ func New(ctx context.Context) (*App, error) {
 	zoneSvc.SetCache(cacheAside)
 	zonesHandler := handlers.NewZonesHandler(zoneSvc, log)
 
-	chiRouter := router.New(log, healthHandler, authMiddleware, identitySvc, logisticsHandler, routingHandler, trackingHandler, zonesHandler, redisClient, cfg, cfg.HTTP.AllowedOrigins)
+	// RBAC
+	rbacRepo := rbacmod.NewEntRepository(entClient)
+	rbacSvc := rbacmod.NewService(rbacRepo, log, tenantSyncer)
+	rbacHandler := handlers.NewRBACHandler(log, rbacSvc, rbacRepo)
+
+	chiRouter := router.New(log, healthHandler, authMiddleware, identitySvc, logisticsHandler, routingHandler, trackingHandler, zonesHandler, rbacHandler, redisClient, cfg, cfg.HTTP.AllowedOrigins)
 
 	httpServer := &http.Server{
 		Addr:              fmt.Sprintf("%s:%d", cfg.HTTP.Host, cfg.HTTP.Port),

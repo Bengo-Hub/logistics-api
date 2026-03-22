@@ -26,7 +26,7 @@ type Task struct {
 	TrackingCode string `json:"tracking_code,omitempty"`
 	// Reference to upstream orders/transfers
 	ExternalReference string `json:"external_reference,omitempty"`
-	// cafe-backend | inventory-service | pos-service
+	// ordering-backend | inventory-service | pos-service
 	SourceService string `json:"source_service,omitempty"`
 	// delivery | pickup | return | transfer | ride
 	TaskType string `json:"task_type,omitempty"`

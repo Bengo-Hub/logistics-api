@@ -25,7 +25,7 @@ func (TenantSyncEvent) Fields() []ent.Field {
 			NotEmpty(),
 		field.String("source_service").
 			NotEmpty().
-			Comment("The service that emitted the sync event (auth-api, cafe-backend, etc.)"),
+			Comment("The service that emitted the sync event (auth-api, ordering-backend, etc.)"),
 		field.JSON("payload", map[string]any{}),
 		field.Time("synced_at").
 			Default(time.Now),
