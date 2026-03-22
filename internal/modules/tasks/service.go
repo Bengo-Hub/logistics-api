@@ -16,6 +16,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
 	"github.com/bengobox/logistics-service/internal/ent/task"
 	"github.com/bengobox/logistics-service/internal/ent/taskassignment"
+	"github.com/bengobox/logistics-service/internal/platform/events"
 )
 
 // Valid task statuses (state machine).
@@ -63,8 +64,9 @@ type ListTasksFilter struct {
 
 // Service handles task business logic.
 type Service struct {
-	client *ent.Client
-	log    *zap.Logger
+	client    *ent.Client
+	log       *zap.Logger
+	publisher *events.Publisher
 }
 
 // NewService creates a new task service.
@@ -73,6 +75,11 @@ func NewService(client *ent.Client, log *zap.Logger) *Service {
 		client: client,
 		log:    log.Named("tasks.service"),
 	}
+}
+
+// SetPublisher sets the event publisher for task lifecycle events.
+func (s *Service) SetPublisher(p *events.Publisher) {
+	s.publisher = p
 }
 
 // CreateTask creates a new delivery task.
@@ -193,6 +200,19 @@ func (s *Service) UpdateStatus(ctx context.Context, tenantID, taskID uuid.UUID, 
 		zap.String("from", t.Status),
 		zap.String("to", newStatus),
 	)
+
+	// Publish task status change event
+	if s.publisher != nil {
+		_ = s.publisher.PublishTaskStatusChanged(ctx, tenantID, events.TaskEventData{
+			TaskID:            taskID.String(),
+			TrackingCode:      updated.TrackingCode,
+			ExternalReference: updated.ExternalReference,
+			Status:            newStatus,
+			PreviousStatus:    t.Status,
+			SourceService:     updated.SourceService,
+		})
+	}
+
 	return updated, nil
 }
 
@@ -236,6 +256,22 @@ func (s *Service) AssignTask(ctx context.Context, tenantID, taskID uuid.UUID, re
 		zap.String("task_id", taskID.String()),
 		zap.String("member_id", req.FleetMemberID.String()),
 	)
+
+	// Publish task assigned event
+	if s.publisher != nil {
+		t, _ := s.client.Task.Query().Where(task.ID(taskID)).Only(ctx)
+		if t != nil {
+			_ = s.publisher.PublishTaskAssigned(ctx, tenantID, events.TaskEventData{
+				TaskID:            taskID.String(),
+				TrackingCode:      t.TrackingCode,
+				ExternalReference: t.ExternalReference,
+				Status:            "assigned",
+				FleetMemberID:     req.FleetMemberID.String(),
+				SourceService:     t.SourceService,
+			})
+		}
+	}
+
 	return assignment, nil
 }
 
@@ -304,6 +340,19 @@ func (s *Service) SubmitPoD(ctx context.Context, tenantID, taskID uuid.UUID, req
 		zap.String("task_id", taskID.String()),
 		zap.String("pod_id", pod.ID.String()),
 	)
+
+	// Publish task completed event
+	if s.publisher != nil {
+		_ = s.publisher.PublishTaskCompleted(ctx, tenantID, events.TaskEventData{
+			TaskID:            taskID.String(),
+			TrackingCode:      t.TrackingCode,
+			ExternalReference: t.ExternalReference,
+			Status:            "delivered",
+			FleetMemberID:     req.FleetMemberID.String(),
+			SourceService:     t.SourceService,
+		})
+	}
+
 	return pod, nil
 }
 
