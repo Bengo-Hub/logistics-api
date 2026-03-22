@@ -120,6 +120,14 @@ func New(ctx context.Context) (*App, error) {
 	tenantSyncer := tenant.NewSyncer(entClient)
 	identitySvc := identity.NewService(entClient, tenantSyncer)
 
+	// Subscribe to auth-service events for identity sync
+	if natsConn != nil {
+		identityEventHandler := identity.NewEventHandler(identitySvc, log)
+		if err := identityEventHandler.SubscribeToAuthEvents(natsConn); err != nil {
+			log.Warn("app: failed to subscribe to auth events", zap.Error(err))
+		}
+	}
+
 	// Create event publisher for fleet lifecycle events
 	var eventPublisher *events.Publisher
 	if natsConn != nil {

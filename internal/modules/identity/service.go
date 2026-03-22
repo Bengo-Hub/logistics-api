@@ -88,13 +88,30 @@ func (s *Service) EnsureUserFromToken(ctx context.Context, authServiceID uuid.UU
 	return newUsr, nil
 }
 
-// roleFromClaims returns the service-level role for JIT-created users. Platform admin (codevertex + superuser) gets "admin" (all permissions).
+// roleFromClaims returns the service-level role for JIT-created users.
+// Platform admin (codevertex + superuser) gets "admin".
+// Uses "driver" as the universal role for delivery/courier/taxi use cases.
 func roleFromClaims(tenantSlug string, claims map[string]any) string {
 	if tenantSlug == "codevertex" && hasSuperuser(claims) {
 		return "admin"
 	}
-	// Default for riders/other tenants; could be derived from claims["roles"] if needed.
-	return "rider"
+	// Extract role from JWT claims if available
+	if roles, ok := claims["roles"].([]interface{}); ok {
+		for _, r := range roles {
+			if s, _ := r.(string); s != "" {
+				switch s {
+				case "superuser", "admin":
+					return "admin"
+				case "staff":
+					return "staff"
+				case "driver", "rider":
+					return RoleDriver
+				}
+			}
+		}
+	}
+	// Default for fleet members: universal driver role
+	return RoleDriver
 }
 
 func hasSuperuser(claims map[string]any) bool {
