@@ -19,6 +19,7 @@ import (
 
 	sharedcache "github.com/Bengo-Hub/cache"
 	authclient "github.com/Bengo-Hub/shared-auth-client"
+	eventslib "github.com/Bengo-Hub/shared-events"
 	"github.com/bengobox/logistics-service/internal/config"
 	"github.com/bengobox/logistics-service/internal/ent"
 	"github.com/bengobox/logistics-service/internal/ent/migrate"
@@ -40,14 +41,15 @@ import (
 )
 
 type App struct {
-	cfg           *config.Config
-	log           *zap.Logger
-	httpServer    *http.Server
-	db            *pgxpool.Pool
-	entClient     *ent.Client
-	cache         *redis.Client
-	events        *nats.Conn
-	orderConsumer *consumers.OrderReadyConsumer
+	cfg             *config.Config
+	log             *zap.Logger
+	httpServer      *http.Server
+	db              *pgxpool.Pool
+	entClient       *ent.Client
+	cache           *redis.Client
+	events          *nats.Conn
+	orderConsumer   *consumers.OrderReadyConsumer
+	outboxPublisher *eventslib.Publisher
 }
 
 func New(ctx context.Context) (*App, error) {
@@ -129,10 +131,20 @@ func New(ctx context.Context) (*App, error) {
 		}
 	}
 
-	// Create event publisher for fleet lifecycle events
+	// Create event publisher using shared-events outbox pattern
 	var eventPublisher *events.Publisher
+	var outboxPub *eventslib.Publisher
 	if natsConn != nil {
-		eventPublisher = events.NewPublisher(natsConn, log)
+		eventPublisher = events.NewPublisher(sqlDB, log)
+
+		// Start background outbox publisher
+		js, jsErr := natsConn.JetStream()
+		if jsErr != nil {
+			log.Warn("jetstream init for outbox publisher", zap.Error(jsErr))
+		} else {
+			pubCfg := eventslib.DefaultPublisherConfig(js, eventPublisher.OutboxRepo(), log)
+			outboxPub = eventslib.NewPublisher(pubCfg)
+		}
 	}
 
 	taskSvc := tasks.NewService(entClient, log)
@@ -175,18 +187,29 @@ func New(ctx context.Context) (*App, error) {
 	}
 
 	return &App{
-		cfg:           cfg,
-		log:           log,
-		httpServer:    httpServer,
-		db:            dbPool,
-		entClient:     entClient,
-		cache:         redisClient,
-		events:        natsConn,
-		orderConsumer: orderConsumer,
+		cfg:             cfg,
+		log:             log,
+		httpServer:      httpServer,
+		db:              dbPool,
+		entClient:       entClient,
+		cache:           redisClient,
+		events:          natsConn,
+		orderConsumer:   orderConsumer,
+		outboxPublisher: outboxPub,
 	}, nil
 }
 
 func (a *App) Run(ctx context.Context) error {
+	// Start outbox background publisher for logistics events
+	if a.outboxPublisher != nil {
+		go func() {
+			if err := a.outboxPublisher.Start(ctx); err != nil {
+				a.log.Error("outbox publisher stopped", zap.Error(err))
+			}
+		}()
+		a.log.Info("outbox background publisher started")
+	}
+
 	// Start order.ready consumer for auto-creating delivery tasks
 	if a.orderConsumer != nil && a.events != nil {
 		js, err := a.events.JetStream()
