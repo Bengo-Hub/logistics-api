@@ -2,84 +2,61 @@ package events
 
 import (
 	"context"
-	"encoding/json"
+	"database/sql"
 	"fmt"
-	"time"
 
+	eventslib "github.com/Bengo-Hub/shared-events"
 	"github.com/google/uuid"
-	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
 )
 
-// Publisher handles publishing events to NATS.
+// Publisher handles publishing logistics events via the transactional outbox pattern.
 type Publisher struct {
-	conn   *nats.Conn
+	repo   eventslib.OutboxRepository
 	logger *zap.Logger
 }
 
-// NewPublisher creates a new event publisher.
-func NewPublisher(conn *nats.Conn, logger *zap.Logger) *Publisher {
+// NewPublisher creates a new event publisher backed by the shared-events outbox.
+func NewPublisher(sqlDB *sql.DB, logger *zap.Logger) *Publisher {
 	return &Publisher{
-		conn:   conn,
+		repo:   eventslib.NewSQLOutboxRepository(sqlDB),
 		logger: logger.Named("events.publisher"),
 	}
 }
 
-// Event represents a CloudEvents-compatible event envelope.
-type Event struct {
-	ID              string                 `json:"id"`
-	Source          string                 `json:"source"`
-	SpecVersion     string                 `json:"specversion"`
-	Type            string                 `json:"type"`
-	DataContentType string                 `json:"datacontenttype"`
-	Time            string                 `json:"time"`
-	TenantID        string                 `json:"tenantId,omitempty"`
-	TenantSlug      string                 `json:"tenant_slug,omitempty"`
-	Data            map[string]interface{} `json:"data"`
-	Metadata        map[string]interface{} `json:"metadata,omitempty"`
+// OutboxRepo returns the outbox repository for use by the background publisher.
+func (p *Publisher) OutboxRepo() eventslib.OutboxRepository {
+	return p.repo
 }
 
-// NewEvent creates a new event with the given type and data.
-func NewEvent(eventType string, tenantID uuid.UUID, data map[string]interface{}) Event {
-	return Event{
-		ID:              uuid.New().String(),
-		Source:          "logistics-service",
-		SpecVersion:     "1.0",
-		Type:            eventType,
-		DataContentType: "application/json",
-		Time:            time.Now().UTC().Format(time.RFC3339),
-		TenantID:        tenantID.String(),
-		Data:            data,
-		Metadata: map[string]interface{}{
-			"correlation_id": uuid.New().String(),
-			"source":         "logistics-service",
-		},
-	}
-}
-
-// Publish publishes an event to the specified subject.
-func (p *Publisher) Publish(ctx context.Context, subject string, event Event) error {
-	if p == nil || p.conn == nil {
+// publish writes an event to the outbox for background publishing to NATS.
+func (p *Publisher) publish(ctx context.Context, tenantID uuid.UUID, aggregateType, eventType string, data map[string]interface{}) error {
+	if p == nil {
 		return nil
 	}
 
-	data, err := json.Marshal(event)
+	event := eventslib.NewEvent(eventType, aggregateType, uuid.New(), tenantID, data)
+
+	tx, err := p.repo.BeginTx(ctx)
 	if err != nil {
-		return fmt.Errorf("marshal event: %w", err)
+		p.logger.Error("failed to begin tx for event", zap.String("event_type", eventType), zap.Error(err))
+		return fmt.Errorf("begin tx: %w", err)
 	}
 
-	if err := p.conn.Publish(subject, data); err != nil {
-		p.logger.Error("failed to publish event",
-			zap.Error(err),
-			zap.String("subject", subject),
-			zap.String("event_id", event.ID))
-		return fmt.Errorf("publish event: %w", err)
+	if err := eventslib.CreateOutboxRecordInTx(ctx, tx, p.repo, event); err != nil {
+		_ = tx.Rollback()
+		p.logger.Error("failed to write event to outbox", zap.String("event_type", eventType), zap.Error(err))
+		return fmt.Errorf("write outbox: %w", err)
 	}
 
-	p.logger.Debug("event published",
-		zap.String("subject", subject),
-		zap.String("event_type", event.Type),
-		zap.String("event_id", event.ID))
+	if err := tx.Commit(); err != nil {
+		p.logger.Error("failed to commit event", zap.String("event_type", eventType), zap.Error(err))
+		return fmt.Errorf("commit: %w", err)
+	}
+
+	p.logger.Debug("event written to outbox",
+		zap.String("event_type", eventType),
+		zap.String("subject", event.Subject()))
 
 	return nil
 }
@@ -88,9 +65,9 @@ func (p *Publisher) Publish(ctx context.Context, subject string, event Event) er
 
 // FleetMemberEventData represents data for fleet member lifecycle events.
 type FleetMemberEventData struct {
-	MemberID string `json:"member_id"`
-	UserID   string `json:"user_id"`
-	FleetID  string `json:"fleet_id"`
+	MemberID  string `json:"member_id"`
+	UserID    string `json:"user_id"`
+	FleetID   string `json:"fleet_id"`
 	UserEmail string `json:"user_email"`
 	UserName  string `json:"user_name"`
 }
@@ -107,20 +84,17 @@ func (d FleetMemberEventData) toMap() map[string]interface{} {
 
 // PublishFleetMemberInvited publishes a fleet.member_invited event.
 func (p *Publisher) PublishFleetMemberInvited(ctx context.Context, tenantID uuid.UUID, data FleetMemberEventData) error {
-	event := NewEvent("logistics.fleet.member_invited", tenantID, data.toMap())
-	return p.Publish(ctx, "logistics.fleet.member_invited", event)
+	return p.publish(ctx, tenantID, "logistics", "fleet.member_invited", data.toMap())
 }
 
 // PublishFleetMemberApproved publishes a fleet.member_approved event.
 func (p *Publisher) PublishFleetMemberApproved(ctx context.Context, tenantID uuid.UUID, data FleetMemberEventData) error {
-	event := NewEvent("logistics.fleet.member_approved", tenantID, data.toMap())
-	return p.Publish(ctx, "logistics.fleet.member_approved", event)
+	return p.publish(ctx, tenantID, "logistics", "fleet.member_approved", data.toMap())
 }
 
 // PublishFleetMemberSuspended publishes a fleet.member_suspended event.
 func (p *Publisher) PublishFleetMemberSuspended(ctx context.Context, tenantID uuid.UUID, data FleetMemberEventData) error {
-	event := NewEvent("logistics.fleet.member_suspended", tenantID, data.toMap())
-	return p.Publish(ctx, "logistics.fleet.member_suspended", event)
+	return p.publish(ctx, tenantID, "logistics", "fleet.member_suspended", data.toMap())
 }
 
 // --- Task Lifecycle Events ---
@@ -138,9 +112,9 @@ type TaskEventData struct {
 
 func (d TaskEventData) toMap() map[string]interface{} {
 	m := map[string]interface{}{
-		"task_id":        d.TaskID,
-		"tracking_code":  d.TrackingCode,
-		"status":         d.Status,
+		"task_id":       d.TaskID,
+		"tracking_code": d.TrackingCode,
+		"status":        d.Status,
 	}
 	if d.ExternalReference != "" {
 		m["external_reference"] = d.ExternalReference
@@ -159,19 +133,16 @@ func (d TaskEventData) toMap() map[string]interface{} {
 
 // PublishTaskAssigned publishes a logistics.task.assigned event.
 func (p *Publisher) PublishTaskAssigned(ctx context.Context, tenantID uuid.UUID, data TaskEventData) error {
-	event := NewEvent("logistics.task.assigned", tenantID, data.toMap())
-	return p.Publish(ctx, "logistics.task.assigned", event)
+	return p.publish(ctx, tenantID, "logistics", "task.assigned", data.toMap())
 }
 
 // PublishTaskStatusChanged publishes a logistics.task.status_changed event.
 func (p *Publisher) PublishTaskStatusChanged(ctx context.Context, tenantID uuid.UUID, data TaskEventData) error {
-	subject := fmt.Sprintf("logistics.task.%s", data.Status)
-	event := NewEvent(subject, tenantID, data.toMap())
-	return p.Publish(ctx, subject, event)
+	eventType := fmt.Sprintf("task.%s", data.Status)
+	return p.publish(ctx, tenantID, "logistics", eventType, data.toMap())
 }
 
 // PublishTaskCompleted publishes a logistics.task.completed event.
 func (p *Publisher) PublishTaskCompleted(ctx context.Context, tenantID uuid.UUID, data TaskEventData) error {
-	event := NewEvent("logistics.task.completed", tenantID, data.toMap())
-	return p.Publish(ctx, "logistics.task.completed", event)
+	return p.publish(ctx, tenantID, "logistics", "task.completed", data.toMap())
 }
