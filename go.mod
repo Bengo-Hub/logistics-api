@@ -5,7 +5,7 @@ go 1.24.0
 require (
 	ariga.io/atlas v0.32.1-0.20250325101103-175b25e1c1b9
 	entgo.io/ent v0.14.5
-	github.com/Bengo-Hub/cache v0.1.0
+	github.com/Bengo-Hub/cache v0.2.0
 	github.com/Bengo-Hub/httpware v0.3.0
 	github.com/Bengo-Hub/shared-auth-client v0.0.0-00010101000000-000000000000
 	github.com/go-chi/chi/v5 v5.0.12
