@@ -6,6 +6,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/bengobox/logistics-service/internal/ent/migrate"
 
@@ -35,14 +36,19 @@ func main() {
 	}
 
 	// Generate migrations using Atlas support.
-	// We use the default development database URL or one from ENV if needed.
-	// For generation, we usually use a temporary or local dev DB.
+	// Use ent_dev schema as a clean dev-db for Atlas to calculate the diff.
 	dbURL := os.Getenv("POSTGRES_URL")
 	if dbURL == "" {
 		dbURL = "postgres://postgres:postgres@localhost:5432/logistics?sslmode=disable"
 	}
+	devURL := dbURL
+	if strings.Contains(devURL, "?") {
+		devURL += "&search_path=ent_dev"
+	} else {
+		devURL += "?search_path=ent_dev"
+	}
 
-	err = migrate.NamedDiff(ctx, dbURL, os.Args[1], opts...)
+	err = migrate.NamedDiff(ctx, devURL, os.Args[1], opts...)
 	if err != nil {
 		log.Fatalf("failed generating migration: %v", err)
 	}
