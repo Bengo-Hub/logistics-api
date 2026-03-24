@@ -52,6 +52,7 @@ type App struct {
 	orderConsumer   *consumers.OrderReadyConsumer
 	outboxPublisher *eventslib.Publisher
 	etaUpdater      *dispatch.ETAUpdater
+	batchScheduler  *dispatch.BatchScheduler
 }
 
 func New(ctx context.Context) (*App, error) {
@@ -167,6 +168,9 @@ func New(ctx context.Context) (*App, error) {
 	// ETA updater: periodically recalculates ETA for in-progress deliveries
 	etaUpdater := dispatch.NewETAUpdater(log, entClient, routingSvc, autoDispatcher, eventPublisher, 30*time.Second)
 
+	// Batch scheduler: groups nearby pending tasks for the same rider every 2 min
+	batchScheduler := dispatch.NewBatchScheduler(log, entClient, autoDispatcher, 2*time.Minute)
+
 	// Public tracking handler (no auth)
 	trackingHandler := handlers.NewTrackingHandler(taskSvc, log)
 
@@ -205,6 +209,7 @@ func New(ctx context.Context) (*App, error) {
 		orderConsumer:   orderConsumer,
 		outboxPublisher: outboxPub,
 		etaUpdater:      etaUpdater,
+		batchScheduler:  batchScheduler,
 	}, nil
 }
 
@@ -238,6 +243,12 @@ func (a *App) Run(ctx context.Context) error {
 	if a.etaUpdater != nil {
 		go a.etaUpdater.Start(ctx)
 		a.log.Info("ETA updater started")
+	}
+
+	// Start batch dispatch scheduler for grouping nearby orders
+	if a.batchScheduler != nil {
+		go a.batchScheduler.Start(ctx)
+		a.log.Info("batch scheduler started")
 	}
 
 	a.log.Info("logistics service starting", zap.String("addr", a.httpServer.Addr))
