@@ -79,6 +79,11 @@ func (d FleetMemberEventData) toMap() map[string]interface{} {
 		"fleet_id":   d.FleetID,
 		"user_email": d.UserEmail,
 		"user_name":  d.UserName,
+		"notification": map[string]interface{}{
+			"target":          "rider",
+			"recipient_email": d.UserEmail,
+			"recipient_name":  d.UserName,
+		},
 	}
 }
 
@@ -115,6 +120,9 @@ func (d TaskEventData) toMap() map[string]interface{} {
 		"task_id":       d.TaskID,
 		"tracking_code": d.TrackingCode,
 		"status":        d.Status,
+		"notification": map[string]interface{}{
+			"target": "customer",
+		},
 	}
 	if d.ExternalReference != "" {
 		m["external_reference"] = d.ExternalReference
@@ -162,12 +170,15 @@ type TaskETAEventData struct {
 
 func (d TaskETAEventData) toMap() map[string]interface{} {
 	m := map[string]interface{}{
-		"task_id":      d.TaskID,
+		"task_id":       d.TaskID,
 		"tracking_code": d.TrackingCode,
-		"eta_minutes":  d.ETAMinutes,
-		"distance_km":  d.DistanceKm,
-		"rider_lat":    d.RiderLat,
-		"rider_lng":    d.RiderLng,
+		"eta_minutes":   d.ETAMinutes,
+		"distance_km":   d.DistanceKm,
+		"rider_lat":     d.RiderLat,
+		"rider_lng":     d.RiderLng,
+		"notification": map[string]interface{}{
+			"target": "customer",
+		},
 	}
 	if d.ExternalReference != "" {
 		m["external_reference"] = d.ExternalReference
