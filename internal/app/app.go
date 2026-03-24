@@ -26,6 +26,7 @@ import (
 	handlers "github.com/bengobox/logistics-service/internal/http/handlers"
 	router "github.com/bengobox/logistics-service/internal/http/router"
 	"github.com/bengobox/logistics-service/internal/modules/consumers"
+	"github.com/bengobox/logistics-service/internal/modules/dispatch"
 	fleetmod "github.com/bengobox/logistics-service/internal/modules/fleet"
 	"github.com/bengobox/logistics-service/internal/modules/identity"
 	rbacmod "github.com/bengobox/logistics-service/internal/modules/rbac"
@@ -50,6 +51,7 @@ type App struct {
 	events          *nats.Conn
 	orderConsumer   *consumers.OrderReadyConsumer
 	outboxPublisher *eventslib.Publisher
+	etaUpdater      *dispatch.ETAUpdater
 }
 
 func New(ctx context.Context) (*App, error) {
@@ -152,12 +154,18 @@ func New(ctx context.Context) (*App, error) {
 	fleetSvc := fleetmod.NewService(entClient, log, eventPublisher)
 	logisticsHandler := handlers.NewLogisticsHandler(log, taskSvc, fleetSvc)
 
-	orderConsumer := consumers.NewOrderReadyConsumer(log, taskSvc)
+	// Auto-dispatch: find nearest rider and assign tasks automatically
+	autoDispatcher := dispatch.NewAutoDispatcher(log, fleetSvc, taskSvc, redisClient)
+
+	orderConsumer := consumers.NewOrderReadyConsumer(log, taskSvc, autoDispatcher)
 
 	// Initialize routing engine (Valhalla primary, no fallback initially)
 	valhallaProvider := routing.NewValhallaProvider(cfg.Routing.PrimaryURL, cfg.Routing.RequestTimeout)
 	routingSvc := routing.NewService(valhallaProvider, nil, redisClient, cfg.Routing.CacheTTL, log)
 	routingHandler := handlers.NewRoutingHandler(routingSvc, log)
+
+	// ETA updater: periodically recalculates ETA for in-progress deliveries
+	etaUpdater := dispatch.NewETAUpdater(log, entClient, routingSvc, autoDispatcher, eventPublisher, 30*time.Second)
 
 	// Public tracking handler (no auth)
 	trackingHandler := handlers.NewTrackingHandler(taskSvc, log)
@@ -196,6 +204,7 @@ func New(ctx context.Context) (*App, error) {
 		events:          natsConn,
 		orderConsumer:   orderConsumer,
 		outboxPublisher: outboxPub,
+		etaUpdater:      etaUpdater,
 	}, nil
 }
 
@@ -223,6 +232,12 @@ func (a *App) Run(ctx context.Context) error {
 			}()
 			a.log.Info("order ready consumer started")
 		}
+	}
+
+	// Start periodic ETA updater for in-progress deliveries
+	if a.etaUpdater != nil {
+		go a.etaUpdater.Start(ctx)
+		a.log.Info("ETA updater started")
 	}
 
 	a.log.Info("logistics service starting", zap.String("addr", a.httpServer.Addr))

@@ -129,6 +129,7 @@ func (s *Service) GetTask(ctx context.Context, tenantID, taskID uuid.UUID) (*ent
 	t, err := s.client.Task.Query().
 		Where(task.ID(taskID), task.TenantID(tenantID)).
 		WithAssignments().
+		WithSteps().
 		WithProofOfDelivery().
 		Only(ctx)
 	if err != nil {

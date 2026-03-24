@@ -146,3 +146,36 @@ func (p *Publisher) PublishTaskStatusChanged(ctx context.Context, tenantID uuid.
 func (p *Publisher) PublishTaskCompleted(ctx context.Context, tenantID uuid.UUID, data TaskEventData) error {
 	return p.publish(ctx, tenantID, "logistics", "task.completed", data.toMap())
 }
+
+// --- Task ETA Events ---
+
+// TaskETAEventData represents data for ETA update events.
+type TaskETAEventData struct {
+	TaskID            string  `json:"task_id"`
+	TrackingCode      string  `json:"tracking_code"`
+	ExternalReference string  `json:"external_reference,omitempty"`
+	ETAMinutes        float64 `json:"eta_minutes"`
+	DistanceKm        float64 `json:"distance_km"`
+	RiderLat          float64 `json:"rider_lat"`
+	RiderLng          float64 `json:"rider_lng"`
+}
+
+func (d TaskETAEventData) toMap() map[string]interface{} {
+	m := map[string]interface{}{
+		"task_id":      d.TaskID,
+		"tracking_code": d.TrackingCode,
+		"eta_minutes":  d.ETAMinutes,
+		"distance_km":  d.DistanceKm,
+		"rider_lat":    d.RiderLat,
+		"rider_lng":    d.RiderLng,
+	}
+	if d.ExternalReference != "" {
+		m["external_reference"] = d.ExternalReference
+	}
+	return m
+}
+
+// PublishTaskETAUpdated publishes a logistics.task.eta.updated event.
+func (p *Publisher) PublishTaskETAUpdated(ctx context.Context, tenantID uuid.UUID, data TaskETAEventData) error {
+	return p.publish(ctx, tenantID, "logistics", "task.eta_updated", data.toMap())
+}
