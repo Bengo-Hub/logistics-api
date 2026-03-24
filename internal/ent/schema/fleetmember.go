@@ -53,6 +53,16 @@ func (FleetMember) Fields() []ent.Field {
 			Nillable(),
 		field.JSON("metadata", map[string]any{}).
 			Default(map[string]any{}),
+		field.JSON("specialization_tags", []string{}).
+			Default([]string{}).
+			Comment("Rider capabilities: food_safe, fragile, heavy_duty, cold_chain, motorcycle, van, bicycle"),
+		field.Bool("has_cold_storage").
+			Default(false).
+			Comment("Vehicle has temperature-controlled storage"),
+		field.Float("max_weight_capacity_kg").
+			Optional().
+			Nillable().
+			Comment("Maximum carrying weight capacity"),
 		field.Time("created_at").
 			Default(time.Now).
 			Immutable(),

@@ -222,6 +222,127 @@ func (_u *TaskUpdate) SetMetadata(v map[string]interface{}) *TaskUpdate {
 	return _u
 }
 
+// SetPackageWeightKg sets the "package_weight_kg" field.
+func (_u *TaskUpdate) SetPackageWeightKg(v float64) *TaskUpdate {
+	_u.mutation.ResetPackageWeightKg()
+	_u.mutation.SetPackageWeightKg(v)
+	return _u
+}
+
+// SetNillablePackageWeightKg sets the "package_weight_kg" field if the given value is not nil.
+func (_u *TaskUpdate) SetNillablePackageWeightKg(v *float64) *TaskUpdate {
+	if v != nil {
+		_u.SetPackageWeightKg(*v)
+	}
+	return _u
+}
+
+// AddPackageWeightKg adds value to the "package_weight_kg" field.
+func (_u *TaskUpdate) AddPackageWeightKg(v float64) *TaskUpdate {
+	_u.mutation.AddPackageWeightKg(v)
+	return _u
+}
+
+// ClearPackageWeightKg clears the value of the "package_weight_kg" field.
+func (_u *TaskUpdate) ClearPackageWeightKg() *TaskUpdate {
+	_u.mutation.ClearPackageWeightKg()
+	return _u
+}
+
+// SetPackageDimensionsCm sets the "package_dimensions_cm" field.
+func (_u *TaskUpdate) SetPackageDimensionsCm(v map[string]float64) *TaskUpdate {
+	_u.mutation.SetPackageDimensionsCm(v)
+	return _u
+}
+
+// ClearPackageDimensionsCm clears the value of the "package_dimensions_cm" field.
+func (_u *TaskUpdate) ClearPackageDimensionsCm() *TaskUpdate {
+	_u.mutation.ClearPackageDimensionsCm()
+	return _u
+}
+
+// SetRequiresTemperatureControl sets the "requires_temperature_control" field.
+func (_u *TaskUpdate) SetRequiresTemperatureControl(v bool) *TaskUpdate {
+	_u.mutation.SetRequiresTemperatureControl(v)
+	return _u
+}
+
+// SetNillableRequiresTemperatureControl sets the "requires_temperature_control" field if the given value is not nil.
+func (_u *TaskUpdate) SetNillableRequiresTemperatureControl(v *bool) *TaskUpdate {
+	if v != nil {
+		_u.SetRequiresTemperatureControl(*v)
+	}
+	return _u
+}
+
+// SetTemperatureRange sets the "temperature_range" field.
+func (_u *TaskUpdate) SetTemperatureRange(v string) *TaskUpdate {
+	_u.mutation.SetTemperatureRange(v)
+	return _u
+}
+
+// SetNillableTemperatureRange sets the "temperature_range" field if the given value is not nil.
+func (_u *TaskUpdate) SetNillableTemperatureRange(v *string) *TaskUpdate {
+	if v != nil {
+		_u.SetTemperatureRange(*v)
+	}
+	return _u
+}
+
+// ClearTemperatureRange clears the value of the "temperature_range" field.
+func (_u *TaskUpdate) ClearTemperatureRange() *TaskUpdate {
+	_u.mutation.ClearTemperatureRange()
+	return _u
+}
+
+// SetRequiresFragileHandling sets the "requires_fragile_handling" field.
+func (_u *TaskUpdate) SetRequiresFragileHandling(v bool) *TaskUpdate {
+	_u.mutation.SetRequiresFragileHandling(v)
+	return _u
+}
+
+// SetNillableRequiresFragileHandling sets the "requires_fragile_handling" field if the given value is not nil.
+func (_u *TaskUpdate) SetNillableRequiresFragileHandling(v *bool) *TaskUpdate {
+	if v != nil {
+		_u.SetRequiresFragileHandling(*v)
+	}
+	return _u
+}
+
+// SetRequiresHeavyDuty sets the "requires_heavy_duty" field.
+func (_u *TaskUpdate) SetRequiresHeavyDuty(v bool) *TaskUpdate {
+	_u.mutation.SetRequiresHeavyDuty(v)
+	return _u
+}
+
+// SetNillableRequiresHeavyDuty sets the "requires_heavy_duty" field if the given value is not nil.
+func (_u *TaskUpdate) SetNillableRequiresHeavyDuty(v *bool) *TaskUpdate {
+	if v != nil {
+		_u.SetRequiresHeavyDuty(*v)
+	}
+	return _u
+}
+
+// SetCarrierID sets the "carrier_id" field.
+func (_u *TaskUpdate) SetCarrierID(v string) *TaskUpdate {
+	_u.mutation.SetCarrierID(v)
+	return _u
+}
+
+// SetNillableCarrierID sets the "carrier_id" field if the given value is not nil.
+func (_u *TaskUpdate) SetNillableCarrierID(v *string) *TaskUpdate {
+	if v != nil {
+		_u.SetCarrierID(*v)
+	}
+	return _u
+}
+
+// ClearCarrierID clears the value of the "carrier_id" field.
+func (_u *TaskUpdate) ClearCarrierID() *TaskUpdate {
+	_u.mutation.ClearCarrierID()
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *TaskUpdate) SetUpdatedAt(v time.Time) *TaskUpdate {
 	_u.mutation.SetUpdatedAt(v)
@@ -477,6 +598,42 @@ func (_u *TaskUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.Metadata(); ok {
 		_spec.SetField(task.FieldMetadata, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.PackageWeightKg(); ok {
+		_spec.SetField(task.FieldPackageWeightKg, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedPackageWeightKg(); ok {
+		_spec.AddField(task.FieldPackageWeightKg, field.TypeFloat64, value)
+	}
+	if _u.mutation.PackageWeightKgCleared() {
+		_spec.ClearField(task.FieldPackageWeightKg, field.TypeFloat64)
+	}
+	if value, ok := _u.mutation.PackageDimensionsCm(); ok {
+		_spec.SetField(task.FieldPackageDimensionsCm, field.TypeJSON, value)
+	}
+	if _u.mutation.PackageDimensionsCmCleared() {
+		_spec.ClearField(task.FieldPackageDimensionsCm, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.RequiresTemperatureControl(); ok {
+		_spec.SetField(task.FieldRequiresTemperatureControl, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.TemperatureRange(); ok {
+		_spec.SetField(task.FieldTemperatureRange, field.TypeString, value)
+	}
+	if _u.mutation.TemperatureRangeCleared() {
+		_spec.ClearField(task.FieldTemperatureRange, field.TypeString)
+	}
+	if value, ok := _u.mutation.RequiresFragileHandling(); ok {
+		_spec.SetField(task.FieldRequiresFragileHandling, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.RequiresHeavyDuty(); ok {
+		_spec.SetField(task.FieldRequiresHeavyDuty, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.CarrierID(); ok {
+		_spec.SetField(task.FieldCarrierID, field.TypeString, value)
+	}
+	if _u.mutation.CarrierIDCleared() {
+		_spec.ClearField(task.FieldCarrierID, field.TypeString)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(task.FieldUpdatedAt, field.TypeTime, value)
@@ -854,6 +1011,127 @@ func (_u *TaskUpdateOne) SetMetadata(v map[string]interface{}) *TaskUpdateOne {
 	return _u
 }
 
+// SetPackageWeightKg sets the "package_weight_kg" field.
+func (_u *TaskUpdateOne) SetPackageWeightKg(v float64) *TaskUpdateOne {
+	_u.mutation.ResetPackageWeightKg()
+	_u.mutation.SetPackageWeightKg(v)
+	return _u
+}
+
+// SetNillablePackageWeightKg sets the "package_weight_kg" field if the given value is not nil.
+func (_u *TaskUpdateOne) SetNillablePackageWeightKg(v *float64) *TaskUpdateOne {
+	if v != nil {
+		_u.SetPackageWeightKg(*v)
+	}
+	return _u
+}
+
+// AddPackageWeightKg adds value to the "package_weight_kg" field.
+func (_u *TaskUpdateOne) AddPackageWeightKg(v float64) *TaskUpdateOne {
+	_u.mutation.AddPackageWeightKg(v)
+	return _u
+}
+
+// ClearPackageWeightKg clears the value of the "package_weight_kg" field.
+func (_u *TaskUpdateOne) ClearPackageWeightKg() *TaskUpdateOne {
+	_u.mutation.ClearPackageWeightKg()
+	return _u
+}
+
+// SetPackageDimensionsCm sets the "package_dimensions_cm" field.
+func (_u *TaskUpdateOne) SetPackageDimensionsCm(v map[string]float64) *TaskUpdateOne {
+	_u.mutation.SetPackageDimensionsCm(v)
+	return _u
+}
+
+// ClearPackageDimensionsCm clears the value of the "package_dimensions_cm" field.
+func (_u *TaskUpdateOne) ClearPackageDimensionsCm() *TaskUpdateOne {
+	_u.mutation.ClearPackageDimensionsCm()
+	return _u
+}
+
+// SetRequiresTemperatureControl sets the "requires_temperature_control" field.
+func (_u *TaskUpdateOne) SetRequiresTemperatureControl(v bool) *TaskUpdateOne {
+	_u.mutation.SetRequiresTemperatureControl(v)
+	return _u
+}
+
+// SetNillableRequiresTemperatureControl sets the "requires_temperature_control" field if the given value is not nil.
+func (_u *TaskUpdateOne) SetNillableRequiresTemperatureControl(v *bool) *TaskUpdateOne {
+	if v != nil {
+		_u.SetRequiresTemperatureControl(*v)
+	}
+	return _u
+}
+
+// SetTemperatureRange sets the "temperature_range" field.
+func (_u *TaskUpdateOne) SetTemperatureRange(v string) *TaskUpdateOne {
+	_u.mutation.SetTemperatureRange(v)
+	return _u
+}
+
+// SetNillableTemperatureRange sets the "temperature_range" field if the given value is not nil.
+func (_u *TaskUpdateOne) SetNillableTemperatureRange(v *string) *TaskUpdateOne {
+	if v != nil {
+		_u.SetTemperatureRange(*v)
+	}
+	return _u
+}
+
+// ClearTemperatureRange clears the value of the "temperature_range" field.
+func (_u *TaskUpdateOne) ClearTemperatureRange() *TaskUpdateOne {
+	_u.mutation.ClearTemperatureRange()
+	return _u
+}
+
+// SetRequiresFragileHandling sets the "requires_fragile_handling" field.
+func (_u *TaskUpdateOne) SetRequiresFragileHandling(v bool) *TaskUpdateOne {
+	_u.mutation.SetRequiresFragileHandling(v)
+	return _u
+}
+
+// SetNillableRequiresFragileHandling sets the "requires_fragile_handling" field if the given value is not nil.
+func (_u *TaskUpdateOne) SetNillableRequiresFragileHandling(v *bool) *TaskUpdateOne {
+	if v != nil {
+		_u.SetRequiresFragileHandling(*v)
+	}
+	return _u
+}
+
+// SetRequiresHeavyDuty sets the "requires_heavy_duty" field.
+func (_u *TaskUpdateOne) SetRequiresHeavyDuty(v bool) *TaskUpdateOne {
+	_u.mutation.SetRequiresHeavyDuty(v)
+	return _u
+}
+
+// SetNillableRequiresHeavyDuty sets the "requires_heavy_duty" field if the given value is not nil.
+func (_u *TaskUpdateOne) SetNillableRequiresHeavyDuty(v *bool) *TaskUpdateOne {
+	if v != nil {
+		_u.SetRequiresHeavyDuty(*v)
+	}
+	return _u
+}
+
+// SetCarrierID sets the "carrier_id" field.
+func (_u *TaskUpdateOne) SetCarrierID(v string) *TaskUpdateOne {
+	_u.mutation.SetCarrierID(v)
+	return _u
+}
+
+// SetNillableCarrierID sets the "carrier_id" field if the given value is not nil.
+func (_u *TaskUpdateOne) SetNillableCarrierID(v *string) *TaskUpdateOne {
+	if v != nil {
+		_u.SetCarrierID(*v)
+	}
+	return _u
+}
+
+// ClearCarrierID clears the value of the "carrier_id" field.
+func (_u *TaskUpdateOne) ClearCarrierID() *TaskUpdateOne {
+	_u.mutation.ClearCarrierID()
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *TaskUpdateOne) SetUpdatedAt(v time.Time) *TaskUpdateOne {
 	_u.mutation.SetUpdatedAt(v)
@@ -1139,6 +1417,42 @@ func (_u *TaskUpdateOne) sqlSave(ctx context.Context) (_node *Task, err error) {
 	}
 	if value, ok := _u.mutation.Metadata(); ok {
 		_spec.SetField(task.FieldMetadata, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.PackageWeightKg(); ok {
+		_spec.SetField(task.FieldPackageWeightKg, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedPackageWeightKg(); ok {
+		_spec.AddField(task.FieldPackageWeightKg, field.TypeFloat64, value)
+	}
+	if _u.mutation.PackageWeightKgCleared() {
+		_spec.ClearField(task.FieldPackageWeightKg, field.TypeFloat64)
+	}
+	if value, ok := _u.mutation.PackageDimensionsCm(); ok {
+		_spec.SetField(task.FieldPackageDimensionsCm, field.TypeJSON, value)
+	}
+	if _u.mutation.PackageDimensionsCmCleared() {
+		_spec.ClearField(task.FieldPackageDimensionsCm, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.RequiresTemperatureControl(); ok {
+		_spec.SetField(task.FieldRequiresTemperatureControl, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.TemperatureRange(); ok {
+		_spec.SetField(task.FieldTemperatureRange, field.TypeString, value)
+	}
+	if _u.mutation.TemperatureRangeCleared() {
+		_spec.ClearField(task.FieldTemperatureRange, field.TypeString)
+	}
+	if value, ok := _u.mutation.RequiresFragileHandling(); ok {
+		_spec.SetField(task.FieldRequiresFragileHandling, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.RequiresHeavyDuty(); ok {
+		_spec.SetField(task.FieldRequiresHeavyDuty, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.CarrierID(); ok {
+		_spec.SetField(task.FieldCarrierID, field.TypeString, value)
+	}
+	if _u.mutation.CarrierIDCleared() {
+		_spec.ClearField(task.FieldCarrierID, field.TypeString)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(task.FieldUpdatedAt, field.TypeTime, value)

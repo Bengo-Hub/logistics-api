@@ -106,6 +106,36 @@ func RequestedDropoffAt(v time.Time) predicate.Task {
 	return predicate.Task(sql.FieldEQ(FieldRequestedDropoffAt, v))
 }
 
+// PackageWeightKg applies equality check predicate on the "package_weight_kg" field. It's identical to PackageWeightKgEQ.
+func PackageWeightKg(v float64) predicate.Task {
+	return predicate.Task(sql.FieldEQ(FieldPackageWeightKg, v))
+}
+
+// RequiresTemperatureControl applies equality check predicate on the "requires_temperature_control" field. It's identical to RequiresTemperatureControlEQ.
+func RequiresTemperatureControl(v bool) predicate.Task {
+	return predicate.Task(sql.FieldEQ(FieldRequiresTemperatureControl, v))
+}
+
+// TemperatureRange applies equality check predicate on the "temperature_range" field. It's identical to TemperatureRangeEQ.
+func TemperatureRange(v string) predicate.Task {
+	return predicate.Task(sql.FieldEQ(FieldTemperatureRange, v))
+}
+
+// RequiresFragileHandling applies equality check predicate on the "requires_fragile_handling" field. It's identical to RequiresFragileHandlingEQ.
+func RequiresFragileHandling(v bool) predicate.Task {
+	return predicate.Task(sql.FieldEQ(FieldRequiresFragileHandling, v))
+}
+
+// RequiresHeavyDuty applies equality check predicate on the "requires_heavy_duty" field. It's identical to RequiresHeavyDutyEQ.
+func RequiresHeavyDuty(v bool) predicate.Task {
+	return predicate.Task(sql.FieldEQ(FieldRequiresHeavyDuty, v))
+}
+
+// CarrierID applies equality check predicate on the "carrier_id" field. It's identical to CarrierIDEQ.
+func CarrierID(v string) predicate.Task {
+	return predicate.Task(sql.FieldEQ(FieldCarrierID, v))
+}
+
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.Task {
 	return predicate.Task(sql.FieldEQ(FieldCreatedAt, v))
@@ -699,6 +729,246 @@ func RequestedDropoffAtIsNil() predicate.Task {
 // RequestedDropoffAtNotNil applies the NotNil predicate on the "requested_dropoff_at" field.
 func RequestedDropoffAtNotNil() predicate.Task {
 	return predicate.Task(sql.FieldNotNull(FieldRequestedDropoffAt))
+}
+
+// PackageWeightKgEQ applies the EQ predicate on the "package_weight_kg" field.
+func PackageWeightKgEQ(v float64) predicate.Task {
+	return predicate.Task(sql.FieldEQ(FieldPackageWeightKg, v))
+}
+
+// PackageWeightKgNEQ applies the NEQ predicate on the "package_weight_kg" field.
+func PackageWeightKgNEQ(v float64) predicate.Task {
+	return predicate.Task(sql.FieldNEQ(FieldPackageWeightKg, v))
+}
+
+// PackageWeightKgIn applies the In predicate on the "package_weight_kg" field.
+func PackageWeightKgIn(vs ...float64) predicate.Task {
+	return predicate.Task(sql.FieldIn(FieldPackageWeightKg, vs...))
+}
+
+// PackageWeightKgNotIn applies the NotIn predicate on the "package_weight_kg" field.
+func PackageWeightKgNotIn(vs ...float64) predicate.Task {
+	return predicate.Task(sql.FieldNotIn(FieldPackageWeightKg, vs...))
+}
+
+// PackageWeightKgGT applies the GT predicate on the "package_weight_kg" field.
+func PackageWeightKgGT(v float64) predicate.Task {
+	return predicate.Task(sql.FieldGT(FieldPackageWeightKg, v))
+}
+
+// PackageWeightKgGTE applies the GTE predicate on the "package_weight_kg" field.
+func PackageWeightKgGTE(v float64) predicate.Task {
+	return predicate.Task(sql.FieldGTE(FieldPackageWeightKg, v))
+}
+
+// PackageWeightKgLT applies the LT predicate on the "package_weight_kg" field.
+func PackageWeightKgLT(v float64) predicate.Task {
+	return predicate.Task(sql.FieldLT(FieldPackageWeightKg, v))
+}
+
+// PackageWeightKgLTE applies the LTE predicate on the "package_weight_kg" field.
+func PackageWeightKgLTE(v float64) predicate.Task {
+	return predicate.Task(sql.FieldLTE(FieldPackageWeightKg, v))
+}
+
+// PackageWeightKgIsNil applies the IsNil predicate on the "package_weight_kg" field.
+func PackageWeightKgIsNil() predicate.Task {
+	return predicate.Task(sql.FieldIsNull(FieldPackageWeightKg))
+}
+
+// PackageWeightKgNotNil applies the NotNil predicate on the "package_weight_kg" field.
+func PackageWeightKgNotNil() predicate.Task {
+	return predicate.Task(sql.FieldNotNull(FieldPackageWeightKg))
+}
+
+// PackageDimensionsCmIsNil applies the IsNil predicate on the "package_dimensions_cm" field.
+func PackageDimensionsCmIsNil() predicate.Task {
+	return predicate.Task(sql.FieldIsNull(FieldPackageDimensionsCm))
+}
+
+// PackageDimensionsCmNotNil applies the NotNil predicate on the "package_dimensions_cm" field.
+func PackageDimensionsCmNotNil() predicate.Task {
+	return predicate.Task(sql.FieldNotNull(FieldPackageDimensionsCm))
+}
+
+// RequiresTemperatureControlEQ applies the EQ predicate on the "requires_temperature_control" field.
+func RequiresTemperatureControlEQ(v bool) predicate.Task {
+	return predicate.Task(sql.FieldEQ(FieldRequiresTemperatureControl, v))
+}
+
+// RequiresTemperatureControlNEQ applies the NEQ predicate on the "requires_temperature_control" field.
+func RequiresTemperatureControlNEQ(v bool) predicate.Task {
+	return predicate.Task(sql.FieldNEQ(FieldRequiresTemperatureControl, v))
+}
+
+// TemperatureRangeEQ applies the EQ predicate on the "temperature_range" field.
+func TemperatureRangeEQ(v string) predicate.Task {
+	return predicate.Task(sql.FieldEQ(FieldTemperatureRange, v))
+}
+
+// TemperatureRangeNEQ applies the NEQ predicate on the "temperature_range" field.
+func TemperatureRangeNEQ(v string) predicate.Task {
+	return predicate.Task(sql.FieldNEQ(FieldTemperatureRange, v))
+}
+
+// TemperatureRangeIn applies the In predicate on the "temperature_range" field.
+func TemperatureRangeIn(vs ...string) predicate.Task {
+	return predicate.Task(sql.FieldIn(FieldTemperatureRange, vs...))
+}
+
+// TemperatureRangeNotIn applies the NotIn predicate on the "temperature_range" field.
+func TemperatureRangeNotIn(vs ...string) predicate.Task {
+	return predicate.Task(sql.FieldNotIn(FieldTemperatureRange, vs...))
+}
+
+// TemperatureRangeGT applies the GT predicate on the "temperature_range" field.
+func TemperatureRangeGT(v string) predicate.Task {
+	return predicate.Task(sql.FieldGT(FieldTemperatureRange, v))
+}
+
+// TemperatureRangeGTE applies the GTE predicate on the "temperature_range" field.
+func TemperatureRangeGTE(v string) predicate.Task {
+	return predicate.Task(sql.FieldGTE(FieldTemperatureRange, v))
+}
+
+// TemperatureRangeLT applies the LT predicate on the "temperature_range" field.
+func TemperatureRangeLT(v string) predicate.Task {
+	return predicate.Task(sql.FieldLT(FieldTemperatureRange, v))
+}
+
+// TemperatureRangeLTE applies the LTE predicate on the "temperature_range" field.
+func TemperatureRangeLTE(v string) predicate.Task {
+	return predicate.Task(sql.FieldLTE(FieldTemperatureRange, v))
+}
+
+// TemperatureRangeContains applies the Contains predicate on the "temperature_range" field.
+func TemperatureRangeContains(v string) predicate.Task {
+	return predicate.Task(sql.FieldContains(FieldTemperatureRange, v))
+}
+
+// TemperatureRangeHasPrefix applies the HasPrefix predicate on the "temperature_range" field.
+func TemperatureRangeHasPrefix(v string) predicate.Task {
+	return predicate.Task(sql.FieldHasPrefix(FieldTemperatureRange, v))
+}
+
+// TemperatureRangeHasSuffix applies the HasSuffix predicate on the "temperature_range" field.
+func TemperatureRangeHasSuffix(v string) predicate.Task {
+	return predicate.Task(sql.FieldHasSuffix(FieldTemperatureRange, v))
+}
+
+// TemperatureRangeIsNil applies the IsNil predicate on the "temperature_range" field.
+func TemperatureRangeIsNil() predicate.Task {
+	return predicate.Task(sql.FieldIsNull(FieldTemperatureRange))
+}
+
+// TemperatureRangeNotNil applies the NotNil predicate on the "temperature_range" field.
+func TemperatureRangeNotNil() predicate.Task {
+	return predicate.Task(sql.FieldNotNull(FieldTemperatureRange))
+}
+
+// TemperatureRangeEqualFold applies the EqualFold predicate on the "temperature_range" field.
+func TemperatureRangeEqualFold(v string) predicate.Task {
+	return predicate.Task(sql.FieldEqualFold(FieldTemperatureRange, v))
+}
+
+// TemperatureRangeContainsFold applies the ContainsFold predicate on the "temperature_range" field.
+func TemperatureRangeContainsFold(v string) predicate.Task {
+	return predicate.Task(sql.FieldContainsFold(FieldTemperatureRange, v))
+}
+
+// RequiresFragileHandlingEQ applies the EQ predicate on the "requires_fragile_handling" field.
+func RequiresFragileHandlingEQ(v bool) predicate.Task {
+	return predicate.Task(sql.FieldEQ(FieldRequiresFragileHandling, v))
+}
+
+// RequiresFragileHandlingNEQ applies the NEQ predicate on the "requires_fragile_handling" field.
+func RequiresFragileHandlingNEQ(v bool) predicate.Task {
+	return predicate.Task(sql.FieldNEQ(FieldRequiresFragileHandling, v))
+}
+
+// RequiresHeavyDutyEQ applies the EQ predicate on the "requires_heavy_duty" field.
+func RequiresHeavyDutyEQ(v bool) predicate.Task {
+	return predicate.Task(sql.FieldEQ(FieldRequiresHeavyDuty, v))
+}
+
+// RequiresHeavyDutyNEQ applies the NEQ predicate on the "requires_heavy_duty" field.
+func RequiresHeavyDutyNEQ(v bool) predicate.Task {
+	return predicate.Task(sql.FieldNEQ(FieldRequiresHeavyDuty, v))
+}
+
+// CarrierIDEQ applies the EQ predicate on the "carrier_id" field.
+func CarrierIDEQ(v string) predicate.Task {
+	return predicate.Task(sql.FieldEQ(FieldCarrierID, v))
+}
+
+// CarrierIDNEQ applies the NEQ predicate on the "carrier_id" field.
+func CarrierIDNEQ(v string) predicate.Task {
+	return predicate.Task(sql.FieldNEQ(FieldCarrierID, v))
+}
+
+// CarrierIDIn applies the In predicate on the "carrier_id" field.
+func CarrierIDIn(vs ...string) predicate.Task {
+	return predicate.Task(sql.FieldIn(FieldCarrierID, vs...))
+}
+
+// CarrierIDNotIn applies the NotIn predicate on the "carrier_id" field.
+func CarrierIDNotIn(vs ...string) predicate.Task {
+	return predicate.Task(sql.FieldNotIn(FieldCarrierID, vs...))
+}
+
+// CarrierIDGT applies the GT predicate on the "carrier_id" field.
+func CarrierIDGT(v string) predicate.Task {
+	return predicate.Task(sql.FieldGT(FieldCarrierID, v))
+}
+
+// CarrierIDGTE applies the GTE predicate on the "carrier_id" field.
+func CarrierIDGTE(v string) predicate.Task {
+	return predicate.Task(sql.FieldGTE(FieldCarrierID, v))
+}
+
+// CarrierIDLT applies the LT predicate on the "carrier_id" field.
+func CarrierIDLT(v string) predicate.Task {
+	return predicate.Task(sql.FieldLT(FieldCarrierID, v))
+}
+
+// CarrierIDLTE applies the LTE predicate on the "carrier_id" field.
+func CarrierIDLTE(v string) predicate.Task {
+	return predicate.Task(sql.FieldLTE(FieldCarrierID, v))
+}
+
+// CarrierIDContains applies the Contains predicate on the "carrier_id" field.
+func CarrierIDContains(v string) predicate.Task {
+	return predicate.Task(sql.FieldContains(FieldCarrierID, v))
+}
+
+// CarrierIDHasPrefix applies the HasPrefix predicate on the "carrier_id" field.
+func CarrierIDHasPrefix(v string) predicate.Task {
+	return predicate.Task(sql.FieldHasPrefix(FieldCarrierID, v))
+}
+
+// CarrierIDHasSuffix applies the HasSuffix predicate on the "carrier_id" field.
+func CarrierIDHasSuffix(v string) predicate.Task {
+	return predicate.Task(sql.FieldHasSuffix(FieldCarrierID, v))
+}
+
+// CarrierIDIsNil applies the IsNil predicate on the "carrier_id" field.
+func CarrierIDIsNil() predicate.Task {
+	return predicate.Task(sql.FieldIsNull(FieldCarrierID))
+}
+
+// CarrierIDNotNil applies the NotNil predicate on the "carrier_id" field.
+func CarrierIDNotNil() predicate.Task {
+	return predicate.Task(sql.FieldNotNull(FieldCarrierID))
+}
+
+// CarrierIDEqualFold applies the EqualFold predicate on the "carrier_id" field.
+func CarrierIDEqualFold(v string) predicate.Task {
+	return predicate.Task(sql.FieldEqualFold(FieldCarrierID, v))
+}
+
+// CarrierIDContainsFold applies the ContainsFold predicate on the "carrier_id" field.
+func CarrierIDContainsFold(v string) predicate.Task {
+	return predicate.Task(sql.FieldContainsFold(FieldCarrierID, v))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.

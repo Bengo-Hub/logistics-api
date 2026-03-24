@@ -166,6 +166,96 @@ func (_c *TaskCreate) SetMetadata(v map[string]interface{}) *TaskCreate {
 	return _c
 }
 
+// SetPackageWeightKg sets the "package_weight_kg" field.
+func (_c *TaskCreate) SetPackageWeightKg(v float64) *TaskCreate {
+	_c.mutation.SetPackageWeightKg(v)
+	return _c
+}
+
+// SetNillablePackageWeightKg sets the "package_weight_kg" field if the given value is not nil.
+func (_c *TaskCreate) SetNillablePackageWeightKg(v *float64) *TaskCreate {
+	if v != nil {
+		_c.SetPackageWeightKg(*v)
+	}
+	return _c
+}
+
+// SetPackageDimensionsCm sets the "package_dimensions_cm" field.
+func (_c *TaskCreate) SetPackageDimensionsCm(v map[string]float64) *TaskCreate {
+	_c.mutation.SetPackageDimensionsCm(v)
+	return _c
+}
+
+// SetRequiresTemperatureControl sets the "requires_temperature_control" field.
+func (_c *TaskCreate) SetRequiresTemperatureControl(v bool) *TaskCreate {
+	_c.mutation.SetRequiresTemperatureControl(v)
+	return _c
+}
+
+// SetNillableRequiresTemperatureControl sets the "requires_temperature_control" field if the given value is not nil.
+func (_c *TaskCreate) SetNillableRequiresTemperatureControl(v *bool) *TaskCreate {
+	if v != nil {
+		_c.SetRequiresTemperatureControl(*v)
+	}
+	return _c
+}
+
+// SetTemperatureRange sets the "temperature_range" field.
+func (_c *TaskCreate) SetTemperatureRange(v string) *TaskCreate {
+	_c.mutation.SetTemperatureRange(v)
+	return _c
+}
+
+// SetNillableTemperatureRange sets the "temperature_range" field if the given value is not nil.
+func (_c *TaskCreate) SetNillableTemperatureRange(v *string) *TaskCreate {
+	if v != nil {
+		_c.SetTemperatureRange(*v)
+	}
+	return _c
+}
+
+// SetRequiresFragileHandling sets the "requires_fragile_handling" field.
+func (_c *TaskCreate) SetRequiresFragileHandling(v bool) *TaskCreate {
+	_c.mutation.SetRequiresFragileHandling(v)
+	return _c
+}
+
+// SetNillableRequiresFragileHandling sets the "requires_fragile_handling" field if the given value is not nil.
+func (_c *TaskCreate) SetNillableRequiresFragileHandling(v *bool) *TaskCreate {
+	if v != nil {
+		_c.SetRequiresFragileHandling(*v)
+	}
+	return _c
+}
+
+// SetRequiresHeavyDuty sets the "requires_heavy_duty" field.
+func (_c *TaskCreate) SetRequiresHeavyDuty(v bool) *TaskCreate {
+	_c.mutation.SetRequiresHeavyDuty(v)
+	return _c
+}
+
+// SetNillableRequiresHeavyDuty sets the "requires_heavy_duty" field if the given value is not nil.
+func (_c *TaskCreate) SetNillableRequiresHeavyDuty(v *bool) *TaskCreate {
+	if v != nil {
+		_c.SetRequiresHeavyDuty(*v)
+	}
+	return _c
+}
+
+// SetCarrierID sets the "carrier_id" field.
+func (_c *TaskCreate) SetCarrierID(v string) *TaskCreate {
+	_c.mutation.SetCarrierID(v)
+	return _c
+}
+
+// SetNillableCarrierID sets the "carrier_id" field if the given value is not nil.
+func (_c *TaskCreate) SetNillableCarrierID(v *string) *TaskCreate {
+	if v != nil {
+		_c.SetCarrierID(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *TaskCreate) SetCreatedAt(v time.Time) *TaskCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -323,6 +413,18 @@ func (_c *TaskCreate) defaults() {
 		v := task.DefaultMetadata
 		_c.mutation.SetMetadata(v)
 	}
+	if _, ok := _c.mutation.RequiresTemperatureControl(); !ok {
+		v := task.DefaultRequiresTemperatureControl
+		_c.mutation.SetRequiresTemperatureControl(v)
+	}
+	if _, ok := _c.mutation.RequiresFragileHandling(); !ok {
+		v := task.DefaultRequiresFragileHandling
+		_c.mutation.SetRequiresFragileHandling(v)
+	}
+	if _, ok := _c.mutation.RequiresHeavyDuty(); !ok {
+		v := task.DefaultRequiresHeavyDuty
+		_c.mutation.SetRequiresHeavyDuty(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := task.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
@@ -358,6 +460,15 @@ func (_c *TaskCreate) check() error {
 	}
 	if _, ok := _c.mutation.Metadata(); !ok {
 		return &ValidationError{Name: "metadata", err: errors.New(`ent: missing required field "Task.metadata"`)}
+	}
+	if _, ok := _c.mutation.RequiresTemperatureControl(); !ok {
+		return &ValidationError{Name: "requires_temperature_control", err: errors.New(`ent: missing required field "Task.requires_temperature_control"`)}
+	}
+	if _, ok := _c.mutation.RequiresFragileHandling(); !ok {
+		return &ValidationError{Name: "requires_fragile_handling", err: errors.New(`ent: missing required field "Task.requires_fragile_handling"`)}
+	}
+	if _, ok := _c.mutation.RequiresHeavyDuty(); !ok {
+		return &ValidationError{Name: "requires_heavy_duty", err: errors.New(`ent: missing required field "Task.requires_heavy_duty"`)}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "Task.created_at"`)}
@@ -444,6 +555,34 @@ func (_c *TaskCreate) createSpec() (*Task, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Metadata(); ok {
 		_spec.SetField(task.FieldMetadata, field.TypeJSON, value)
 		_node.Metadata = value
+	}
+	if value, ok := _c.mutation.PackageWeightKg(); ok {
+		_spec.SetField(task.FieldPackageWeightKg, field.TypeFloat64, value)
+		_node.PackageWeightKg = &value
+	}
+	if value, ok := _c.mutation.PackageDimensionsCm(); ok {
+		_spec.SetField(task.FieldPackageDimensionsCm, field.TypeJSON, value)
+		_node.PackageDimensionsCm = value
+	}
+	if value, ok := _c.mutation.RequiresTemperatureControl(); ok {
+		_spec.SetField(task.FieldRequiresTemperatureControl, field.TypeBool, value)
+		_node.RequiresTemperatureControl = value
+	}
+	if value, ok := _c.mutation.TemperatureRange(); ok {
+		_spec.SetField(task.FieldTemperatureRange, field.TypeString, value)
+		_node.TemperatureRange = value
+	}
+	if value, ok := _c.mutation.RequiresFragileHandling(); ok {
+		_spec.SetField(task.FieldRequiresFragileHandling, field.TypeBool, value)
+		_node.RequiresFragileHandling = value
+	}
+	if value, ok := _c.mutation.RequiresHeavyDuty(); ok {
+		_spec.SetField(task.FieldRequiresHeavyDuty, field.TypeBool, value)
+		_node.RequiresHeavyDuty = value
+	}
+	if value, ok := _c.mutation.CarrierID(); ok {
+		_spec.SetField(task.FieldCarrierID, field.TypeString, value)
+		_node.CarrierID = value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(task.FieldCreatedAt, field.TypeTime, value)
@@ -743,6 +882,120 @@ func (u *TaskUpsert) UpdateMetadata() *TaskUpsert {
 	return u
 }
 
+// SetPackageWeightKg sets the "package_weight_kg" field.
+func (u *TaskUpsert) SetPackageWeightKg(v float64) *TaskUpsert {
+	u.Set(task.FieldPackageWeightKg, v)
+	return u
+}
+
+// UpdatePackageWeightKg sets the "package_weight_kg" field to the value that was provided on create.
+func (u *TaskUpsert) UpdatePackageWeightKg() *TaskUpsert {
+	u.SetExcluded(task.FieldPackageWeightKg)
+	return u
+}
+
+// AddPackageWeightKg adds v to the "package_weight_kg" field.
+func (u *TaskUpsert) AddPackageWeightKg(v float64) *TaskUpsert {
+	u.Add(task.FieldPackageWeightKg, v)
+	return u
+}
+
+// ClearPackageWeightKg clears the value of the "package_weight_kg" field.
+func (u *TaskUpsert) ClearPackageWeightKg() *TaskUpsert {
+	u.SetNull(task.FieldPackageWeightKg)
+	return u
+}
+
+// SetPackageDimensionsCm sets the "package_dimensions_cm" field.
+func (u *TaskUpsert) SetPackageDimensionsCm(v map[string]float64) *TaskUpsert {
+	u.Set(task.FieldPackageDimensionsCm, v)
+	return u
+}
+
+// UpdatePackageDimensionsCm sets the "package_dimensions_cm" field to the value that was provided on create.
+func (u *TaskUpsert) UpdatePackageDimensionsCm() *TaskUpsert {
+	u.SetExcluded(task.FieldPackageDimensionsCm)
+	return u
+}
+
+// ClearPackageDimensionsCm clears the value of the "package_dimensions_cm" field.
+func (u *TaskUpsert) ClearPackageDimensionsCm() *TaskUpsert {
+	u.SetNull(task.FieldPackageDimensionsCm)
+	return u
+}
+
+// SetRequiresTemperatureControl sets the "requires_temperature_control" field.
+func (u *TaskUpsert) SetRequiresTemperatureControl(v bool) *TaskUpsert {
+	u.Set(task.FieldRequiresTemperatureControl, v)
+	return u
+}
+
+// UpdateRequiresTemperatureControl sets the "requires_temperature_control" field to the value that was provided on create.
+func (u *TaskUpsert) UpdateRequiresTemperatureControl() *TaskUpsert {
+	u.SetExcluded(task.FieldRequiresTemperatureControl)
+	return u
+}
+
+// SetTemperatureRange sets the "temperature_range" field.
+func (u *TaskUpsert) SetTemperatureRange(v string) *TaskUpsert {
+	u.Set(task.FieldTemperatureRange, v)
+	return u
+}
+
+// UpdateTemperatureRange sets the "temperature_range" field to the value that was provided on create.
+func (u *TaskUpsert) UpdateTemperatureRange() *TaskUpsert {
+	u.SetExcluded(task.FieldTemperatureRange)
+	return u
+}
+
+// ClearTemperatureRange clears the value of the "temperature_range" field.
+func (u *TaskUpsert) ClearTemperatureRange() *TaskUpsert {
+	u.SetNull(task.FieldTemperatureRange)
+	return u
+}
+
+// SetRequiresFragileHandling sets the "requires_fragile_handling" field.
+func (u *TaskUpsert) SetRequiresFragileHandling(v bool) *TaskUpsert {
+	u.Set(task.FieldRequiresFragileHandling, v)
+	return u
+}
+
+// UpdateRequiresFragileHandling sets the "requires_fragile_handling" field to the value that was provided on create.
+func (u *TaskUpsert) UpdateRequiresFragileHandling() *TaskUpsert {
+	u.SetExcluded(task.FieldRequiresFragileHandling)
+	return u
+}
+
+// SetRequiresHeavyDuty sets the "requires_heavy_duty" field.
+func (u *TaskUpsert) SetRequiresHeavyDuty(v bool) *TaskUpsert {
+	u.Set(task.FieldRequiresHeavyDuty, v)
+	return u
+}
+
+// UpdateRequiresHeavyDuty sets the "requires_heavy_duty" field to the value that was provided on create.
+func (u *TaskUpsert) UpdateRequiresHeavyDuty() *TaskUpsert {
+	u.SetExcluded(task.FieldRequiresHeavyDuty)
+	return u
+}
+
+// SetCarrierID sets the "carrier_id" field.
+func (u *TaskUpsert) SetCarrierID(v string) *TaskUpsert {
+	u.Set(task.FieldCarrierID, v)
+	return u
+}
+
+// UpdateCarrierID sets the "carrier_id" field to the value that was provided on create.
+func (u *TaskUpsert) UpdateCarrierID() *TaskUpsert {
+	u.SetExcluded(task.FieldCarrierID)
+	return u
+}
+
+// ClearCarrierID clears the value of the "carrier_id" field.
+func (u *TaskUpsert) ClearCarrierID() *TaskUpsert {
+	u.SetNull(task.FieldCarrierID)
+	return u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (u *TaskUpsert) SetUpdatedAt(v time.Time) *TaskUpsert {
 	u.Set(task.FieldUpdatedAt, v)
@@ -1006,6 +1259,139 @@ func (u *TaskUpsertOne) SetMetadata(v map[string]interface{}) *TaskUpsertOne {
 func (u *TaskUpsertOne) UpdateMetadata() *TaskUpsertOne {
 	return u.Update(func(s *TaskUpsert) {
 		s.UpdateMetadata()
+	})
+}
+
+// SetPackageWeightKg sets the "package_weight_kg" field.
+func (u *TaskUpsertOne) SetPackageWeightKg(v float64) *TaskUpsertOne {
+	return u.Update(func(s *TaskUpsert) {
+		s.SetPackageWeightKg(v)
+	})
+}
+
+// AddPackageWeightKg adds v to the "package_weight_kg" field.
+func (u *TaskUpsertOne) AddPackageWeightKg(v float64) *TaskUpsertOne {
+	return u.Update(func(s *TaskUpsert) {
+		s.AddPackageWeightKg(v)
+	})
+}
+
+// UpdatePackageWeightKg sets the "package_weight_kg" field to the value that was provided on create.
+func (u *TaskUpsertOne) UpdatePackageWeightKg() *TaskUpsertOne {
+	return u.Update(func(s *TaskUpsert) {
+		s.UpdatePackageWeightKg()
+	})
+}
+
+// ClearPackageWeightKg clears the value of the "package_weight_kg" field.
+func (u *TaskUpsertOne) ClearPackageWeightKg() *TaskUpsertOne {
+	return u.Update(func(s *TaskUpsert) {
+		s.ClearPackageWeightKg()
+	})
+}
+
+// SetPackageDimensionsCm sets the "package_dimensions_cm" field.
+func (u *TaskUpsertOne) SetPackageDimensionsCm(v map[string]float64) *TaskUpsertOne {
+	return u.Update(func(s *TaskUpsert) {
+		s.SetPackageDimensionsCm(v)
+	})
+}
+
+// UpdatePackageDimensionsCm sets the "package_dimensions_cm" field to the value that was provided on create.
+func (u *TaskUpsertOne) UpdatePackageDimensionsCm() *TaskUpsertOne {
+	return u.Update(func(s *TaskUpsert) {
+		s.UpdatePackageDimensionsCm()
+	})
+}
+
+// ClearPackageDimensionsCm clears the value of the "package_dimensions_cm" field.
+func (u *TaskUpsertOne) ClearPackageDimensionsCm() *TaskUpsertOne {
+	return u.Update(func(s *TaskUpsert) {
+		s.ClearPackageDimensionsCm()
+	})
+}
+
+// SetRequiresTemperatureControl sets the "requires_temperature_control" field.
+func (u *TaskUpsertOne) SetRequiresTemperatureControl(v bool) *TaskUpsertOne {
+	return u.Update(func(s *TaskUpsert) {
+		s.SetRequiresTemperatureControl(v)
+	})
+}
+
+// UpdateRequiresTemperatureControl sets the "requires_temperature_control" field to the value that was provided on create.
+func (u *TaskUpsertOne) UpdateRequiresTemperatureControl() *TaskUpsertOne {
+	return u.Update(func(s *TaskUpsert) {
+		s.UpdateRequiresTemperatureControl()
+	})
+}
+
+// SetTemperatureRange sets the "temperature_range" field.
+func (u *TaskUpsertOne) SetTemperatureRange(v string) *TaskUpsertOne {
+	return u.Update(func(s *TaskUpsert) {
+		s.SetTemperatureRange(v)
+	})
+}
+
+// UpdateTemperatureRange sets the "temperature_range" field to the value that was provided on create.
+func (u *TaskUpsertOne) UpdateTemperatureRange() *TaskUpsertOne {
+	return u.Update(func(s *TaskUpsert) {
+		s.UpdateTemperatureRange()
+	})
+}
+
+// ClearTemperatureRange clears the value of the "temperature_range" field.
+func (u *TaskUpsertOne) ClearTemperatureRange() *TaskUpsertOne {
+	return u.Update(func(s *TaskUpsert) {
+		s.ClearTemperatureRange()
+	})
+}
+
+// SetRequiresFragileHandling sets the "requires_fragile_handling" field.
+func (u *TaskUpsertOne) SetRequiresFragileHandling(v bool) *TaskUpsertOne {
+	return u.Update(func(s *TaskUpsert) {
+		s.SetRequiresFragileHandling(v)
+	})
+}
+
+// UpdateRequiresFragileHandling sets the "requires_fragile_handling" field to the value that was provided on create.
+func (u *TaskUpsertOne) UpdateRequiresFragileHandling() *TaskUpsertOne {
+	return u.Update(func(s *TaskUpsert) {
+		s.UpdateRequiresFragileHandling()
+	})
+}
+
+// SetRequiresHeavyDuty sets the "requires_heavy_duty" field.
+func (u *TaskUpsertOne) SetRequiresHeavyDuty(v bool) *TaskUpsertOne {
+	return u.Update(func(s *TaskUpsert) {
+		s.SetRequiresHeavyDuty(v)
+	})
+}
+
+// UpdateRequiresHeavyDuty sets the "requires_heavy_duty" field to the value that was provided on create.
+func (u *TaskUpsertOne) UpdateRequiresHeavyDuty() *TaskUpsertOne {
+	return u.Update(func(s *TaskUpsert) {
+		s.UpdateRequiresHeavyDuty()
+	})
+}
+
+// SetCarrierID sets the "carrier_id" field.
+func (u *TaskUpsertOne) SetCarrierID(v string) *TaskUpsertOne {
+	return u.Update(func(s *TaskUpsert) {
+		s.SetCarrierID(v)
+	})
+}
+
+// UpdateCarrierID sets the "carrier_id" field to the value that was provided on create.
+func (u *TaskUpsertOne) UpdateCarrierID() *TaskUpsertOne {
+	return u.Update(func(s *TaskUpsert) {
+		s.UpdateCarrierID()
+	})
+}
+
+// ClearCarrierID clears the value of the "carrier_id" field.
+func (u *TaskUpsertOne) ClearCarrierID() *TaskUpsertOne {
+	return u.Update(func(s *TaskUpsert) {
+		s.ClearCarrierID()
 	})
 }
 
@@ -1441,6 +1827,139 @@ func (u *TaskUpsertBulk) SetMetadata(v map[string]interface{}) *TaskUpsertBulk {
 func (u *TaskUpsertBulk) UpdateMetadata() *TaskUpsertBulk {
 	return u.Update(func(s *TaskUpsert) {
 		s.UpdateMetadata()
+	})
+}
+
+// SetPackageWeightKg sets the "package_weight_kg" field.
+func (u *TaskUpsertBulk) SetPackageWeightKg(v float64) *TaskUpsertBulk {
+	return u.Update(func(s *TaskUpsert) {
+		s.SetPackageWeightKg(v)
+	})
+}
+
+// AddPackageWeightKg adds v to the "package_weight_kg" field.
+func (u *TaskUpsertBulk) AddPackageWeightKg(v float64) *TaskUpsertBulk {
+	return u.Update(func(s *TaskUpsert) {
+		s.AddPackageWeightKg(v)
+	})
+}
+
+// UpdatePackageWeightKg sets the "package_weight_kg" field to the value that was provided on create.
+func (u *TaskUpsertBulk) UpdatePackageWeightKg() *TaskUpsertBulk {
+	return u.Update(func(s *TaskUpsert) {
+		s.UpdatePackageWeightKg()
+	})
+}
+
+// ClearPackageWeightKg clears the value of the "package_weight_kg" field.
+func (u *TaskUpsertBulk) ClearPackageWeightKg() *TaskUpsertBulk {
+	return u.Update(func(s *TaskUpsert) {
+		s.ClearPackageWeightKg()
+	})
+}
+
+// SetPackageDimensionsCm sets the "package_dimensions_cm" field.
+func (u *TaskUpsertBulk) SetPackageDimensionsCm(v map[string]float64) *TaskUpsertBulk {
+	return u.Update(func(s *TaskUpsert) {
+		s.SetPackageDimensionsCm(v)
+	})
+}
+
+// UpdatePackageDimensionsCm sets the "package_dimensions_cm" field to the value that was provided on create.
+func (u *TaskUpsertBulk) UpdatePackageDimensionsCm() *TaskUpsertBulk {
+	return u.Update(func(s *TaskUpsert) {
+		s.UpdatePackageDimensionsCm()
+	})
+}
+
+// ClearPackageDimensionsCm clears the value of the "package_dimensions_cm" field.
+func (u *TaskUpsertBulk) ClearPackageDimensionsCm() *TaskUpsertBulk {
+	return u.Update(func(s *TaskUpsert) {
+		s.ClearPackageDimensionsCm()
+	})
+}
+
+// SetRequiresTemperatureControl sets the "requires_temperature_control" field.
+func (u *TaskUpsertBulk) SetRequiresTemperatureControl(v bool) *TaskUpsertBulk {
+	return u.Update(func(s *TaskUpsert) {
+		s.SetRequiresTemperatureControl(v)
+	})
+}
+
+// UpdateRequiresTemperatureControl sets the "requires_temperature_control" field to the value that was provided on create.
+func (u *TaskUpsertBulk) UpdateRequiresTemperatureControl() *TaskUpsertBulk {
+	return u.Update(func(s *TaskUpsert) {
+		s.UpdateRequiresTemperatureControl()
+	})
+}
+
+// SetTemperatureRange sets the "temperature_range" field.
+func (u *TaskUpsertBulk) SetTemperatureRange(v string) *TaskUpsertBulk {
+	return u.Update(func(s *TaskUpsert) {
+		s.SetTemperatureRange(v)
+	})
+}
+
+// UpdateTemperatureRange sets the "temperature_range" field to the value that was provided on create.
+func (u *TaskUpsertBulk) UpdateTemperatureRange() *TaskUpsertBulk {
+	return u.Update(func(s *TaskUpsert) {
+		s.UpdateTemperatureRange()
+	})
+}
+
+// ClearTemperatureRange clears the value of the "temperature_range" field.
+func (u *TaskUpsertBulk) ClearTemperatureRange() *TaskUpsertBulk {
+	return u.Update(func(s *TaskUpsert) {
+		s.ClearTemperatureRange()
+	})
+}
+
+// SetRequiresFragileHandling sets the "requires_fragile_handling" field.
+func (u *TaskUpsertBulk) SetRequiresFragileHandling(v bool) *TaskUpsertBulk {
+	return u.Update(func(s *TaskUpsert) {
+		s.SetRequiresFragileHandling(v)
+	})
+}
+
+// UpdateRequiresFragileHandling sets the "requires_fragile_handling" field to the value that was provided on create.
+func (u *TaskUpsertBulk) UpdateRequiresFragileHandling() *TaskUpsertBulk {
+	return u.Update(func(s *TaskUpsert) {
+		s.UpdateRequiresFragileHandling()
+	})
+}
+
+// SetRequiresHeavyDuty sets the "requires_heavy_duty" field.
+func (u *TaskUpsertBulk) SetRequiresHeavyDuty(v bool) *TaskUpsertBulk {
+	return u.Update(func(s *TaskUpsert) {
+		s.SetRequiresHeavyDuty(v)
+	})
+}
+
+// UpdateRequiresHeavyDuty sets the "requires_heavy_duty" field to the value that was provided on create.
+func (u *TaskUpsertBulk) UpdateRequiresHeavyDuty() *TaskUpsertBulk {
+	return u.Update(func(s *TaskUpsert) {
+		s.UpdateRequiresHeavyDuty()
+	})
+}
+
+// SetCarrierID sets the "carrier_id" field.
+func (u *TaskUpsertBulk) SetCarrierID(v string) *TaskUpsertBulk {
+	return u.Update(func(s *TaskUpsert) {
+		s.SetCarrierID(v)
+	})
+}
+
+// UpdateCarrierID sets the "carrier_id" field to the value that was provided on create.
+func (u *TaskUpsertBulk) UpdateCarrierID() *TaskUpsertBulk {
+	return u.Update(func(s *TaskUpsert) {
+		s.UpdateCarrierID()
+	})
+}
+
+// ClearCarrierID clears the value of the "carrier_id" field.
+func (u *TaskUpsertBulk) ClearCarrierID() *TaskUpsertBulk {
+	return u.Update(func(s *TaskUpsert) {
+		s.ClearCarrierID()
 	})
 }
 

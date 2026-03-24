@@ -35,7 +35,7 @@ func (Task) Fields() []ent.Field {
 			Comment("ordering-backend | inventory-service | pos-service"),
 		field.String("task_type").
 			Default("delivery").
-			Comment("delivery | pickup | return | transfer | ride"),
+			Comment("food_delivery | retail_delivery | outlet_transfer | commercial_courier | drop_shipping | pickup | return | ride"),
 		field.Int("priority").
 			Default(0),
 		field.String("status").
@@ -51,6 +51,28 @@ func (Task) Fields() []ent.Field {
 			Nillable(),
 		field.JSON("metadata", map[string]any{}).
 			Default(map[string]any{}),
+		field.Float("package_weight_kg").
+			Optional().
+			Nillable().
+			Comment("Package weight for pricing/rider matching"),
+		field.JSON("package_dimensions_cm", map[string]float64{}).
+			Optional().
+			Comment("Package dimensions {length, width, height} cm"),
+		field.Bool("requires_temperature_control").
+			Default(false).
+			Comment("Food/pharma cold chain requirement"),
+		field.String("temperature_range").
+			Optional().
+			Comment("ambient, chilled, frozen"),
+		field.Bool("requires_fragile_handling").
+			Default(false).
+			Comment("Fragile goods handling"),
+		field.Bool("requires_heavy_duty").
+			Default(false).
+			Comment("Heavy items: furniture, hardware, building materials"),
+		field.String("carrier_id").
+			Optional().
+			Comment("External carrier reference if outsourced to 3rd party"),
 		field.Time("created_at").
 			Default(time.Now).
 			Immutable(),

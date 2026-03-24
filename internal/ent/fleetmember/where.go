@@ -116,6 +116,16 @@ func SuspendedAt(v time.Time) predicate.FleetMember {
 	return predicate.FleetMember(sql.FieldEQ(FieldSuspendedAt, v))
 }
 
+// HasColdStorage applies equality check predicate on the "has_cold_storage" field. It's identical to HasColdStorageEQ.
+func HasColdStorage(v bool) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEQ(FieldHasColdStorage, v))
+}
+
+// MaxWeightCapacityKg applies equality check predicate on the "max_weight_capacity_kg" field. It's identical to MaxWeightCapacityKgEQ.
+func MaxWeightCapacityKg(v float64) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEQ(FieldMaxWeightCapacityKg, v))
+}
+
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.FleetMember {
 	return predicate.FleetMember(sql.FieldEQ(FieldCreatedAt, v))
@@ -764,6 +774,66 @@ func SuspendedAtIsNil() predicate.FleetMember {
 // SuspendedAtNotNil applies the NotNil predicate on the "suspended_at" field.
 func SuspendedAtNotNil() predicate.FleetMember {
 	return predicate.FleetMember(sql.FieldNotNull(FieldSuspendedAt))
+}
+
+// HasColdStorageEQ applies the EQ predicate on the "has_cold_storage" field.
+func HasColdStorageEQ(v bool) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEQ(FieldHasColdStorage, v))
+}
+
+// HasColdStorageNEQ applies the NEQ predicate on the "has_cold_storage" field.
+func HasColdStorageNEQ(v bool) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNEQ(FieldHasColdStorage, v))
+}
+
+// MaxWeightCapacityKgEQ applies the EQ predicate on the "max_weight_capacity_kg" field.
+func MaxWeightCapacityKgEQ(v float64) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEQ(FieldMaxWeightCapacityKg, v))
+}
+
+// MaxWeightCapacityKgNEQ applies the NEQ predicate on the "max_weight_capacity_kg" field.
+func MaxWeightCapacityKgNEQ(v float64) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNEQ(FieldMaxWeightCapacityKg, v))
+}
+
+// MaxWeightCapacityKgIn applies the In predicate on the "max_weight_capacity_kg" field.
+func MaxWeightCapacityKgIn(vs ...float64) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldIn(FieldMaxWeightCapacityKg, vs...))
+}
+
+// MaxWeightCapacityKgNotIn applies the NotIn predicate on the "max_weight_capacity_kg" field.
+func MaxWeightCapacityKgNotIn(vs ...float64) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNotIn(FieldMaxWeightCapacityKg, vs...))
+}
+
+// MaxWeightCapacityKgGT applies the GT predicate on the "max_weight_capacity_kg" field.
+func MaxWeightCapacityKgGT(v float64) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldGT(FieldMaxWeightCapacityKg, v))
+}
+
+// MaxWeightCapacityKgGTE applies the GTE predicate on the "max_weight_capacity_kg" field.
+func MaxWeightCapacityKgGTE(v float64) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldGTE(FieldMaxWeightCapacityKg, v))
+}
+
+// MaxWeightCapacityKgLT applies the LT predicate on the "max_weight_capacity_kg" field.
+func MaxWeightCapacityKgLT(v float64) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldLT(FieldMaxWeightCapacityKg, v))
+}
+
+// MaxWeightCapacityKgLTE applies the LTE predicate on the "max_weight_capacity_kg" field.
+func MaxWeightCapacityKgLTE(v float64) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldLTE(FieldMaxWeightCapacityKg, v))
+}
+
+// MaxWeightCapacityKgIsNil applies the IsNil predicate on the "max_weight_capacity_kg" field.
+func MaxWeightCapacityKgIsNil() predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldIsNull(FieldMaxWeightCapacityKg))
+}
+
+// MaxWeightCapacityKgNotNil applies the NotNil predicate on the "max_weight_capacity_kg" field.
+func MaxWeightCapacityKgNotNil() predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNotNull(FieldMaxWeightCapacityKg))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.

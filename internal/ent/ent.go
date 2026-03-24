@@ -23,8 +23,10 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/logisticspermission"
 	"github.com/bengobox/logistics-service/internal/ent/logisticsrole"
 	"github.com/bengobox/logistics-service/internal/ent/outboxevent"
+	"github.com/bengobox/logistics-service/internal/ent/pricingrule"
 	"github.com/bengobox/logistics-service/internal/ent/proofofdelivery"
 	"github.com/bengobox/logistics-service/internal/ent/ratelimitconfig"
+	"github.com/bengobox/logistics-service/internal/ent/ridershift"
 	"github.com/bengobox/logistics-service/internal/ent/rolepermission"
 	"github.com/bengobox/logistics-service/internal/ent/serviceconfig"
 	"github.com/bengobox/logistics-service/internal/ent/task"
@@ -109,8 +111,10 @@ func checkColumn(t, c string) error {
 			logisticspermission.Table: logisticspermission.ValidColumn,
 			logisticsrole.Table:       logisticsrole.ValidColumn,
 			outboxevent.Table:         outboxevent.ValidColumn,
+			pricingrule.Table:         pricingrule.ValidColumn,
 			proofofdelivery.Table:     proofofdelivery.ValidColumn,
 			ratelimitconfig.Table:     ratelimitconfig.ValidColumn,
+			ridershift.Table:          ridershift.ValidColumn,
 			rolepermission.Table:      rolepermission.ValidColumn,
 			serviceconfig.Table:       serviceconfig.ValidColumn,
 			task.Table:                task.ValidColumn,

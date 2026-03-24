@@ -34,10 +34,14 @@ type Tx struct {
 	LogisticsRole *LogisticsRoleClient
 	// OutboxEvent is the client for interacting with the OutboxEvent builders.
 	OutboxEvent *OutboxEventClient
+	// PricingRule is the client for interacting with the PricingRule builders.
+	PricingRule *PricingRuleClient
 	// ProofOfDelivery is the client for interacting with the ProofOfDelivery builders.
 	ProofOfDelivery *ProofOfDeliveryClient
 	// RateLimitConfig is the client for interacting with the RateLimitConfig builders.
 	RateLimitConfig *RateLimitConfigClient
+	// RiderShift is the client for interacting with the RiderShift builders.
+	RiderShift *RiderShiftClient
 	// RolePermission is the client for interacting with the RolePermission builders.
 	RolePermission *RolePermissionClient
 	// ServiceConfig is the client for interacting with the ServiceConfig builders.
@@ -206,8 +210,10 @@ func (tx *Tx) init() {
 	tx.LogisticsPermission = NewLogisticsPermissionClient(tx.config)
 	tx.LogisticsRole = NewLogisticsRoleClient(tx.config)
 	tx.OutboxEvent = NewOutboxEventClient(tx.config)
+	tx.PricingRule = NewPricingRuleClient(tx.config)
 	tx.ProofOfDelivery = NewProofOfDeliveryClient(tx.config)
 	tx.RateLimitConfig = NewRateLimitConfigClient(tx.config)
+	tx.RiderShift = NewRiderShiftClient(tx.config)
 	tx.RolePermission = NewRolePermissionClient(tx.config)
 	tx.ServiceConfig = NewServiceConfigClient(tx.config)
 	tx.Task = NewTaskClient(tx.config)

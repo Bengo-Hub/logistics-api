@@ -27,8 +27,10 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/logisticspermission"
 	"github.com/bengobox/logistics-service/internal/ent/logisticsrole"
 	"github.com/bengobox/logistics-service/internal/ent/outboxevent"
+	"github.com/bengobox/logistics-service/internal/ent/pricingrule"
 	"github.com/bengobox/logistics-service/internal/ent/proofofdelivery"
 	"github.com/bengobox/logistics-service/internal/ent/ratelimitconfig"
+	"github.com/bengobox/logistics-service/internal/ent/ridershift"
 	"github.com/bengobox/logistics-service/internal/ent/rolepermission"
 	"github.com/bengobox/logistics-service/internal/ent/serviceconfig"
 	"github.com/bengobox/logistics-service/internal/ent/task"
@@ -71,10 +73,14 @@ type Client struct {
 	LogisticsRole *LogisticsRoleClient
 	// OutboxEvent is the client for interacting with the OutboxEvent builders.
 	OutboxEvent *OutboxEventClient
+	// PricingRule is the client for interacting with the PricingRule builders.
+	PricingRule *PricingRuleClient
 	// ProofOfDelivery is the client for interacting with the ProofOfDelivery builders.
 	ProofOfDelivery *ProofOfDeliveryClient
 	// RateLimitConfig is the client for interacting with the RateLimitConfig builders.
 	RateLimitConfig *RateLimitConfigClient
+	// RiderShift is the client for interacting with the RiderShift builders.
+	RiderShift *RiderShiftClient
 	// RolePermission is the client for interacting with the RolePermission builders.
 	RolePermission *RolePermissionClient
 	// ServiceConfig is the client for interacting with the ServiceConfig builders.
@@ -123,8 +129,10 @@ func (c *Client) init() {
 	c.LogisticsPermission = NewLogisticsPermissionClient(c.config)
 	c.LogisticsRole = NewLogisticsRoleClient(c.config)
 	c.OutboxEvent = NewOutboxEventClient(c.config)
+	c.PricingRule = NewPricingRuleClient(c.config)
 	c.ProofOfDelivery = NewProofOfDeliveryClient(c.config)
 	c.RateLimitConfig = NewRateLimitConfigClient(c.config)
+	c.RiderShift = NewRiderShiftClient(c.config)
 	c.RolePermission = NewRolePermissionClient(c.config)
 	c.ServiceConfig = NewServiceConfigClient(c.config)
 	c.Task = NewTaskClient(c.config)
@@ -241,8 +249,10 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		LogisticsPermission: NewLogisticsPermissionClient(cfg),
 		LogisticsRole:       NewLogisticsRoleClient(cfg),
 		OutboxEvent:         NewOutboxEventClient(cfg),
+		PricingRule:         NewPricingRuleClient(cfg),
 		ProofOfDelivery:     NewProofOfDeliveryClient(cfg),
 		RateLimitConfig:     NewRateLimitConfigClient(cfg),
+		RiderShift:          NewRiderShiftClient(cfg),
 		RolePermission:      NewRolePermissionClient(cfg),
 		ServiceConfig:       NewServiceConfigClient(cfg),
 		Task:                NewTaskClient(cfg),
@@ -286,8 +296,10 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		LogisticsPermission: NewLogisticsPermissionClient(cfg),
 		LogisticsRole:       NewLogisticsRoleClient(cfg),
 		OutboxEvent:         NewOutboxEventClient(cfg),
+		PricingRule:         NewPricingRuleClient(cfg),
 		ProofOfDelivery:     NewProofOfDeliveryClient(cfg),
 		RateLimitConfig:     NewRateLimitConfigClient(cfg),
+		RiderShift:          NewRiderShiftClient(cfg),
 		RolePermission:      NewRolePermissionClient(cfg),
 		ServiceConfig:       NewServiceConfigClient(cfg),
 		Task:                NewTaskClient(cfg),
@@ -332,10 +344,10 @@ func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.BillingEvent, c.CarrierJob, c.CarrierPartner, c.EarningsStatement, c.Fleet,
 		c.FleetMember, c.GeoFence, c.IntegrationSetting, c.LogisticsPermission,
-		c.LogisticsRole, c.OutboxEvent, c.ProofOfDelivery, c.RateLimitConfig,
-		c.RolePermission, c.ServiceConfig, c.Task, c.TaskAssignment, c.TaskEvent,
-		c.TaskStep, c.TelemetryPoint, c.TelemetryStream, c.Tenant, c.TenantSyncEvent,
-		c.User, c.UserRoleAssignment, c.Vehicle,
+		c.LogisticsRole, c.OutboxEvent, c.PricingRule, c.ProofOfDelivery,
+		c.RateLimitConfig, c.RiderShift, c.RolePermission, c.ServiceConfig, c.Task,
+		c.TaskAssignment, c.TaskEvent, c.TaskStep, c.TelemetryPoint, c.TelemetryStream,
+		c.Tenant, c.TenantSyncEvent, c.User, c.UserRoleAssignment, c.Vehicle,
 	} {
 		n.Use(hooks...)
 	}
@@ -347,10 +359,10 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.BillingEvent, c.CarrierJob, c.CarrierPartner, c.EarningsStatement, c.Fleet,
 		c.FleetMember, c.GeoFence, c.IntegrationSetting, c.LogisticsPermission,
-		c.LogisticsRole, c.OutboxEvent, c.ProofOfDelivery, c.RateLimitConfig,
-		c.RolePermission, c.ServiceConfig, c.Task, c.TaskAssignment, c.TaskEvent,
-		c.TaskStep, c.TelemetryPoint, c.TelemetryStream, c.Tenant, c.TenantSyncEvent,
-		c.User, c.UserRoleAssignment, c.Vehicle,
+		c.LogisticsRole, c.OutboxEvent, c.PricingRule, c.ProofOfDelivery,
+		c.RateLimitConfig, c.RiderShift, c.RolePermission, c.ServiceConfig, c.Task,
+		c.TaskAssignment, c.TaskEvent, c.TaskStep, c.TelemetryPoint, c.TelemetryStream,
+		c.Tenant, c.TenantSyncEvent, c.User, c.UserRoleAssignment, c.Vehicle,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -381,10 +393,14 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.LogisticsRole.mutate(ctx, m)
 	case *OutboxEventMutation:
 		return c.OutboxEvent.mutate(ctx, m)
+	case *PricingRuleMutation:
+		return c.PricingRule.mutate(ctx, m)
 	case *ProofOfDeliveryMutation:
 		return c.ProofOfDelivery.mutate(ctx, m)
 	case *RateLimitConfigMutation:
 		return c.RateLimitConfig.mutate(ctx, m)
+	case *RiderShiftMutation:
+		return c.RiderShift.mutate(ctx, m)
 	case *RolePermissionMutation:
 		return c.RolePermission.mutate(ctx, m)
 	case *ServiceConfigMutation:
@@ -2055,6 +2071,139 @@ func (c *OutboxEventClient) mutate(ctx context.Context, m *OutboxEventMutation) 
 	}
 }
 
+// PricingRuleClient is a client for the PricingRule schema.
+type PricingRuleClient struct {
+	config
+}
+
+// NewPricingRuleClient returns a client for the PricingRule from the given config.
+func NewPricingRuleClient(c config) *PricingRuleClient {
+	return &PricingRuleClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `pricingrule.Hooks(f(g(h())))`.
+func (c *PricingRuleClient) Use(hooks ...Hook) {
+	c.hooks.PricingRule = append(c.hooks.PricingRule, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `pricingrule.Intercept(f(g(h())))`.
+func (c *PricingRuleClient) Intercept(interceptors ...Interceptor) {
+	c.inters.PricingRule = append(c.inters.PricingRule, interceptors...)
+}
+
+// Create returns a builder for creating a PricingRule entity.
+func (c *PricingRuleClient) Create() *PricingRuleCreate {
+	mutation := newPricingRuleMutation(c.config, OpCreate)
+	return &PricingRuleCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of PricingRule entities.
+func (c *PricingRuleClient) CreateBulk(builders ...*PricingRuleCreate) *PricingRuleCreateBulk {
+	return &PricingRuleCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *PricingRuleClient) MapCreateBulk(slice any, setFunc func(*PricingRuleCreate, int)) *PricingRuleCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &PricingRuleCreateBulk{err: fmt.Errorf("calling to PricingRuleClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*PricingRuleCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &PricingRuleCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for PricingRule.
+func (c *PricingRuleClient) Update() *PricingRuleUpdate {
+	mutation := newPricingRuleMutation(c.config, OpUpdate)
+	return &PricingRuleUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *PricingRuleClient) UpdateOne(_m *PricingRule) *PricingRuleUpdateOne {
+	mutation := newPricingRuleMutation(c.config, OpUpdateOne, withPricingRule(_m))
+	return &PricingRuleUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *PricingRuleClient) UpdateOneID(id uuid.UUID) *PricingRuleUpdateOne {
+	mutation := newPricingRuleMutation(c.config, OpUpdateOne, withPricingRuleID(id))
+	return &PricingRuleUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for PricingRule.
+func (c *PricingRuleClient) Delete() *PricingRuleDelete {
+	mutation := newPricingRuleMutation(c.config, OpDelete)
+	return &PricingRuleDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *PricingRuleClient) DeleteOne(_m *PricingRule) *PricingRuleDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *PricingRuleClient) DeleteOneID(id uuid.UUID) *PricingRuleDeleteOne {
+	builder := c.Delete().Where(pricingrule.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &PricingRuleDeleteOne{builder}
+}
+
+// Query returns a query builder for PricingRule.
+func (c *PricingRuleClient) Query() *PricingRuleQuery {
+	return &PricingRuleQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypePricingRule},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a PricingRule entity by its id.
+func (c *PricingRuleClient) Get(ctx context.Context, id uuid.UUID) (*PricingRule, error) {
+	return c.Query().Where(pricingrule.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *PricingRuleClient) GetX(ctx context.Context, id uuid.UUID) *PricingRule {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *PricingRuleClient) Hooks() []Hook {
+	return c.hooks.PricingRule
+}
+
+// Interceptors returns the client interceptors.
+func (c *PricingRuleClient) Interceptors() []Interceptor {
+	return c.inters.PricingRule
+}
+
+func (c *PricingRuleClient) mutate(ctx context.Context, m *PricingRuleMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&PricingRuleCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&PricingRuleUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&PricingRuleUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&PricingRuleDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown PricingRule mutation op: %q", m.Op())
+	}
+}
+
 // ProofOfDeliveryClient is a client for the ProofOfDelivery schema.
 type ProofOfDeliveryClient struct {
 	config
@@ -2334,6 +2483,139 @@ func (c *RateLimitConfigClient) mutate(ctx context.Context, m *RateLimitConfigMu
 		return (&RateLimitConfigDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown RateLimitConfig mutation op: %q", m.Op())
+	}
+}
+
+// RiderShiftClient is a client for the RiderShift schema.
+type RiderShiftClient struct {
+	config
+}
+
+// NewRiderShiftClient returns a client for the RiderShift from the given config.
+func NewRiderShiftClient(c config) *RiderShiftClient {
+	return &RiderShiftClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `ridershift.Hooks(f(g(h())))`.
+func (c *RiderShiftClient) Use(hooks ...Hook) {
+	c.hooks.RiderShift = append(c.hooks.RiderShift, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `ridershift.Intercept(f(g(h())))`.
+func (c *RiderShiftClient) Intercept(interceptors ...Interceptor) {
+	c.inters.RiderShift = append(c.inters.RiderShift, interceptors...)
+}
+
+// Create returns a builder for creating a RiderShift entity.
+func (c *RiderShiftClient) Create() *RiderShiftCreate {
+	mutation := newRiderShiftMutation(c.config, OpCreate)
+	return &RiderShiftCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of RiderShift entities.
+func (c *RiderShiftClient) CreateBulk(builders ...*RiderShiftCreate) *RiderShiftCreateBulk {
+	return &RiderShiftCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *RiderShiftClient) MapCreateBulk(slice any, setFunc func(*RiderShiftCreate, int)) *RiderShiftCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &RiderShiftCreateBulk{err: fmt.Errorf("calling to RiderShiftClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*RiderShiftCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &RiderShiftCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for RiderShift.
+func (c *RiderShiftClient) Update() *RiderShiftUpdate {
+	mutation := newRiderShiftMutation(c.config, OpUpdate)
+	return &RiderShiftUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *RiderShiftClient) UpdateOne(_m *RiderShift) *RiderShiftUpdateOne {
+	mutation := newRiderShiftMutation(c.config, OpUpdateOne, withRiderShift(_m))
+	return &RiderShiftUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *RiderShiftClient) UpdateOneID(id uuid.UUID) *RiderShiftUpdateOne {
+	mutation := newRiderShiftMutation(c.config, OpUpdateOne, withRiderShiftID(id))
+	return &RiderShiftUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for RiderShift.
+func (c *RiderShiftClient) Delete() *RiderShiftDelete {
+	mutation := newRiderShiftMutation(c.config, OpDelete)
+	return &RiderShiftDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *RiderShiftClient) DeleteOne(_m *RiderShift) *RiderShiftDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *RiderShiftClient) DeleteOneID(id uuid.UUID) *RiderShiftDeleteOne {
+	builder := c.Delete().Where(ridershift.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &RiderShiftDeleteOne{builder}
+}
+
+// Query returns a query builder for RiderShift.
+func (c *RiderShiftClient) Query() *RiderShiftQuery {
+	return &RiderShiftQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeRiderShift},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a RiderShift entity by its id.
+func (c *RiderShiftClient) Get(ctx context.Context, id uuid.UUID) (*RiderShift, error) {
+	return c.Query().Where(ridershift.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *RiderShiftClient) GetX(ctx context.Context, id uuid.UUID) *RiderShift {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *RiderShiftClient) Hooks() []Hook {
+	return c.hooks.RiderShift
+}
+
+// Interceptors returns the client interceptors.
+func (c *RiderShiftClient) Interceptors() []Interceptor {
+	return c.inters.RiderShift
+}
+
+func (c *RiderShiftClient) mutate(ctx context.Context, m *RiderShiftMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&RiderShiftCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&RiderShiftUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&RiderShiftUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&RiderShiftDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown RiderShift mutation op: %q", m.Op())
 	}
 }
 
@@ -4391,15 +4673,17 @@ type (
 	hooks struct {
 		BillingEvent, CarrierJob, CarrierPartner, EarningsStatement, Fleet, FleetMember,
 		GeoFence, IntegrationSetting, LogisticsPermission, LogisticsRole, OutboxEvent,
-		ProofOfDelivery, RateLimitConfig, RolePermission, ServiceConfig, Task,
-		TaskAssignment, TaskEvent, TaskStep, TelemetryPoint, TelemetryStream, Tenant,
-		TenantSyncEvent, User, UserRoleAssignment, Vehicle []ent.Hook
+		PricingRule, ProofOfDelivery, RateLimitConfig, RiderShift, RolePermission,
+		ServiceConfig, Task, TaskAssignment, TaskEvent, TaskStep, TelemetryPoint,
+		TelemetryStream, Tenant, TenantSyncEvent, User, UserRoleAssignment,
+		Vehicle []ent.Hook
 	}
 	inters struct {
 		BillingEvent, CarrierJob, CarrierPartner, EarningsStatement, Fleet, FleetMember,
 		GeoFence, IntegrationSetting, LogisticsPermission, LogisticsRole, OutboxEvent,
-		ProofOfDelivery, RateLimitConfig, RolePermission, ServiceConfig, Task,
-		TaskAssignment, TaskEvent, TaskStep, TelemetryPoint, TelemetryStream, Tenant,
-		TenantSyncEvent, User, UserRoleAssignment, Vehicle []ent.Interceptor
+		PricingRule, ProofOfDelivery, RateLimitConfig, RiderShift, RolePermission,
+		ServiceConfig, Task, TaskAssignment, TaskEvent, TaskStep, TelemetryPoint,
+		TelemetryStream, Tenant, TenantSyncEvent, User, UserRoleAssignment,
+		Vehicle []ent.Interceptor
 	}
 )

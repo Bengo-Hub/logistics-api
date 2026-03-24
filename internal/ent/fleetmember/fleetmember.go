@@ -41,6 +41,12 @@ const (
 	FieldSuspendedAt = "suspended_at"
 	// FieldMetadata holds the string denoting the metadata field in the database.
 	FieldMetadata = "metadata"
+	// FieldSpecializationTags holds the string denoting the specialization_tags field in the database.
+	FieldSpecializationTags = "specialization_tags"
+	// FieldHasColdStorage holds the string denoting the has_cold_storage field in the database.
+	FieldHasColdStorage = "has_cold_storage"
+	// FieldMaxWeightCapacityKg holds the string denoting the max_weight_capacity_kg field in the database.
+	FieldMaxWeightCapacityKg = "max_weight_capacity_kg"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
@@ -101,6 +107,9 @@ var Columns = []string{
 	FieldJoinedAt,
 	FieldSuspendedAt,
 	FieldMetadata,
+	FieldSpecializationTags,
+	FieldHasColdStorage,
+	FieldMaxWeightCapacityKg,
 	FieldCreatedAt,
 	FieldUpdatedAt,
 }
@@ -122,6 +131,10 @@ var (
 	DefaultJoinedAt func() time.Time
 	// DefaultMetadata holds the default value on creation for the "metadata" field.
 	DefaultMetadata map[string]interface{}
+	// DefaultSpecializationTags holds the default value on creation for the "specialization_tags" field.
+	DefaultSpecializationTags []string
+	// DefaultHasColdStorage holds the default value on creation for the "has_cold_storage" field.
+	DefaultHasColdStorage bool
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultUpdatedAt holds the default value on creation for the "updated_at" field.
@@ -198,6 +211,16 @@ func ByJoinedAt(opts ...sql.OrderTermOption) OrderOption {
 // BySuspendedAt orders the results by the suspended_at field.
 func BySuspendedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldSuspendedAt, opts...).ToFunc()
+}
+
+// ByHasColdStorage orders the results by the has_cold_storage field.
+func ByHasColdStorage(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldHasColdStorage, opts...).ToFunc()
+}
+
+// ByMaxWeightCapacityKg orders the results by the max_weight_capacity_kg field.
+func ByMaxWeightCapacityKg(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMaxWeightCapacityKg, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.

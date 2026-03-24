@@ -127,6 +127,9 @@ var (
 		{Name: "joined_at", Type: field.TypeTime},
 		{Name: "suspended_at", Type: field.TypeTime, Nullable: true},
 		{Name: "metadata", Type: field.TypeJSON},
+		{Name: "specialization_tags", Type: field.TypeJSON},
+		{Name: "has_cold_storage", Type: field.TypeBool, Default: false},
+		{Name: "max_weight_capacity_kg", Type: field.TypeFloat64, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "fleet_id", Type: field.TypeUUID},
@@ -141,19 +144,19 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "fleet_members_fleets_members",
-				Columns:    []*schema.Column{FleetMembersColumns[13]},
+				Columns:    []*schema.Column{FleetMembersColumns[16]},
 				RefColumns: []*schema.Column{FleetsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "fleet_members_vehicles_vehicle",
-				Columns:    []*schema.Column{FleetMembersColumns[14]},
+				Columns:    []*schema.Column{FleetMembersColumns[17]},
 				RefColumns: []*schema.Column{VehiclesColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "fleet_members_users_fleet_memberships",
-				Columns:    []*schema.Column{FleetMembersColumns[15]},
+				Columns:    []*schema.Column{FleetMembersColumns[18]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -162,7 +165,7 @@ var (
 			{
 				Name:    "fleetmember_tenant_id_user_id",
 				Unique:  true,
-				Columns: []*schema.Column{FleetMembersColumns[1], FleetMembersColumns[15]},
+				Columns: []*schema.Column{FleetMembersColumns[1], FleetMembersColumns[18]},
 			},
 			{
 				Name:    "fleetmember_driver_code",
@@ -342,6 +345,41 @@ var (
 			},
 		},
 	}
+	// PricingRulesColumns holds the columns for the "pricing_rules" table.
+	PricingRulesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID},
+		{Name: "name", Type: field.TypeString},
+		{Name: "rule_type", Type: field.TypeEnum, Enums: []string{"distance", "weight", "time_of_day", "surge", "flat"}, Default: "distance"},
+		{Name: "base_fee", Type: field.TypeFloat64, Default: 0},
+		{Name: "per_km_rate", Type: field.TypeFloat64, Nullable: true},
+		{Name: "per_kg_rate", Type: field.TypeFloat64, Nullable: true},
+		{Name: "surge_multiplier", Type: field.TypeFloat64, Nullable: true},
+		{Name: "time_windows", Type: field.TypeJSON, Nullable: true},
+		{Name: "distance_tiers", Type: field.TypeJSON, Nullable: true},
+		{Name: "priority", Type: field.TypeInt, Default: 0},
+		{Name: "is_active", Type: field.TypeBool, Default: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// PricingRulesTable holds the schema information for the "pricing_rules" table.
+	PricingRulesTable = &schema.Table{
+		Name:       "pricing_rules",
+		Columns:    PricingRulesColumns,
+		PrimaryKey: []*schema.Column{PricingRulesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "pricingrule_tenant_id_is_active",
+				Unique:  false,
+				Columns: []*schema.Column{PricingRulesColumns[1], PricingRulesColumns[11]},
+			},
+			{
+				Name:    "pricingrule_tenant_id_rule_type",
+				Unique:  false,
+				Columns: []*schema.Column{PricingRulesColumns[1], PricingRulesColumns[3]},
+			},
+		},
+	}
 	// ProofOfDeliveriesColumns holds the columns for the "proof_of_deliveries" table.
 	ProofOfDeliveriesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -414,6 +452,36 @@ var (
 				Name:    "ratelimitconfig_is_active",
 				Unique:  false,
 				Columns: []*schema.Column{RateLimitConfigsColumns[7]},
+			},
+		},
+	}
+	// RiderShiftsColumns holds the columns for the "rider_shifts" table.
+	RiderShiftsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID},
+		{Name: "fleet_member_id", Type: field.TypeUUID},
+		{Name: "shift_start", Type: field.TypeTime},
+		{Name: "shift_end", Type: field.TypeTime},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"scheduled", "active", "completed", "cancelled"}, Default: "scheduled"},
+		{Name: "zone_ids", Type: field.TypeJSON, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// RiderShiftsTable holds the schema information for the "rider_shifts" table.
+	RiderShiftsTable = &schema.Table{
+		Name:       "rider_shifts",
+		Columns:    RiderShiftsColumns,
+		PrimaryKey: []*schema.Column{RiderShiftsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "ridershift_tenant_id_fleet_member_id_shift_start",
+				Unique:  false,
+				Columns: []*schema.Column{RiderShiftsColumns[1], RiderShiftsColumns[2], RiderShiftsColumns[3]},
+			},
+			{
+				Name:    "ridershift_status",
+				Unique:  false,
+				Columns: []*schema.Column{RiderShiftsColumns[5]},
 			},
 		},
 	}
@@ -504,6 +572,13 @@ var (
 		{Name: "requested_pickup_at", Type: field.TypeTime, Nullable: true},
 		{Name: "requested_dropoff_at", Type: field.TypeTime, Nullable: true},
 		{Name: "metadata", Type: field.TypeJSON},
+		{Name: "package_weight_kg", Type: field.TypeFloat64, Nullable: true},
+		{Name: "package_dimensions_cm", Type: field.TypeJSON, Nullable: true},
+		{Name: "requires_temperature_control", Type: field.TypeBool, Default: false},
+		{Name: "temperature_range", Type: field.TypeString, Nullable: true},
+		{Name: "requires_fragile_handling", Type: field.TypeBool, Default: false},
+		{Name: "requires_heavy_duty", Type: field.TypeBool, Default: false},
+		{Name: "carrier_id", Type: field.TypeString, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "user_tasks", Type: field.TypeUUID, Nullable: true},
@@ -516,7 +591,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "tasks_users_tasks",
-				Columns:    []*schema.Column{TasksColumns[14]},
+				Columns:    []*schema.Column{TasksColumns[21]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -881,8 +956,10 @@ var (
 		LogisticsPermissionsTable,
 		LogisticsRolesTable,
 		OutboxEventsTable,
+		PricingRulesTable,
 		ProofOfDeliveriesTable,
 		RateLimitConfigsTable,
+		RiderShiftsTable,
 		RolePermissionsTable,
 		ServiceConfigsTable,
 		TasksTable,

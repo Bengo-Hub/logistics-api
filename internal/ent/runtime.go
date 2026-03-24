@@ -16,8 +16,10 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/logisticspermission"
 	"github.com/bengobox/logistics-service/internal/ent/logisticsrole"
 	"github.com/bengobox/logistics-service/internal/ent/outboxevent"
+	"github.com/bengobox/logistics-service/internal/ent/pricingrule"
 	"github.com/bengobox/logistics-service/internal/ent/proofofdelivery"
 	"github.com/bengobox/logistics-service/internal/ent/ratelimitconfig"
+	"github.com/bengobox/logistics-service/internal/ent/ridershift"
 	"github.com/bengobox/logistics-service/internal/ent/schema"
 	"github.com/bengobox/logistics-service/internal/ent/serviceconfig"
 	"github.com/bengobox/logistics-service/internal/ent/task"
@@ -190,12 +192,20 @@ func init() {
 	fleetmemberDescMetadata := fleetmemberFields[13].Descriptor()
 	// fleetmember.DefaultMetadata holds the default value on creation for the metadata field.
 	fleetmember.DefaultMetadata = fleetmemberDescMetadata.Default.(map[string]interface{})
+	// fleetmemberDescSpecializationTags is the schema descriptor for specialization_tags field.
+	fleetmemberDescSpecializationTags := fleetmemberFields[14].Descriptor()
+	// fleetmember.DefaultSpecializationTags holds the default value on creation for the specialization_tags field.
+	fleetmember.DefaultSpecializationTags = fleetmemberDescSpecializationTags.Default.([]string)
+	// fleetmemberDescHasColdStorage is the schema descriptor for has_cold_storage field.
+	fleetmemberDescHasColdStorage := fleetmemberFields[15].Descriptor()
+	// fleetmember.DefaultHasColdStorage holds the default value on creation for the has_cold_storage field.
+	fleetmember.DefaultHasColdStorage = fleetmemberDescHasColdStorage.Default.(bool)
 	// fleetmemberDescCreatedAt is the schema descriptor for created_at field.
-	fleetmemberDescCreatedAt := fleetmemberFields[14].Descriptor()
+	fleetmemberDescCreatedAt := fleetmemberFields[17].Descriptor()
 	// fleetmember.DefaultCreatedAt holds the default value on creation for the created_at field.
 	fleetmember.DefaultCreatedAt = fleetmemberDescCreatedAt.Default.(func() time.Time)
 	// fleetmemberDescUpdatedAt is the schema descriptor for updated_at field.
-	fleetmemberDescUpdatedAt := fleetmemberFields[15].Descriptor()
+	fleetmemberDescUpdatedAt := fleetmemberFields[18].Descriptor()
 	// fleetmember.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	fleetmember.DefaultUpdatedAt = fleetmemberDescUpdatedAt.Default.(func() time.Time)
 	// fleetmember.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -356,6 +366,38 @@ func init() {
 	outboxeventDescID := outboxeventFields[0].Descriptor()
 	// outboxevent.DefaultID holds the default value on creation for the id field.
 	outboxevent.DefaultID = outboxeventDescID.Default.(func() uuid.UUID)
+	pricingruleFields := schema.PricingRule{}.Fields()
+	_ = pricingruleFields
+	// pricingruleDescName is the schema descriptor for name field.
+	pricingruleDescName := pricingruleFields[2].Descriptor()
+	// pricingrule.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	pricingrule.NameValidator = pricingruleDescName.Validators[0].(func(string) error)
+	// pricingruleDescBaseFee is the schema descriptor for base_fee field.
+	pricingruleDescBaseFee := pricingruleFields[4].Descriptor()
+	// pricingrule.DefaultBaseFee holds the default value on creation for the base_fee field.
+	pricingrule.DefaultBaseFee = pricingruleDescBaseFee.Default.(float64)
+	// pricingruleDescPriority is the schema descriptor for priority field.
+	pricingruleDescPriority := pricingruleFields[10].Descriptor()
+	// pricingrule.DefaultPriority holds the default value on creation for the priority field.
+	pricingrule.DefaultPriority = pricingruleDescPriority.Default.(int)
+	// pricingruleDescIsActive is the schema descriptor for is_active field.
+	pricingruleDescIsActive := pricingruleFields[11].Descriptor()
+	// pricingrule.DefaultIsActive holds the default value on creation for the is_active field.
+	pricingrule.DefaultIsActive = pricingruleDescIsActive.Default.(bool)
+	// pricingruleDescCreatedAt is the schema descriptor for created_at field.
+	pricingruleDescCreatedAt := pricingruleFields[12].Descriptor()
+	// pricingrule.DefaultCreatedAt holds the default value on creation for the created_at field.
+	pricingrule.DefaultCreatedAt = pricingruleDescCreatedAt.Default.(func() time.Time)
+	// pricingruleDescUpdatedAt is the schema descriptor for updated_at field.
+	pricingruleDescUpdatedAt := pricingruleFields[13].Descriptor()
+	// pricingrule.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	pricingrule.DefaultUpdatedAt = pricingruleDescUpdatedAt.Default.(func() time.Time)
+	// pricingrule.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	pricingrule.UpdateDefaultUpdatedAt = pricingruleDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// pricingruleDescID is the schema descriptor for id field.
+	pricingruleDescID := pricingruleFields[0].Descriptor()
+	// pricingrule.DefaultID holds the default value on creation for the id field.
+	pricingrule.DefaultID = pricingruleDescID.Default.(func() uuid.UUID)
 	proofofdeliveryFields := schema.ProofOfDelivery{}.Fields()
 	_ = proofofdeliveryFields
 	// proofofdeliveryDescCapturedAt is the schema descriptor for captured_at field.
@@ -418,6 +460,22 @@ func init() {
 	ratelimitconfigDescID := ratelimitconfigFields[0].Descriptor()
 	// ratelimitconfig.DefaultID holds the default value on creation for the id field.
 	ratelimitconfig.DefaultID = ratelimitconfigDescID.Default.(func() uuid.UUID)
+	ridershiftFields := schema.RiderShift{}.Fields()
+	_ = ridershiftFields
+	// ridershiftDescCreatedAt is the schema descriptor for created_at field.
+	ridershiftDescCreatedAt := ridershiftFields[7].Descriptor()
+	// ridershift.DefaultCreatedAt holds the default value on creation for the created_at field.
+	ridershift.DefaultCreatedAt = ridershiftDescCreatedAt.Default.(func() time.Time)
+	// ridershiftDescUpdatedAt is the schema descriptor for updated_at field.
+	ridershiftDescUpdatedAt := ridershiftFields[8].Descriptor()
+	// ridershift.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	ridershift.DefaultUpdatedAt = ridershiftDescUpdatedAt.Default.(func() time.Time)
+	// ridershift.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	ridershift.UpdateDefaultUpdatedAt = ridershiftDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// ridershiftDescID is the schema descriptor for id field.
+	ridershiftDescID := ridershiftFields[0].Descriptor()
+	// ridershift.DefaultID holds the default value on creation for the id field.
+	ridershift.DefaultID = ridershiftDescID.Default.(func() uuid.UUID)
 	serviceconfigFields := schema.ServiceConfig{}.Fields()
 	_ = serviceconfigFields
 	// serviceconfigDescConfigKey is the schema descriptor for config_key field.
@@ -472,12 +530,24 @@ func init() {
 	taskDescMetadata := taskFields[11].Descriptor()
 	// task.DefaultMetadata holds the default value on creation for the metadata field.
 	task.DefaultMetadata = taskDescMetadata.Default.(map[string]interface{})
+	// taskDescRequiresTemperatureControl is the schema descriptor for requires_temperature_control field.
+	taskDescRequiresTemperatureControl := taskFields[14].Descriptor()
+	// task.DefaultRequiresTemperatureControl holds the default value on creation for the requires_temperature_control field.
+	task.DefaultRequiresTemperatureControl = taskDescRequiresTemperatureControl.Default.(bool)
+	// taskDescRequiresFragileHandling is the schema descriptor for requires_fragile_handling field.
+	taskDescRequiresFragileHandling := taskFields[16].Descriptor()
+	// task.DefaultRequiresFragileHandling holds the default value on creation for the requires_fragile_handling field.
+	task.DefaultRequiresFragileHandling = taskDescRequiresFragileHandling.Default.(bool)
+	// taskDescRequiresHeavyDuty is the schema descriptor for requires_heavy_duty field.
+	taskDescRequiresHeavyDuty := taskFields[17].Descriptor()
+	// task.DefaultRequiresHeavyDuty holds the default value on creation for the requires_heavy_duty field.
+	task.DefaultRequiresHeavyDuty = taskDescRequiresHeavyDuty.Default.(bool)
 	// taskDescCreatedAt is the schema descriptor for created_at field.
-	taskDescCreatedAt := taskFields[12].Descriptor()
+	taskDescCreatedAt := taskFields[19].Descriptor()
 	// task.DefaultCreatedAt holds the default value on creation for the created_at field.
 	task.DefaultCreatedAt = taskDescCreatedAt.Default.(func() time.Time)
 	// taskDescUpdatedAt is the schema descriptor for updated_at field.
-	taskDescUpdatedAt := taskFields[13].Descriptor()
+	taskDescUpdatedAt := taskFields[20].Descriptor()
 	// task.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	task.DefaultUpdatedAt = taskDescUpdatedAt.Default.(func() time.Time)
 	// task.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
