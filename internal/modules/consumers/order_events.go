@@ -10,6 +10,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
 
+	"github.com/bengobox/logistics-service/internal/modules/dispatch"
 	"github.com/bengobox/logistics-service/internal/modules/tasks"
 )
 
@@ -21,15 +22,17 @@ const (
 
 // OrderReadyConsumer subscribes to ordering.order.ready and creates delivery tasks.
 type OrderReadyConsumer struct {
-	log     *zap.Logger
-	taskSvc *tasks.Service
+	log        *zap.Logger
+	taskSvc    *tasks.Service
+	dispatcher *dispatch.AutoDispatcher
 }
 
 // NewOrderReadyConsumer creates the consumer.
-func NewOrderReadyConsumer(log *zap.Logger, taskSvc *tasks.Service) *OrderReadyConsumer {
+func NewOrderReadyConsumer(log *zap.Logger, taskSvc *tasks.Service, dispatcher *dispatch.AutoDispatcher) *OrderReadyConsumer {
 	return &OrderReadyConsumer{
-		log:     log.Named("consumers.order_ready"),
-		taskSvc: taskSvc,
+		log:        log.Named("consumers.order_ready"),
+		taskSvc:    taskSvc,
+		dispatcher: dispatcher,
 	}
 }
 
@@ -97,5 +100,19 @@ func (c *OrderReadyConsumer) handleMessage(msg *nats.Msg) {
 		zap.String("task_id", t.ID.String()),
 		zap.String("order_id", orderID),
 	)
+
+	// Auto-dispatch: find and assign nearest available rider (async, best-effort)
+	if c.dispatcher != nil {
+		go func() {
+			dispatchCtx := context.Background()
+			if dispatchErr := c.dispatcher.DispatchTask(dispatchCtx, tenantID, t.ID); dispatchErr != nil {
+				c.log.Warn("auto-dispatch failed",
+					zap.String("task_id", t.ID.String()),
+					zap.Error(dispatchErr),
+				)
+			}
+		}()
+	}
+
 	_ = msg.Ack()
 }
