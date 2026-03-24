@@ -39,11 +39,17 @@ type LogisticsRole func(*sql.Selector)
 // OutboxEvent is the predicate function for outboxevent builders.
 type OutboxEvent func(*sql.Selector)
 
+// PricingRule is the predicate function for pricingrule builders.
+type PricingRule func(*sql.Selector)
+
 // ProofOfDelivery is the predicate function for proofofdelivery builders.
 type ProofOfDelivery func(*sql.Selector)
 
 // RateLimitConfig is the predicate function for ratelimitconfig builders.
 type RateLimitConfig func(*sql.Selector)
+
+// RiderShift is the predicate function for ridershift builders.
+type RiderShift func(*sql.Selector)
 
 // RolePermission is the predicate function for rolepermission builders.
 type RolePermission func(*sql.Selector)

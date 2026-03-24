@@ -37,6 +37,20 @@ const (
 	FieldRequestedDropoffAt = "requested_dropoff_at"
 	// FieldMetadata holds the string denoting the metadata field in the database.
 	FieldMetadata = "metadata"
+	// FieldPackageWeightKg holds the string denoting the package_weight_kg field in the database.
+	FieldPackageWeightKg = "package_weight_kg"
+	// FieldPackageDimensionsCm holds the string denoting the package_dimensions_cm field in the database.
+	FieldPackageDimensionsCm = "package_dimensions_cm"
+	// FieldRequiresTemperatureControl holds the string denoting the requires_temperature_control field in the database.
+	FieldRequiresTemperatureControl = "requires_temperature_control"
+	// FieldTemperatureRange holds the string denoting the temperature_range field in the database.
+	FieldTemperatureRange = "temperature_range"
+	// FieldRequiresFragileHandling holds the string denoting the requires_fragile_handling field in the database.
+	FieldRequiresFragileHandling = "requires_fragile_handling"
+	// FieldRequiresHeavyDuty holds the string denoting the requires_heavy_duty field in the database.
+	FieldRequiresHeavyDuty = "requires_heavy_duty"
+	// FieldCarrierID holds the string denoting the carrier_id field in the database.
+	FieldCarrierID = "carrier_id"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
@@ -95,6 +109,13 @@ var Columns = []string{
 	FieldRequestedPickupAt,
 	FieldRequestedDropoffAt,
 	FieldMetadata,
+	FieldPackageWeightKg,
+	FieldPackageDimensionsCm,
+	FieldRequiresTemperatureControl,
+	FieldTemperatureRange,
+	FieldRequiresFragileHandling,
+	FieldRequiresHeavyDuty,
+	FieldCarrierID,
 	FieldCreatedAt,
 	FieldUpdatedAt,
 }
@@ -131,6 +152,12 @@ var (
 	DefaultStatus string
 	// DefaultMetadata holds the default value on creation for the "metadata" field.
 	DefaultMetadata map[string]interface{}
+	// DefaultRequiresTemperatureControl holds the default value on creation for the "requires_temperature_control" field.
+	DefaultRequiresTemperatureControl bool
+	// DefaultRequiresFragileHandling holds the default value on creation for the "requires_fragile_handling" field.
+	DefaultRequiresFragileHandling bool
+	// DefaultRequiresHeavyDuty holds the default value on creation for the "requires_heavy_duty" field.
+	DefaultRequiresHeavyDuty bool
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultUpdatedAt holds the default value on creation for the "updated_at" field.
@@ -197,6 +224,36 @@ func ByRequestedPickupAt(opts ...sql.OrderTermOption) OrderOption {
 // ByRequestedDropoffAt orders the results by the requested_dropoff_at field.
 func ByRequestedDropoffAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldRequestedDropoffAt, opts...).ToFunc()
+}
+
+// ByPackageWeightKg orders the results by the package_weight_kg field.
+func ByPackageWeightKg(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPackageWeightKg, opts...).ToFunc()
+}
+
+// ByRequiresTemperatureControl orders the results by the requires_temperature_control field.
+func ByRequiresTemperatureControl(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRequiresTemperatureControl, opts...).ToFunc()
+}
+
+// ByTemperatureRange orders the results by the temperature_range field.
+func ByTemperatureRange(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTemperatureRange, opts...).ToFunc()
+}
+
+// ByRequiresFragileHandling orders the results by the requires_fragile_handling field.
+func ByRequiresFragileHandling(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRequiresFragileHandling, opts...).ToFunc()
+}
+
+// ByRequiresHeavyDuty orders the results by the requires_heavy_duty field.
+func ByRequiresHeavyDuty(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRequiresHeavyDuty, opts...).ToFunc()
+}
+
+// ByCarrierID orders the results by the carrier_id field.
+func ByCarrierID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCarrierID, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.

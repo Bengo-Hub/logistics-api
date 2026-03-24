@@ -178,6 +178,40 @@ func (_c *FleetMemberCreate) SetMetadata(v map[string]interface{}) *FleetMemberC
 	return _c
 }
 
+// SetSpecializationTags sets the "specialization_tags" field.
+func (_c *FleetMemberCreate) SetSpecializationTags(v []string) *FleetMemberCreate {
+	_c.mutation.SetSpecializationTags(v)
+	return _c
+}
+
+// SetHasColdStorage sets the "has_cold_storage" field.
+func (_c *FleetMemberCreate) SetHasColdStorage(v bool) *FleetMemberCreate {
+	_c.mutation.SetHasColdStorage(v)
+	return _c
+}
+
+// SetNillableHasColdStorage sets the "has_cold_storage" field if the given value is not nil.
+func (_c *FleetMemberCreate) SetNillableHasColdStorage(v *bool) *FleetMemberCreate {
+	if v != nil {
+		_c.SetHasColdStorage(*v)
+	}
+	return _c
+}
+
+// SetMaxWeightCapacityKg sets the "max_weight_capacity_kg" field.
+func (_c *FleetMemberCreate) SetMaxWeightCapacityKg(v float64) *FleetMemberCreate {
+	_c.mutation.SetMaxWeightCapacityKg(v)
+	return _c
+}
+
+// SetNillableMaxWeightCapacityKg sets the "max_weight_capacity_kg" field if the given value is not nil.
+func (_c *FleetMemberCreate) SetNillableMaxWeightCapacityKg(v *float64) *FleetMemberCreate {
+	if v != nil {
+		_c.SetMaxWeightCapacityKg(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *FleetMemberCreate) SetCreatedAt(v time.Time) *FleetMemberCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -297,6 +331,14 @@ func (_c *FleetMemberCreate) defaults() {
 		v := fleetmember.DefaultMetadata
 		_c.mutation.SetMetadata(v)
 	}
+	if _, ok := _c.mutation.SpecializationTags(); !ok {
+		v := fleetmember.DefaultSpecializationTags
+		_c.mutation.SetSpecializationTags(v)
+	}
+	if _, ok := _c.mutation.HasColdStorage(); !ok {
+		v := fleetmember.DefaultHasColdStorage
+		_c.mutation.SetHasColdStorage(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := fleetmember.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
@@ -330,6 +372,12 @@ func (_c *FleetMemberCreate) check() error {
 	}
 	if _, ok := _c.mutation.Metadata(); !ok {
 		return &ValidationError{Name: "metadata", err: errors.New(`ent: missing required field "FleetMember.metadata"`)}
+	}
+	if _, ok := _c.mutation.SpecializationTags(); !ok {
+		return &ValidationError{Name: "specialization_tags", err: errors.New(`ent: missing required field "FleetMember.specialization_tags"`)}
+	}
+	if _, ok := _c.mutation.HasColdStorage(); !ok {
+		return &ValidationError{Name: "has_cold_storage", err: errors.New(`ent: missing required field "FleetMember.has_cold_storage"`)}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "FleetMember.created_at"`)}
@@ -418,6 +466,18 @@ func (_c *FleetMemberCreate) createSpec() (*FleetMember, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Metadata(); ok {
 		_spec.SetField(fleetmember.FieldMetadata, field.TypeJSON, value)
 		_node.Metadata = value
+	}
+	if value, ok := _c.mutation.SpecializationTags(); ok {
+		_spec.SetField(fleetmember.FieldSpecializationTags, field.TypeJSON, value)
+		_node.SpecializationTags = value
+	}
+	if value, ok := _c.mutation.HasColdStorage(); ok {
+		_spec.SetField(fleetmember.FieldHasColdStorage, field.TypeBool, value)
+		_node.HasColdStorage = value
+	}
+	if value, ok := _c.mutation.MaxWeightCapacityKg(); ok {
+		_spec.SetField(fleetmember.FieldMaxWeightCapacityKg, field.TypeFloat64, value)
+		_node.MaxWeightCapacityKg = &value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(fleetmember.FieldCreatedAt, field.TypeTime, value)
@@ -744,6 +804,54 @@ func (u *FleetMemberUpsert) UpdateMetadata() *FleetMemberUpsert {
 	return u
 }
 
+// SetSpecializationTags sets the "specialization_tags" field.
+func (u *FleetMemberUpsert) SetSpecializationTags(v []string) *FleetMemberUpsert {
+	u.Set(fleetmember.FieldSpecializationTags, v)
+	return u
+}
+
+// UpdateSpecializationTags sets the "specialization_tags" field to the value that was provided on create.
+func (u *FleetMemberUpsert) UpdateSpecializationTags() *FleetMemberUpsert {
+	u.SetExcluded(fleetmember.FieldSpecializationTags)
+	return u
+}
+
+// SetHasColdStorage sets the "has_cold_storage" field.
+func (u *FleetMemberUpsert) SetHasColdStorage(v bool) *FleetMemberUpsert {
+	u.Set(fleetmember.FieldHasColdStorage, v)
+	return u
+}
+
+// UpdateHasColdStorage sets the "has_cold_storage" field to the value that was provided on create.
+func (u *FleetMemberUpsert) UpdateHasColdStorage() *FleetMemberUpsert {
+	u.SetExcluded(fleetmember.FieldHasColdStorage)
+	return u
+}
+
+// SetMaxWeightCapacityKg sets the "max_weight_capacity_kg" field.
+func (u *FleetMemberUpsert) SetMaxWeightCapacityKg(v float64) *FleetMemberUpsert {
+	u.Set(fleetmember.FieldMaxWeightCapacityKg, v)
+	return u
+}
+
+// UpdateMaxWeightCapacityKg sets the "max_weight_capacity_kg" field to the value that was provided on create.
+func (u *FleetMemberUpsert) UpdateMaxWeightCapacityKg() *FleetMemberUpsert {
+	u.SetExcluded(fleetmember.FieldMaxWeightCapacityKg)
+	return u
+}
+
+// AddMaxWeightCapacityKg adds v to the "max_weight_capacity_kg" field.
+func (u *FleetMemberUpsert) AddMaxWeightCapacityKg(v float64) *FleetMemberUpsert {
+	u.Add(fleetmember.FieldMaxWeightCapacityKg, v)
+	return u
+}
+
+// ClearMaxWeightCapacityKg clears the value of the "max_weight_capacity_kg" field.
+func (u *FleetMemberUpsert) ClearMaxWeightCapacityKg() *FleetMemberUpsert {
+	u.SetNull(fleetmember.FieldMaxWeightCapacityKg)
+	return u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (u *FleetMemberUpsert) SetUpdatedAt(v time.Time) *FleetMemberUpsert {
 	u.Set(fleetmember.FieldUpdatedAt, v)
@@ -1035,6 +1143,62 @@ func (u *FleetMemberUpsertOne) SetMetadata(v map[string]interface{}) *FleetMembe
 func (u *FleetMemberUpsertOne) UpdateMetadata() *FleetMemberUpsertOne {
 	return u.Update(func(s *FleetMemberUpsert) {
 		s.UpdateMetadata()
+	})
+}
+
+// SetSpecializationTags sets the "specialization_tags" field.
+func (u *FleetMemberUpsertOne) SetSpecializationTags(v []string) *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetSpecializationTags(v)
+	})
+}
+
+// UpdateSpecializationTags sets the "specialization_tags" field to the value that was provided on create.
+func (u *FleetMemberUpsertOne) UpdateSpecializationTags() *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdateSpecializationTags()
+	})
+}
+
+// SetHasColdStorage sets the "has_cold_storage" field.
+func (u *FleetMemberUpsertOne) SetHasColdStorage(v bool) *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetHasColdStorage(v)
+	})
+}
+
+// UpdateHasColdStorage sets the "has_cold_storage" field to the value that was provided on create.
+func (u *FleetMemberUpsertOne) UpdateHasColdStorage() *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdateHasColdStorage()
+	})
+}
+
+// SetMaxWeightCapacityKg sets the "max_weight_capacity_kg" field.
+func (u *FleetMemberUpsertOne) SetMaxWeightCapacityKg(v float64) *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetMaxWeightCapacityKg(v)
+	})
+}
+
+// AddMaxWeightCapacityKg adds v to the "max_weight_capacity_kg" field.
+func (u *FleetMemberUpsertOne) AddMaxWeightCapacityKg(v float64) *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.AddMaxWeightCapacityKg(v)
+	})
+}
+
+// UpdateMaxWeightCapacityKg sets the "max_weight_capacity_kg" field to the value that was provided on create.
+func (u *FleetMemberUpsertOne) UpdateMaxWeightCapacityKg() *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdateMaxWeightCapacityKg()
+	})
+}
+
+// ClearMaxWeightCapacityKg clears the value of the "max_weight_capacity_kg" field.
+func (u *FleetMemberUpsertOne) ClearMaxWeightCapacityKg() *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.ClearMaxWeightCapacityKg()
 	})
 }
 
@@ -1498,6 +1662,62 @@ func (u *FleetMemberUpsertBulk) SetMetadata(v map[string]interface{}) *FleetMemb
 func (u *FleetMemberUpsertBulk) UpdateMetadata() *FleetMemberUpsertBulk {
 	return u.Update(func(s *FleetMemberUpsert) {
 		s.UpdateMetadata()
+	})
+}
+
+// SetSpecializationTags sets the "specialization_tags" field.
+func (u *FleetMemberUpsertBulk) SetSpecializationTags(v []string) *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetSpecializationTags(v)
+	})
+}
+
+// UpdateSpecializationTags sets the "specialization_tags" field to the value that was provided on create.
+func (u *FleetMemberUpsertBulk) UpdateSpecializationTags() *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdateSpecializationTags()
+	})
+}
+
+// SetHasColdStorage sets the "has_cold_storage" field.
+func (u *FleetMemberUpsertBulk) SetHasColdStorage(v bool) *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetHasColdStorage(v)
+	})
+}
+
+// UpdateHasColdStorage sets the "has_cold_storage" field to the value that was provided on create.
+func (u *FleetMemberUpsertBulk) UpdateHasColdStorage() *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdateHasColdStorage()
+	})
+}
+
+// SetMaxWeightCapacityKg sets the "max_weight_capacity_kg" field.
+func (u *FleetMemberUpsertBulk) SetMaxWeightCapacityKg(v float64) *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetMaxWeightCapacityKg(v)
+	})
+}
+
+// AddMaxWeightCapacityKg adds v to the "max_weight_capacity_kg" field.
+func (u *FleetMemberUpsertBulk) AddMaxWeightCapacityKg(v float64) *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.AddMaxWeightCapacityKg(v)
+	})
+}
+
+// UpdateMaxWeightCapacityKg sets the "max_weight_capacity_kg" field to the value that was provided on create.
+func (u *FleetMemberUpsertBulk) UpdateMaxWeightCapacityKg() *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdateMaxWeightCapacityKg()
+	})
+}
+
+// ClearMaxWeightCapacityKg clears the value of the "max_weight_capacity_kg" field.
+func (u *FleetMemberUpsertBulk) ClearMaxWeightCapacityKg() *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.ClearMaxWeightCapacityKg()
 	})
 }
 

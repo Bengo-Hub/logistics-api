@@ -28,7 +28,7 @@ type Task struct {
 	ExternalReference string `json:"external_reference,omitempty"`
 	// ordering-backend | inventory-service | pos-service
 	SourceService string `json:"source_service,omitempty"`
-	// delivery | pickup | return | transfer | ride
+	// food_delivery | retail_delivery | outlet_transfer | commercial_courier | drop_shipping | pickup | return | ride
 	TaskType string `json:"task_type,omitempty"`
 	// Priority holds the value of the "priority" field.
 	Priority int `json:"priority,omitempty"`
@@ -42,6 +42,20 @@ type Task struct {
 	RequestedDropoffAt *time.Time `json:"requested_dropoff_at,omitempty"`
 	// Metadata holds the value of the "metadata" field.
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
+	// Package weight for pricing/rider matching
+	PackageWeightKg *float64 `json:"package_weight_kg,omitempty"`
+	// Package dimensions {length, width, height} cm
+	PackageDimensionsCm map[string]float64 `json:"package_dimensions_cm,omitempty"`
+	// Food/pharma cold chain requirement
+	RequiresTemperatureControl bool `json:"requires_temperature_control,omitempty"`
+	// ambient, chilled, frozen
+	TemperatureRange string `json:"temperature_range,omitempty"`
+	// Fragile goods handling
+	RequiresFragileHandling bool `json:"requires_fragile_handling,omitempty"`
+	// Heavy items: furniture, hardware, building materials
+	RequiresHeavyDuty bool `json:"requires_heavy_duty,omitempty"`
+	// External carrier reference if outsourced to 3rd party
+	CarrierID string `json:"carrier_id,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
@@ -111,11 +125,15 @@ func (*Task) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case task.FieldMetadata:
+		case task.FieldMetadata, task.FieldPackageDimensionsCm:
 			values[i] = new([]byte)
+		case task.FieldRequiresTemperatureControl, task.FieldRequiresFragileHandling, task.FieldRequiresHeavyDuty:
+			values[i] = new(sql.NullBool)
+		case task.FieldPackageWeightKg:
+			values[i] = new(sql.NullFloat64)
 		case task.FieldPriority:
 			values[i] = new(sql.NullInt64)
-		case task.FieldTrackingCode, task.FieldExternalReference, task.FieldSourceService, task.FieldTaskType, task.FieldStatus:
+		case task.FieldTrackingCode, task.FieldExternalReference, task.FieldSourceService, task.FieldTaskType, task.FieldStatus, task.FieldTemperatureRange, task.FieldCarrierID:
 			values[i] = new(sql.NullString)
 		case task.FieldSLADueAt, task.FieldRequestedPickupAt, task.FieldRequestedDropoffAt, task.FieldCreatedAt, task.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -214,6 +232,51 @@ func (_m *Task) assignValues(columns []string, values []any) error {
 				if err := json.Unmarshal(*value, &_m.Metadata); err != nil {
 					return fmt.Errorf("unmarshal field metadata: %w", err)
 				}
+			}
+		case task.FieldPackageWeightKg:
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
+				return fmt.Errorf("unexpected type %T for field package_weight_kg", values[i])
+			} else if value.Valid {
+				_m.PackageWeightKg = new(float64)
+				*_m.PackageWeightKg = value.Float64
+			}
+		case task.FieldPackageDimensionsCm:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field package_dimensions_cm", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.PackageDimensionsCm); err != nil {
+					return fmt.Errorf("unmarshal field package_dimensions_cm: %w", err)
+				}
+			}
+		case task.FieldRequiresTemperatureControl:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field requires_temperature_control", values[i])
+			} else if value.Valid {
+				_m.RequiresTemperatureControl = value.Bool
+			}
+		case task.FieldTemperatureRange:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field temperature_range", values[i])
+			} else if value.Valid {
+				_m.TemperatureRange = value.String
+			}
+		case task.FieldRequiresFragileHandling:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field requires_fragile_handling", values[i])
+			} else if value.Valid {
+				_m.RequiresFragileHandling = value.Bool
+			}
+		case task.FieldRequiresHeavyDuty:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field requires_heavy_duty", values[i])
+			} else if value.Valid {
+				_m.RequiresHeavyDuty = value.Bool
+			}
+		case task.FieldCarrierID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field carrier_id", values[i])
+			} else if value.Valid {
+				_m.CarrierID = value.String
 			}
 		case task.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -328,6 +391,29 @@ func (_m *Task) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("metadata=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Metadata))
+	builder.WriteString(", ")
+	if v := _m.PackageWeightKg; v != nil {
+		builder.WriteString("package_weight_kg=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	builder.WriteString("package_dimensions_cm=")
+	builder.WriteString(fmt.Sprintf("%v", _m.PackageDimensionsCm))
+	builder.WriteString(", ")
+	builder.WriteString("requires_temperature_control=")
+	builder.WriteString(fmt.Sprintf("%v", _m.RequiresTemperatureControl))
+	builder.WriteString(", ")
+	builder.WriteString("temperature_range=")
+	builder.WriteString(_m.TemperatureRange)
+	builder.WriteString(", ")
+	builder.WriteString("requires_fragile_handling=")
+	builder.WriteString(fmt.Sprintf("%v", _m.RequiresFragileHandling))
+	builder.WriteString(", ")
+	builder.WriteString("requires_heavy_duty=")
+	builder.WriteString(fmt.Sprintf("%v", _m.RequiresHeavyDuty))
+	builder.WriteString(", ")
+	builder.WriteString("carrier_id=")
+	builder.WriteString(_m.CarrierID)
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))

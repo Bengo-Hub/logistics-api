@@ -10,6 +10,7 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
 	"github.com/bengobox/logistics-service/internal/ent/fleet"
 	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
@@ -249,6 +250,59 @@ func (_u *FleetMemberUpdate) SetMetadata(v map[string]interface{}) *FleetMemberU
 	return _u
 }
 
+// SetSpecializationTags sets the "specialization_tags" field.
+func (_u *FleetMemberUpdate) SetSpecializationTags(v []string) *FleetMemberUpdate {
+	_u.mutation.SetSpecializationTags(v)
+	return _u
+}
+
+// AppendSpecializationTags appends value to the "specialization_tags" field.
+func (_u *FleetMemberUpdate) AppendSpecializationTags(v []string) *FleetMemberUpdate {
+	_u.mutation.AppendSpecializationTags(v)
+	return _u
+}
+
+// SetHasColdStorage sets the "has_cold_storage" field.
+func (_u *FleetMemberUpdate) SetHasColdStorage(v bool) *FleetMemberUpdate {
+	_u.mutation.SetHasColdStorage(v)
+	return _u
+}
+
+// SetNillableHasColdStorage sets the "has_cold_storage" field if the given value is not nil.
+func (_u *FleetMemberUpdate) SetNillableHasColdStorage(v *bool) *FleetMemberUpdate {
+	if v != nil {
+		_u.SetHasColdStorage(*v)
+	}
+	return _u
+}
+
+// SetMaxWeightCapacityKg sets the "max_weight_capacity_kg" field.
+func (_u *FleetMemberUpdate) SetMaxWeightCapacityKg(v float64) *FleetMemberUpdate {
+	_u.mutation.ResetMaxWeightCapacityKg()
+	_u.mutation.SetMaxWeightCapacityKg(v)
+	return _u
+}
+
+// SetNillableMaxWeightCapacityKg sets the "max_weight_capacity_kg" field if the given value is not nil.
+func (_u *FleetMemberUpdate) SetNillableMaxWeightCapacityKg(v *float64) *FleetMemberUpdate {
+	if v != nil {
+		_u.SetMaxWeightCapacityKg(*v)
+	}
+	return _u
+}
+
+// AddMaxWeightCapacityKg adds value to the "max_weight_capacity_kg" field.
+func (_u *FleetMemberUpdate) AddMaxWeightCapacityKg(v float64) *FleetMemberUpdate {
+	_u.mutation.AddMaxWeightCapacityKg(v)
+	return _u
+}
+
+// ClearMaxWeightCapacityKg clears the value of the "max_weight_capacity_kg" field.
+func (_u *FleetMemberUpdate) ClearMaxWeightCapacityKg() *FleetMemberUpdate {
+	_u.mutation.ClearMaxWeightCapacityKg()
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *FleetMemberUpdate) SetUpdatedAt(v time.Time) *FleetMemberUpdate {
 	_u.mutation.SetUpdatedAt(v)
@@ -435,6 +489,26 @@ func (_u *FleetMemberUpdate) sqlSave(ctx context.Context) (_node int, err error)
 	}
 	if value, ok := _u.mutation.Metadata(); ok {
 		_spec.SetField(fleetmember.FieldMetadata, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.SpecializationTags(); ok {
+		_spec.SetField(fleetmember.FieldSpecializationTags, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedSpecializationTags(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, fleetmember.FieldSpecializationTags, value)
+		})
+	}
+	if value, ok := _u.mutation.HasColdStorage(); ok {
+		_spec.SetField(fleetmember.FieldHasColdStorage, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.MaxWeightCapacityKg(); ok {
+		_spec.SetField(fleetmember.FieldMaxWeightCapacityKg, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedMaxWeightCapacityKg(); ok {
+		_spec.AddField(fleetmember.FieldMaxWeightCapacityKg, field.TypeFloat64, value)
+	}
+	if _u.mutation.MaxWeightCapacityKgCleared() {
+		_spec.ClearField(fleetmember.FieldMaxWeightCapacityKg, field.TypeFloat64)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(fleetmember.FieldUpdatedAt, field.TypeTime, value)
@@ -807,6 +881,59 @@ func (_u *FleetMemberUpdateOne) SetMetadata(v map[string]interface{}) *FleetMemb
 	return _u
 }
 
+// SetSpecializationTags sets the "specialization_tags" field.
+func (_u *FleetMemberUpdateOne) SetSpecializationTags(v []string) *FleetMemberUpdateOne {
+	_u.mutation.SetSpecializationTags(v)
+	return _u
+}
+
+// AppendSpecializationTags appends value to the "specialization_tags" field.
+func (_u *FleetMemberUpdateOne) AppendSpecializationTags(v []string) *FleetMemberUpdateOne {
+	_u.mutation.AppendSpecializationTags(v)
+	return _u
+}
+
+// SetHasColdStorage sets the "has_cold_storage" field.
+func (_u *FleetMemberUpdateOne) SetHasColdStorage(v bool) *FleetMemberUpdateOne {
+	_u.mutation.SetHasColdStorage(v)
+	return _u
+}
+
+// SetNillableHasColdStorage sets the "has_cold_storage" field if the given value is not nil.
+func (_u *FleetMemberUpdateOne) SetNillableHasColdStorage(v *bool) *FleetMemberUpdateOne {
+	if v != nil {
+		_u.SetHasColdStorage(*v)
+	}
+	return _u
+}
+
+// SetMaxWeightCapacityKg sets the "max_weight_capacity_kg" field.
+func (_u *FleetMemberUpdateOne) SetMaxWeightCapacityKg(v float64) *FleetMemberUpdateOne {
+	_u.mutation.ResetMaxWeightCapacityKg()
+	_u.mutation.SetMaxWeightCapacityKg(v)
+	return _u
+}
+
+// SetNillableMaxWeightCapacityKg sets the "max_weight_capacity_kg" field if the given value is not nil.
+func (_u *FleetMemberUpdateOne) SetNillableMaxWeightCapacityKg(v *float64) *FleetMemberUpdateOne {
+	if v != nil {
+		_u.SetMaxWeightCapacityKg(*v)
+	}
+	return _u
+}
+
+// AddMaxWeightCapacityKg adds value to the "max_weight_capacity_kg" field.
+func (_u *FleetMemberUpdateOne) AddMaxWeightCapacityKg(v float64) *FleetMemberUpdateOne {
+	_u.mutation.AddMaxWeightCapacityKg(v)
+	return _u
+}
+
+// ClearMaxWeightCapacityKg clears the value of the "max_weight_capacity_kg" field.
+func (_u *FleetMemberUpdateOne) ClearMaxWeightCapacityKg() *FleetMemberUpdateOne {
+	_u.mutation.ClearMaxWeightCapacityKg()
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *FleetMemberUpdateOne) SetUpdatedAt(v time.Time) *FleetMemberUpdateOne {
 	_u.mutation.SetUpdatedAt(v)
@@ -1023,6 +1150,26 @@ func (_u *FleetMemberUpdateOne) sqlSave(ctx context.Context) (_node *FleetMember
 	}
 	if value, ok := _u.mutation.Metadata(); ok {
 		_spec.SetField(fleetmember.FieldMetadata, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.SpecializationTags(); ok {
+		_spec.SetField(fleetmember.FieldSpecializationTags, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedSpecializationTags(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, fleetmember.FieldSpecializationTags, value)
+		})
+	}
+	if value, ok := _u.mutation.HasColdStorage(); ok {
+		_spec.SetField(fleetmember.FieldHasColdStorage, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.MaxWeightCapacityKg(); ok {
+		_spec.SetField(fleetmember.FieldMaxWeightCapacityKg, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedMaxWeightCapacityKg(); ok {
+		_spec.AddField(fleetmember.FieldMaxWeightCapacityKg, field.TypeFloat64, value)
+	}
+	if _u.mutation.MaxWeightCapacityKgCleared() {
+		_spec.ClearField(fleetmember.FieldMaxWeightCapacityKg, field.TypeFloat64)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(fleetmember.FieldUpdatedAt, field.TypeTime, value)

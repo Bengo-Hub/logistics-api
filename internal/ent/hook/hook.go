@@ -141,6 +141,18 @@ func (f OutboxEventFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value,
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.OutboxEventMutation", m)
 }
 
+// The PricingRuleFunc type is an adapter to allow the use of ordinary
+// function as PricingRule mutator.
+type PricingRuleFunc func(context.Context, *ent.PricingRuleMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f PricingRuleFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.PricingRuleMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PricingRuleMutation", m)
+}
+
 // The ProofOfDeliveryFunc type is an adapter to allow the use of ordinary
 // function as ProofOfDelivery mutator.
 type ProofOfDeliveryFunc func(context.Context, *ent.ProofOfDeliveryMutation) (ent.Value, error)
@@ -163,6 +175,18 @@ func (f RateLimitConfigFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Va
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.RateLimitConfigMutation", m)
+}
+
+// The RiderShiftFunc type is an adapter to allow the use of ordinary
+// function as RiderShift mutator.
+type RiderShiftFunc func(context.Context, *ent.RiderShiftMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f RiderShiftFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.RiderShiftMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.RiderShiftMutation", m)
 }
 
 // The RolePermissionFunc type is an adapter to allow the use of ordinary

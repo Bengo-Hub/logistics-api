@@ -48,6 +48,12 @@ type FleetMember struct {
 	SuspendedAt *time.Time `json:"suspended_at,omitempty"`
 	// Metadata holds the value of the "metadata" field.
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
+	// Rider capabilities: food_safe, fragile, heavy_duty, cold_chain, motorcycle, van, bicycle
+	SpecializationTags []string `json:"specialization_tags,omitempty"`
+	// Vehicle has temperature-controlled storage
+	HasColdStorage bool `json:"has_cold_storage,omitempty"`
+	// Maximum carrying weight capacity
+	MaxWeightCapacityKg *float64 `json:"max_weight_capacity_kg,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
@@ -122,8 +128,12 @@ func (*FleetMember) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case fleetmember.FieldVehicleID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case fleetmember.FieldMetadata:
+		case fleetmember.FieldMetadata, fleetmember.FieldSpecializationTags:
 			values[i] = new([]byte)
+		case fleetmember.FieldHasColdStorage:
+			values[i] = new(sql.NullBool)
+		case fleetmember.FieldMaxWeightCapacityKg:
+			values[i] = new(sql.NullFloat64)
 		case fleetmember.FieldDriverCode, fleetmember.FieldIDNumber, fleetmember.FieldLicenseNo, fleetmember.FieldStatus, fleetmember.FieldIDPassportAttachment, fleetmember.FieldRiderPhoto:
 			values[i] = new(sql.NullString)
 		case fleetmember.FieldJoinedAt, fleetmember.FieldSuspendedAt, fleetmember.FieldCreatedAt, fleetmember.FieldUpdatedAt:
@@ -232,6 +242,27 @@ func (_m *FleetMember) assignValues(columns []string, values []any) error {
 				if err := json.Unmarshal(*value, &_m.Metadata); err != nil {
 					return fmt.Errorf("unmarshal field metadata: %w", err)
 				}
+			}
+		case fleetmember.FieldSpecializationTags:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field specialization_tags", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.SpecializationTags); err != nil {
+					return fmt.Errorf("unmarshal field specialization_tags: %w", err)
+				}
+			}
+		case fleetmember.FieldHasColdStorage:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field has_cold_storage", values[i])
+			} else if value.Valid {
+				_m.HasColdStorage = value.Bool
+			}
+		case fleetmember.FieldMaxWeightCapacityKg:
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
+				return fmt.Errorf("unexpected type %T for field max_weight_capacity_kg", values[i])
+			} else if value.Valid {
+				_m.MaxWeightCapacityKg = new(float64)
+				*_m.MaxWeightCapacityKg = value.Float64
 			}
 		case fleetmember.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -343,6 +374,17 @@ func (_m *FleetMember) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("metadata=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Metadata))
+	builder.WriteString(", ")
+	builder.WriteString("specialization_tags=")
+	builder.WriteString(fmt.Sprintf("%v", _m.SpecializationTags))
+	builder.WriteString(", ")
+	builder.WriteString("has_cold_storage=")
+	builder.WriteString(fmt.Sprintf("%v", _m.HasColdStorage))
+	builder.WriteString(", ")
+	if v := _m.MaxWeightCapacityKg; v != nil {
+		builder.WriteString("max_weight_capacity_kg=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))
