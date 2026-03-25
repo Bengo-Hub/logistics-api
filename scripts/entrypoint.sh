@@ -8,15 +8,11 @@ echo "=========================================="
 echo "Logistics-API Service Startup"
 echo "=========================================="
 
-# Create media directory if it doesn't exist (handled by Dockerfile but good for dev)
-mkdir -p /media
-
-# Sync media assets to persistent volume if mounted
-if [ -d "/media" ] && [ -d "/app/media" ]; then
-  echo "📁 Synchronizing media assets to persistent volume..."
-  cp -rn /app/media/* /media/ 2>/dev/null || true
-  echo "✅ Media synchronization complete"
-fi
+# Create media directories if they don't exist
+# MEDIA_ROOT defaults to /data/media (set via values.yaml in production)
+MEDIA_DIR="${MEDIA_ROOT:-/data/media}"
+mkdir -p "$MEDIA_DIR/uploads/kyc"
+echo "Media directory ready: $MEDIA_DIR"
 
 # Wait for database to be ready (with timeout)
 echo "Waiting for database connection..."
