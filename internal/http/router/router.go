@@ -130,6 +130,24 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 				Required:     true,
 			}))
 
+			// Resolve tenant slug → UUID after TenantV2 when only slug is available (fresh DB).
+			if idSvc != nil {
+				tenant.Use(func(next http.Handler) http.Handler {
+					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						ctx := r.Context()
+						if httpware.GetTenantID(ctx) == "" {
+							if slug := httpware.GetTenantSlug(ctx); slug != "" {
+								if tid, err := idSvc.ResolveTenantSlug(ctx, slug); err == nil {
+									ctx = httpware.WithTenantID(ctx, tid.String())
+									r = r.WithContext(ctx)
+								}
+							}
+						}
+						next.ServeHTTP(w, r)
+					})
+				})
+			}
+
 			tenant.Route("/riders", func(riders chi.Router) {
 				idHandler := handlers.NewIdentityHandler(idSvc)
 				riders.Get("/me", idHandler.GetMe)
