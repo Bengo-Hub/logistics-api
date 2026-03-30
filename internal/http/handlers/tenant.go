@@ -53,7 +53,7 @@ func ResolveTenantForRequest(r *http.Request) (uuid.UUID, bool) {
 		}
 	}
 
-	// 4. JWT claims fallback
+	// 4. JWT claims fallback (UUID tenant ID)
 	claims, found := authclient.ClaimsFromContext(ctx)
 	if found && claims.TenantID != "" {
 		if id, err := uuid.Parse(claims.TenantID); err == nil {

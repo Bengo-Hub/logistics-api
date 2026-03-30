@@ -84,18 +84,28 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 		if idSvc != nil {
 			api.Use(func(next http.Handler) http.Handler {
 				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					claims, ok := authclient.ClaimsFromContext(r.Context())
+					ctx := r.Context()
+					claims, ok := authclient.ClaimsFromContext(ctx)
 					if ok && claims.Subject != "" {
 						subject, _ := uuid.Parse(claims.Subject)
 						slug := claims.GetTenantSlug()
 						if slug != "" {
-							_, err := idSvc.EnsureUserFromToken(r.Context(), subject, slug, map[string]any{
+							jitUser, err := idSvc.EnsureUserFromToken(ctx, subject, slug, map[string]any{
 								"email":             claims.Email,
 								"roles":             claims.Roles,
 								"is_platform_owner": claims.IsPlatformOwner,
 							})
 							if err != nil {
 								log.Warn("jit provisioning failed", zap.Error(err))
+							}
+							// Ensure tenant UUID is in context for downstream handlers.
+							// TenantV2 middleware may only have the slug; resolve it now.
+							if httpware.GetTenantID(ctx) == "" && jitUser != nil {
+								tid := jitUser.TenantID
+								if tid != uuid.Nil {
+									ctx = httpware.WithTenantID(ctx, tid.String())
+									r = r.WithContext(ctx)
+								}
 							}
 						}
 					}

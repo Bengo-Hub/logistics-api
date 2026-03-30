@@ -96,6 +96,34 @@ func (_c *OutboxEventCreate) SetNillableLastAttemptAt(v *time.Time) *OutboxEvent
 	return _c
 }
 
+// SetPublishedAt sets the "published_at" field.
+func (_c *OutboxEventCreate) SetPublishedAt(v time.Time) *OutboxEventCreate {
+	_c.mutation.SetPublishedAt(v)
+	return _c
+}
+
+// SetNillablePublishedAt sets the "published_at" field if the given value is not nil.
+func (_c *OutboxEventCreate) SetNillablePublishedAt(v *time.Time) *OutboxEventCreate {
+	if v != nil {
+		_c.SetPublishedAt(*v)
+	}
+	return _c
+}
+
+// SetErrorMessage sets the "error_message" field.
+func (_c *OutboxEventCreate) SetErrorMessage(v string) *OutboxEventCreate {
+	_c.mutation.SetErrorMessage(v)
+	return _c
+}
+
+// SetNillableErrorMessage sets the "error_message" field if the given value is not nil.
+func (_c *OutboxEventCreate) SetNillableErrorMessage(v *string) *OutboxEventCreate {
+	if v != nil {
+		_c.SetErrorMessage(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *OutboxEventCreate) SetCreatedAt(v time.Time) *OutboxEventCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -281,6 +309,14 @@ func (_c *OutboxEventCreate) createSpec() (*OutboxEvent, *sqlgraph.CreateSpec) {
 		_spec.SetField(outboxevent.FieldLastAttemptAt, field.TypeTime, value)
 		_node.LastAttemptAt = &value
 	}
+	if value, ok := _c.mutation.PublishedAt(); ok {
+		_spec.SetField(outboxevent.FieldPublishedAt, field.TypeTime, value)
+		_node.PublishedAt = &value
+	}
+	if value, ok := _c.mutation.ErrorMessage(); ok {
+		_spec.SetField(outboxevent.FieldErrorMessage, field.TypeString, value)
+		_node.ErrorMessage = &value
+	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(outboxevent.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -442,6 +478,42 @@ func (u *OutboxEventUpsert) UpdateLastAttemptAt() *OutboxEventUpsert {
 // ClearLastAttemptAt clears the value of the "last_attempt_at" field.
 func (u *OutboxEventUpsert) ClearLastAttemptAt() *OutboxEventUpsert {
 	u.SetNull(outboxevent.FieldLastAttemptAt)
+	return u
+}
+
+// SetPublishedAt sets the "published_at" field.
+func (u *OutboxEventUpsert) SetPublishedAt(v time.Time) *OutboxEventUpsert {
+	u.Set(outboxevent.FieldPublishedAt, v)
+	return u
+}
+
+// UpdatePublishedAt sets the "published_at" field to the value that was provided on create.
+func (u *OutboxEventUpsert) UpdatePublishedAt() *OutboxEventUpsert {
+	u.SetExcluded(outboxevent.FieldPublishedAt)
+	return u
+}
+
+// ClearPublishedAt clears the value of the "published_at" field.
+func (u *OutboxEventUpsert) ClearPublishedAt() *OutboxEventUpsert {
+	u.SetNull(outboxevent.FieldPublishedAt)
+	return u
+}
+
+// SetErrorMessage sets the "error_message" field.
+func (u *OutboxEventUpsert) SetErrorMessage(v string) *OutboxEventUpsert {
+	u.Set(outboxevent.FieldErrorMessage, v)
+	return u
+}
+
+// UpdateErrorMessage sets the "error_message" field to the value that was provided on create.
+func (u *OutboxEventUpsert) UpdateErrorMessage() *OutboxEventUpsert {
+	u.SetExcluded(outboxevent.FieldErrorMessage)
+	return u
+}
+
+// ClearErrorMessage clears the value of the "error_message" field.
+func (u *OutboxEventUpsert) ClearErrorMessage() *OutboxEventUpsert {
+	u.SetNull(outboxevent.FieldErrorMessage)
 	return u
 }
 
@@ -619,6 +691,48 @@ func (u *OutboxEventUpsertOne) UpdateLastAttemptAt() *OutboxEventUpsertOne {
 func (u *OutboxEventUpsertOne) ClearLastAttemptAt() *OutboxEventUpsertOne {
 	return u.Update(func(s *OutboxEventUpsert) {
 		s.ClearLastAttemptAt()
+	})
+}
+
+// SetPublishedAt sets the "published_at" field.
+func (u *OutboxEventUpsertOne) SetPublishedAt(v time.Time) *OutboxEventUpsertOne {
+	return u.Update(func(s *OutboxEventUpsert) {
+		s.SetPublishedAt(v)
+	})
+}
+
+// UpdatePublishedAt sets the "published_at" field to the value that was provided on create.
+func (u *OutboxEventUpsertOne) UpdatePublishedAt() *OutboxEventUpsertOne {
+	return u.Update(func(s *OutboxEventUpsert) {
+		s.UpdatePublishedAt()
+	})
+}
+
+// ClearPublishedAt clears the value of the "published_at" field.
+func (u *OutboxEventUpsertOne) ClearPublishedAt() *OutboxEventUpsertOne {
+	return u.Update(func(s *OutboxEventUpsert) {
+		s.ClearPublishedAt()
+	})
+}
+
+// SetErrorMessage sets the "error_message" field.
+func (u *OutboxEventUpsertOne) SetErrorMessage(v string) *OutboxEventUpsertOne {
+	return u.Update(func(s *OutboxEventUpsert) {
+		s.SetErrorMessage(v)
+	})
+}
+
+// UpdateErrorMessage sets the "error_message" field to the value that was provided on create.
+func (u *OutboxEventUpsertOne) UpdateErrorMessage() *OutboxEventUpsertOne {
+	return u.Update(func(s *OutboxEventUpsert) {
+		s.UpdateErrorMessage()
+	})
+}
+
+// ClearErrorMessage clears the value of the "error_message" field.
+func (u *OutboxEventUpsertOne) ClearErrorMessage() *OutboxEventUpsertOne {
+	return u.Update(func(s *OutboxEventUpsert) {
+		s.ClearErrorMessage()
 	})
 }
 
@@ -963,6 +1077,48 @@ func (u *OutboxEventUpsertBulk) UpdateLastAttemptAt() *OutboxEventUpsertBulk {
 func (u *OutboxEventUpsertBulk) ClearLastAttemptAt() *OutboxEventUpsertBulk {
 	return u.Update(func(s *OutboxEventUpsert) {
 		s.ClearLastAttemptAt()
+	})
+}
+
+// SetPublishedAt sets the "published_at" field.
+func (u *OutboxEventUpsertBulk) SetPublishedAt(v time.Time) *OutboxEventUpsertBulk {
+	return u.Update(func(s *OutboxEventUpsert) {
+		s.SetPublishedAt(v)
+	})
+}
+
+// UpdatePublishedAt sets the "published_at" field to the value that was provided on create.
+func (u *OutboxEventUpsertBulk) UpdatePublishedAt() *OutboxEventUpsertBulk {
+	return u.Update(func(s *OutboxEventUpsert) {
+		s.UpdatePublishedAt()
+	})
+}
+
+// ClearPublishedAt clears the value of the "published_at" field.
+func (u *OutboxEventUpsertBulk) ClearPublishedAt() *OutboxEventUpsertBulk {
+	return u.Update(func(s *OutboxEventUpsert) {
+		s.ClearPublishedAt()
+	})
+}
+
+// SetErrorMessage sets the "error_message" field.
+func (u *OutboxEventUpsertBulk) SetErrorMessage(v string) *OutboxEventUpsertBulk {
+	return u.Update(func(s *OutboxEventUpsert) {
+		s.SetErrorMessage(v)
+	})
+}
+
+// UpdateErrorMessage sets the "error_message" field to the value that was provided on create.
+func (u *OutboxEventUpsertBulk) UpdateErrorMessage() *OutboxEventUpsertBulk {
+	return u.Update(func(s *OutboxEventUpsert) {
+		s.UpdateErrorMessage()
+	})
+}
+
+// ClearErrorMessage clears the value of the "error_message" field.
+func (u *OutboxEventUpsertBulk) ClearErrorMessage() *OutboxEventUpsertBulk {
+	return u.Update(func(s *OutboxEventUpsert) {
+		s.ClearErrorMessage()
 	})
 }
 

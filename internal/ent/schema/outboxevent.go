@@ -34,6 +34,12 @@ func (OutboxEvent) Fields() []ent.Field {
 		field.Time("last_attempt_at").
 			Optional().
 			Nillable(),
+		field.Time("published_at").
+			Optional().
+			Nillable(),
+		field.String("error_message").
+			Optional().
+			Nillable(),
 		field.Time("created_at").
 			Default(time.Now).
 			Immutable(),

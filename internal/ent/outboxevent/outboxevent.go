@@ -30,6 +30,10 @@ const (
 	FieldAttempts = "attempts"
 	// FieldLastAttemptAt holds the string denoting the last_attempt_at field in the database.
 	FieldLastAttemptAt = "last_attempt_at"
+	// FieldPublishedAt holds the string denoting the published_at field in the database.
+	FieldPublishedAt = "published_at"
+	// FieldErrorMessage holds the string denoting the error_message field in the database.
+	FieldErrorMessage = "error_message"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// Table holds the table name of the outboxevent in the database.
@@ -47,6 +51,8 @@ var Columns = []string{
 	FieldStatus,
 	FieldAttempts,
 	FieldLastAttemptAt,
+	FieldPublishedAt,
+	FieldErrorMessage,
 	FieldCreatedAt,
 }
 
@@ -116,6 +122,16 @@ func ByAttempts(opts ...sql.OrderTermOption) OrderOption {
 // ByLastAttemptAt orders the results by the last_attempt_at field.
 func ByLastAttemptAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldLastAttemptAt, opts...).ToFunc()
+}
+
+// ByPublishedAt orders the results by the published_at field.
+func ByPublishedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPublishedAt, opts...).ToFunc()
+}
+
+// ByErrorMessage orders the results by the error_message field.
+func ByErrorMessage(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldErrorMessage, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.

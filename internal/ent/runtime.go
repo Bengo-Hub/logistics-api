@@ -368,7 +368,7 @@ func init() {
 	// outboxevent.DefaultAttempts holds the default value on creation for the attempts field.
 	outboxevent.DefaultAttempts = outboxeventDescAttempts.Default.(int)
 	// outboxeventDescCreatedAt is the schema descriptor for created_at field.
-	outboxeventDescCreatedAt := outboxeventFields[9].Descriptor()
+	outboxeventDescCreatedAt := outboxeventFields[11].Descriptor()
 	// outboxevent.DefaultCreatedAt holds the default value on creation for the created_at field.
 	outboxevent.DefaultCreatedAt = outboxeventDescCreatedAt.Default.(func() time.Time)
 	// outboxeventDescID is the schema descriptor for id field.
