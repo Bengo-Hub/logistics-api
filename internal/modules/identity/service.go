@@ -40,6 +40,11 @@ func NewService(client *ent.Client, tenantSyncer *tenant.Syncer) *Service {
 	}
 }
 
+// ResolveTenantSlug syncs and resolves a tenant slug to its UUID.
+func (s *Service) ResolveTenantSlug(ctx context.Context, slug string) (uuid.UUID, error) {
+	return s.tenantSyncer.SyncTenant(ctx, slug)
+}
+
 // EnsureUserFromToken performs JIT (Just-In-Time) provisioning of users and tenants.
 // If the user doesn't exist locally, it creates them. If the tenant doesn't exist,
 // it syncs it from the auth-service first.
