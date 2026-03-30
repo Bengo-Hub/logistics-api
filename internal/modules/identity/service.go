@@ -66,13 +66,33 @@ func (s *Service) EnsureUserFromToken(ctx context.Context, authServiceID uuid.UU
 		return nil, fmt.Errorf("identity.Service: query user: %w", err)
 	}
 
-	// 3. Create user; platform admin (codevertex + superuser) gets admin role (all permissions).
+	// 3. Fallback: check if user exists by email (may exist without auth_service_user_id linked)
 	email, _ := claims["email"].(string)
+	if email != "" {
+		existing, emailErr := s.client.User.Query().
+			Where(user.EmailEQ(email), user.TenantID(tenantID)).
+			Only(ctx)
+		if emailErr == nil && existing != nil {
+			// Link existing user to auth-service ID
+			updated, updErr := existing.Update().
+				SetAuthServiceUserID(authServiceID).
+				SetSyncStatus("synced").
+				SetSyncAt(time.Now()).
+				Save(ctx)
+			if updErr != nil {
+				return nil, fmt.Errorf("identity.Service: link user to auth-service: %w", updErr)
+			}
+			log.Printf("  [jit-provisioning] linked existing user %s to AuthID %s", email, authServiceID)
+			return updated, nil
+		}
+	}
+
+	// 4. Create user; use auth-service UUID as primary key for cross-service consistency.
 	fullName, _ := claims["name"].(string)
 	role := roleFromClaims(tenantSlug, claims)
 
 	newUsr, err := s.client.User.Create().
-		SetID(uuid.New()).
+		SetID(authServiceID).
 		SetAuthServiceUserID(authServiceID).
 		SetTenantID(tenantID).
 		SetEmail(email).
