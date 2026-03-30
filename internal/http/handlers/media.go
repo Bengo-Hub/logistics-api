@@ -63,6 +63,25 @@ func (h *MediaHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		"application/pdf": true,
 	}
 
+	// Go's http.DetectContentType cannot detect WebP (may return
+	// application/octet-stream). Fall back to file extension and
+	// the multipart Content-Type header.
+	if !allowedTypes[contentType] {
+		ext := strings.ToLower(filepath.Ext(header.Filename))
+		headerCT := header.Header.Get("Content-Type")
+
+		switch {
+		case ext == ".webp" || headerCT == "image/webp":
+			contentType = "image/webp"
+		case ext == ".jpg" || ext == ".jpeg" || headerCT == "image/jpeg":
+			contentType = "image/jpeg"
+		case ext == ".png" || headerCT == "image/png":
+			contentType = "image/png"
+		case ext == ".pdf" || headerCT == "application/pdf":
+			contentType = "application/pdf"
+		}
+	}
+
 	if !allowedTypes[contentType] {
 		http.Error(w, "Invalid file type. Supported: JPEG, JPG, PNG, WEBP, PDF", http.StatusBadRequest)
 		return
