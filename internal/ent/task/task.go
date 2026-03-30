@@ -49,6 +49,10 @@ const (
 	FieldRequiresFragileHandling = "requires_fragile_handling"
 	// FieldRequiresHeavyDuty holds the string denoting the requires_heavy_duty field in the database.
 	FieldRequiresHeavyDuty = "requires_heavy_duty"
+	// FieldCashOnDelivery holds the string denoting the cash_on_delivery field in the database.
+	FieldCashOnDelivery = "cash_on_delivery"
+	// FieldCashCollected holds the string denoting the cash_collected field in the database.
+	FieldCashCollected = "cash_collected"
 	// FieldCarrierID holds the string denoting the carrier_id field in the database.
 	FieldCarrierID = "carrier_id"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
@@ -115,6 +119,8 @@ var Columns = []string{
 	FieldTemperatureRange,
 	FieldRequiresFragileHandling,
 	FieldRequiresHeavyDuty,
+	FieldCashOnDelivery,
+	FieldCashCollected,
 	FieldCarrierID,
 	FieldCreatedAt,
 	FieldUpdatedAt,
@@ -158,6 +164,10 @@ var (
 	DefaultRequiresFragileHandling bool
 	// DefaultRequiresHeavyDuty holds the default value on creation for the "requires_heavy_duty" field.
 	DefaultRequiresHeavyDuty bool
+	// DefaultCashOnDelivery holds the default value on creation for the "cash_on_delivery" field.
+	DefaultCashOnDelivery float64
+	// DefaultCashCollected holds the default value on creation for the "cash_collected" field.
+	DefaultCashCollected bool
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultUpdatedAt holds the default value on creation for the "updated_at" field.
@@ -249,6 +259,16 @@ func ByRequiresFragileHandling(opts ...sql.OrderTermOption) OrderOption {
 // ByRequiresHeavyDuty orders the results by the requires_heavy_duty field.
 func ByRequiresHeavyDuty(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldRequiresHeavyDuty, opts...).ToFunc()
+}
+
+// ByCashOnDelivery orders the results by the cash_on_delivery field.
+func ByCashOnDelivery(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCashOnDelivery, opts...).ToFunc()
+}
+
+// ByCashCollected orders the results by the cash_collected field.
+func ByCashCollected(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCashCollected, opts...).ToFunc()
 }
 
 // ByCarrierID orders the results by the carrier_id field.

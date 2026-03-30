@@ -48,6 +48,9 @@ type ProofOfDelivery func(*sql.Selector)
 // RateLimitConfig is the predicate function for ratelimitconfig builders.
 type RateLimitConfig func(*sql.Selector)
 
+// RiderRating is the predicate function for riderrating builders.
+type RiderRating func(*sql.Selector)
+
 // RiderShift is the predicate function for ridershift builders.
 type RiderShift func(*sql.Selector)
 

@@ -280,3 +280,77 @@ func (s *Service) SuspendMember(ctx context.Context, tenantID, memberID uuid.UUI
 
 	return updated, nil
 }
+
+// RateRiderRequest is the DTO for rating a rider after delivery.
+type RateRiderRequest struct {
+	TaskID         *uuid.UUID `json:"task_id,omitempty"`
+	OrderID        string     `json:"order_id,omitempty"`
+	CustomerUserID string     `json:"customer_user_id,omitempty"`
+	Rating         int        `json:"rating"`
+	Comment        string     `json:"comment,omitempty"`
+}
+
+// RateRider records a customer rating for a rider and updates the running average.
+func (s *Service) RateRider(ctx context.Context, tenantID, memberID uuid.UUID, req RateRiderRequest) (*ent.RiderRating, error) {
+	if req.Rating < 1 || req.Rating > 5 {
+		return nil, fmt.Errorf("fleet: rating must be between 1 and 5")
+	}
+
+	// Verify member exists and belongs to tenant
+	member, err := s.client.FleetMember.Query().
+		Where(fleetmember.ID(memberID), fleetmember.TenantID(tenantID)).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, fmt.Errorf("fleet: member not found")
+		}
+		return nil, fmt.Errorf("fleet: get member for rating: %w", err)
+	}
+
+	// Create the rating
+	builder := s.client.RiderRating.Create().
+		SetTenantID(tenantID).
+		SetFleetMemberID(memberID).
+		SetRating(req.Rating)
+
+	if req.TaskID != nil {
+		builder.SetTaskID(*req.TaskID)
+	}
+	if req.OrderID != "" {
+		builder.SetOrderID(req.OrderID)
+	}
+	if req.CustomerUserID != "" {
+		builder.SetCustomerUserID(req.CustomerUserID)
+	}
+	if req.Comment != "" {
+		builder.SetComment(req.Comment)
+	}
+
+	rating, err := builder.Save(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("fleet: create rating: %w", err)
+	}
+
+	// Update running average on fleet member
+	oldAvg := member.AverageRating
+	oldCount := member.TotalRatings
+	newCount := oldCount + 1
+	newAvg := ((oldAvg * float64(oldCount)) + float64(req.Rating)) / float64(newCount)
+
+	_, err = s.client.FleetMember.UpdateOne(member).
+		SetAverageRating(newAvg).
+		SetTotalRatings(newCount).
+		Save(ctx)
+	if err != nil {
+		s.log.Error("failed to update rider average rating", zap.Error(err))
+	}
+
+	s.log.Info("rider rated",
+		zap.String("member_id", memberID.String()),
+		zap.Int("rating", req.Rating),
+		zap.Float64("new_average", newAvg),
+		zap.Int("total_ratings", newCount),
+	)
+
+	return rating, nil
+}

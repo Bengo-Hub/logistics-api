@@ -32,6 +32,10 @@ type ProofOfDelivery struct {
 	PhotoURL string `json:"photo_url,omitempty"`
 	// OtpCode holds the value of the "otp_code" field.
 	OtpCode string `json:"otp_code,omitempty"`
+	// Cash amount collected from customer (for COD orders)
+	AmountCollected float64 `json:"amount_collected,omitempty"`
+	// How cash was collected: cash, mobile_money
+	CollectionMethod string `json:"collection_method,omitempty"`
 	// CapturedAt holds the value of the "captured_at" field.
 	CapturedAt time.Time `json:"captured_at,omitempty"`
 	// Metadata holds the value of the "metadata" field.
@@ -69,7 +73,9 @@ func (*ProofOfDelivery) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case proofofdelivery.FieldMetadata:
 			values[i] = new([]byte)
-		case proofofdelivery.FieldSignatureURL, proofofdelivery.FieldPhotoURL, proofofdelivery.FieldOtpCode:
+		case proofofdelivery.FieldAmountCollected:
+			values[i] = new(sql.NullFloat64)
+		case proofofdelivery.FieldSignatureURL, proofofdelivery.FieldPhotoURL, proofofdelivery.FieldOtpCode, proofofdelivery.FieldCollectionMethod:
 			values[i] = new(sql.NullString)
 		case proofofdelivery.FieldCapturedAt:
 			values[i] = new(sql.NullTime)
@@ -131,6 +137,18 @@ func (_m *ProofOfDelivery) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field otp_code", values[i])
 			} else if value.Valid {
 				_m.OtpCode = value.String
+			}
+		case proofofdelivery.FieldAmountCollected:
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
+				return fmt.Errorf("unexpected type %T for field amount_collected", values[i])
+			} else if value.Valid {
+				_m.AmountCollected = value.Float64
+			}
+		case proofofdelivery.FieldCollectionMethod:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field collection_method", values[i])
+			} else if value.Valid {
+				_m.CollectionMethod = value.String
 			}
 		case proofofdelivery.FieldCapturedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -204,6 +222,12 @@ func (_m *ProofOfDelivery) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("otp_code=")
 	builder.WriteString(_m.OtpCode)
+	builder.WriteString(", ")
+	builder.WriteString("amount_collected=")
+	builder.WriteString(fmt.Sprintf("%v", _m.AmountCollected))
+	builder.WriteString(", ")
+	builder.WriteString("collection_method=")
+	builder.WriteString(_m.CollectionMethod)
 	builder.WriteString(", ")
 	builder.WriteString("captured_at=")
 	builder.WriteString(_m.CapturedAt.Format(time.ANSIC))

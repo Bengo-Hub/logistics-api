@@ -130,6 +130,8 @@ var (
 		{Name: "specialization_tags", Type: field.TypeJSON},
 		{Name: "has_cold_storage", Type: field.TypeBool, Default: false},
 		{Name: "max_weight_capacity_kg", Type: field.TypeFloat64, Nullable: true},
+		{Name: "average_rating", Type: field.TypeFloat64, Default: 0},
+		{Name: "total_ratings", Type: field.TypeInt, Default: 0},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "fleet_id", Type: field.TypeUUID},
@@ -144,19 +146,19 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "fleet_members_fleets_members",
-				Columns:    []*schema.Column{FleetMembersColumns[16]},
+				Columns:    []*schema.Column{FleetMembersColumns[18]},
 				RefColumns: []*schema.Column{FleetsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "fleet_members_vehicles_vehicle",
-				Columns:    []*schema.Column{FleetMembersColumns[17]},
+				Columns:    []*schema.Column{FleetMembersColumns[19]},
 				RefColumns: []*schema.Column{VehiclesColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "fleet_members_users_fleet_memberships",
-				Columns:    []*schema.Column{FleetMembersColumns[18]},
+				Columns:    []*schema.Column{FleetMembersColumns[20]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -165,7 +167,7 @@ var (
 			{
 				Name:    "fleetmember_tenant_id_user_id",
 				Unique:  true,
-				Columns: []*schema.Column{FleetMembersColumns[1], FleetMembersColumns[18]},
+				Columns: []*schema.Column{FleetMembersColumns[1], FleetMembersColumns[20]},
 			},
 			{
 				Name:    "fleetmember_driver_code",
@@ -388,6 +390,8 @@ var (
 		{Name: "signature_url", Type: field.TypeString, Nullable: true},
 		{Name: "photo_url", Type: field.TypeString, Nullable: true},
 		{Name: "otp_code", Type: field.TypeString, Nullable: true},
+		{Name: "amount_collected", Type: field.TypeFloat64, Default: 0},
+		{Name: "collection_method", Type: field.TypeString, Nullable: true},
 		{Name: "captured_at", Type: field.TypeTime},
 		{Name: "metadata", Type: field.TypeJSON},
 		{Name: "task_id", Type: field.TypeUUID, Unique: true},
@@ -400,7 +404,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "proof_of_deliveries_tasks_proof_of_delivery",
-				Columns:    []*schema.Column{ProofOfDeliveriesColumns[8]},
+				Columns:    []*schema.Column{ProofOfDeliveriesColumns[10]},
 				RefColumns: []*schema.Column{TasksColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -414,7 +418,7 @@ var (
 			{
 				Name:    "proofofdelivery_tenant_id_task_id",
 				Unique:  false,
-				Columns: []*schema.Column{ProofOfDeliveriesColumns[1], ProofOfDeliveriesColumns[8]},
+				Columns: []*schema.Column{ProofOfDeliveriesColumns[1], ProofOfDeliveriesColumns[10]},
 			},
 		},
 	}
@@ -452,6 +456,49 @@ var (
 				Name:    "ratelimitconfig_is_active",
 				Unique:  false,
 				Columns: []*schema.Column{RateLimitConfigsColumns[7]},
+			},
+		},
+	}
+	// RiderRatingsColumns holds the columns for the "rider_ratings" table.
+	RiderRatingsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID},
+		{Name: "task_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "order_id", Type: field.TypeString, Nullable: true},
+		{Name: "customer_user_id", Type: field.TypeString, Nullable: true},
+		{Name: "rating", Type: field.TypeInt},
+		{Name: "comment", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "fleet_member_id", Type: field.TypeUUID},
+	}
+	// RiderRatingsTable holds the schema information for the "rider_ratings" table.
+	RiderRatingsTable = &schema.Table{
+		Name:       "rider_ratings",
+		Columns:    RiderRatingsColumns,
+		PrimaryKey: []*schema.Column{RiderRatingsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "rider_ratings_fleet_members_ratings",
+				Columns:    []*schema.Column{RiderRatingsColumns[8]},
+				RefColumns: []*schema.Column{FleetMembersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "riderrating_tenant_id_fleet_member_id",
+				Unique:  false,
+				Columns: []*schema.Column{RiderRatingsColumns[1], RiderRatingsColumns[8]},
+			},
+			{
+				Name:    "riderrating_task_id",
+				Unique:  false,
+				Columns: []*schema.Column{RiderRatingsColumns[2]},
+			},
+			{
+				Name:    "riderrating_order_id",
+				Unique:  false,
+				Columns: []*schema.Column{RiderRatingsColumns[3]},
 			},
 		},
 	}
@@ -578,6 +625,8 @@ var (
 		{Name: "temperature_range", Type: field.TypeString, Nullable: true},
 		{Name: "requires_fragile_handling", Type: field.TypeBool, Default: false},
 		{Name: "requires_heavy_duty", Type: field.TypeBool, Default: false},
+		{Name: "cash_on_delivery", Type: field.TypeFloat64, Default: 0},
+		{Name: "cash_collected", Type: field.TypeBool, Default: false},
 		{Name: "carrier_id", Type: field.TypeString, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
@@ -591,7 +640,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "tasks_users_tasks",
-				Columns:    []*schema.Column{TasksColumns[21]},
+				Columns:    []*schema.Column{TasksColumns[23]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -959,6 +1008,7 @@ var (
 		PricingRulesTable,
 		ProofOfDeliveriesTable,
 		RateLimitConfigsTable,
+		RiderRatingsTable,
 		RiderShiftsTable,
 		RolePermissionsTable,
 		ServiceConfigsTable,
@@ -981,6 +1031,7 @@ func init() {
 	FleetMembersTable.ForeignKeys[1].RefTable = VehiclesTable
 	FleetMembersTable.ForeignKeys[2].RefTable = UsersTable
 	ProofOfDeliveriesTable.ForeignKeys[0].RefTable = TasksTable
+	RiderRatingsTable.ForeignKeys[0].RefTable = FleetMembersTable
 	RolePermissionsTable.ForeignKeys[0].RefTable = LogisticsRolesTable
 	RolePermissionsTable.ForeignKeys[1].RefTable = LogisticsPermissionsTable
 	TasksTable.ForeignKeys[0].RefTable = UsersTable

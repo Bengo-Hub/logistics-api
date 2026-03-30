@@ -85,6 +85,34 @@ func (_c *ProofOfDeliveryCreate) SetNillableOtpCode(v *string) *ProofOfDeliveryC
 	return _c
 }
 
+// SetAmountCollected sets the "amount_collected" field.
+func (_c *ProofOfDeliveryCreate) SetAmountCollected(v float64) *ProofOfDeliveryCreate {
+	_c.mutation.SetAmountCollected(v)
+	return _c
+}
+
+// SetNillableAmountCollected sets the "amount_collected" field if the given value is not nil.
+func (_c *ProofOfDeliveryCreate) SetNillableAmountCollected(v *float64) *ProofOfDeliveryCreate {
+	if v != nil {
+		_c.SetAmountCollected(*v)
+	}
+	return _c
+}
+
+// SetCollectionMethod sets the "collection_method" field.
+func (_c *ProofOfDeliveryCreate) SetCollectionMethod(v string) *ProofOfDeliveryCreate {
+	_c.mutation.SetCollectionMethod(v)
+	return _c
+}
+
+// SetNillableCollectionMethod sets the "collection_method" field if the given value is not nil.
+func (_c *ProofOfDeliveryCreate) SetNillableCollectionMethod(v *string) *ProofOfDeliveryCreate {
+	if v != nil {
+		_c.SetCollectionMethod(*v)
+	}
+	return _c
+}
+
 // SetCapturedAt sets the "captured_at" field.
 func (_c *ProofOfDeliveryCreate) SetCapturedAt(v time.Time) *ProofOfDeliveryCreate {
 	_c.mutation.SetCapturedAt(v)
@@ -159,6 +187,10 @@ func (_c *ProofOfDeliveryCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *ProofOfDeliveryCreate) defaults() {
+	if _, ok := _c.mutation.AmountCollected(); !ok {
+		v := proofofdelivery.DefaultAmountCollected
+		_c.mutation.SetAmountCollected(v)
+	}
 	if _, ok := _c.mutation.CapturedAt(); !ok {
 		v := proofofdelivery.DefaultCapturedAt()
 		_c.mutation.SetCapturedAt(v)
@@ -183,6 +215,9 @@ func (_c *ProofOfDeliveryCreate) check() error {
 	}
 	if _, ok := _c.mutation.FleetMemberID(); !ok {
 		return &ValidationError{Name: "fleet_member_id", err: errors.New(`ent: missing required field "ProofOfDelivery.fleet_member_id"`)}
+	}
+	if _, ok := _c.mutation.AmountCollected(); !ok {
+		return &ValidationError{Name: "amount_collected", err: errors.New(`ent: missing required field "ProofOfDelivery.amount_collected"`)}
 	}
 	if _, ok := _c.mutation.CapturedAt(); !ok {
 		return &ValidationError{Name: "captured_at", err: errors.New(`ent: missing required field "ProofOfDelivery.captured_at"`)}
@@ -248,6 +283,14 @@ func (_c *ProofOfDeliveryCreate) createSpec() (*ProofOfDelivery, *sqlgraph.Creat
 	if value, ok := _c.mutation.OtpCode(); ok {
 		_spec.SetField(proofofdelivery.FieldOtpCode, field.TypeString, value)
 		_node.OtpCode = value
+	}
+	if value, ok := _c.mutation.AmountCollected(); ok {
+		_spec.SetField(proofofdelivery.FieldAmountCollected, field.TypeFloat64, value)
+		_node.AmountCollected = value
+	}
+	if value, ok := _c.mutation.CollectionMethod(); ok {
+		_spec.SetField(proofofdelivery.FieldCollectionMethod, field.TypeString, value)
+		_node.CollectionMethod = value
 	}
 	if value, ok := _c.mutation.CapturedAt(); ok {
 		_spec.SetField(proofofdelivery.FieldCapturedAt, field.TypeTime, value)
@@ -413,6 +456,42 @@ func (u *ProofOfDeliveryUpsert) UpdateOtpCode() *ProofOfDeliveryUpsert {
 // ClearOtpCode clears the value of the "otp_code" field.
 func (u *ProofOfDeliveryUpsert) ClearOtpCode() *ProofOfDeliveryUpsert {
 	u.SetNull(proofofdelivery.FieldOtpCode)
+	return u
+}
+
+// SetAmountCollected sets the "amount_collected" field.
+func (u *ProofOfDeliveryUpsert) SetAmountCollected(v float64) *ProofOfDeliveryUpsert {
+	u.Set(proofofdelivery.FieldAmountCollected, v)
+	return u
+}
+
+// UpdateAmountCollected sets the "amount_collected" field to the value that was provided on create.
+func (u *ProofOfDeliveryUpsert) UpdateAmountCollected() *ProofOfDeliveryUpsert {
+	u.SetExcluded(proofofdelivery.FieldAmountCollected)
+	return u
+}
+
+// AddAmountCollected adds v to the "amount_collected" field.
+func (u *ProofOfDeliveryUpsert) AddAmountCollected(v float64) *ProofOfDeliveryUpsert {
+	u.Add(proofofdelivery.FieldAmountCollected, v)
+	return u
+}
+
+// SetCollectionMethod sets the "collection_method" field.
+func (u *ProofOfDeliveryUpsert) SetCollectionMethod(v string) *ProofOfDeliveryUpsert {
+	u.Set(proofofdelivery.FieldCollectionMethod, v)
+	return u
+}
+
+// UpdateCollectionMethod sets the "collection_method" field to the value that was provided on create.
+func (u *ProofOfDeliveryUpsert) UpdateCollectionMethod() *ProofOfDeliveryUpsert {
+	u.SetExcluded(proofofdelivery.FieldCollectionMethod)
+	return u
+}
+
+// ClearCollectionMethod clears the value of the "collection_method" field.
+func (u *ProofOfDeliveryUpsert) ClearCollectionMethod() *ProofOfDeliveryUpsert {
+	u.SetNull(proofofdelivery.FieldCollectionMethod)
 	return u
 }
 
@@ -590,6 +669,48 @@ func (u *ProofOfDeliveryUpsertOne) UpdateOtpCode() *ProofOfDeliveryUpsertOne {
 func (u *ProofOfDeliveryUpsertOne) ClearOtpCode() *ProofOfDeliveryUpsertOne {
 	return u.Update(func(s *ProofOfDeliveryUpsert) {
 		s.ClearOtpCode()
+	})
+}
+
+// SetAmountCollected sets the "amount_collected" field.
+func (u *ProofOfDeliveryUpsertOne) SetAmountCollected(v float64) *ProofOfDeliveryUpsertOne {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.SetAmountCollected(v)
+	})
+}
+
+// AddAmountCollected adds v to the "amount_collected" field.
+func (u *ProofOfDeliveryUpsertOne) AddAmountCollected(v float64) *ProofOfDeliveryUpsertOne {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.AddAmountCollected(v)
+	})
+}
+
+// UpdateAmountCollected sets the "amount_collected" field to the value that was provided on create.
+func (u *ProofOfDeliveryUpsertOne) UpdateAmountCollected() *ProofOfDeliveryUpsertOne {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.UpdateAmountCollected()
+	})
+}
+
+// SetCollectionMethod sets the "collection_method" field.
+func (u *ProofOfDeliveryUpsertOne) SetCollectionMethod(v string) *ProofOfDeliveryUpsertOne {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.SetCollectionMethod(v)
+	})
+}
+
+// UpdateCollectionMethod sets the "collection_method" field to the value that was provided on create.
+func (u *ProofOfDeliveryUpsertOne) UpdateCollectionMethod() *ProofOfDeliveryUpsertOne {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.UpdateCollectionMethod()
+	})
+}
+
+// ClearCollectionMethod clears the value of the "collection_method" field.
+func (u *ProofOfDeliveryUpsertOne) ClearCollectionMethod() *ProofOfDeliveryUpsertOne {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.ClearCollectionMethod()
 	})
 }
 
@@ -938,6 +1059,48 @@ func (u *ProofOfDeliveryUpsertBulk) UpdateOtpCode() *ProofOfDeliveryUpsertBulk {
 func (u *ProofOfDeliveryUpsertBulk) ClearOtpCode() *ProofOfDeliveryUpsertBulk {
 	return u.Update(func(s *ProofOfDeliveryUpsert) {
 		s.ClearOtpCode()
+	})
+}
+
+// SetAmountCollected sets the "amount_collected" field.
+func (u *ProofOfDeliveryUpsertBulk) SetAmountCollected(v float64) *ProofOfDeliveryUpsertBulk {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.SetAmountCollected(v)
+	})
+}
+
+// AddAmountCollected adds v to the "amount_collected" field.
+func (u *ProofOfDeliveryUpsertBulk) AddAmountCollected(v float64) *ProofOfDeliveryUpsertBulk {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.AddAmountCollected(v)
+	})
+}
+
+// UpdateAmountCollected sets the "amount_collected" field to the value that was provided on create.
+func (u *ProofOfDeliveryUpsertBulk) UpdateAmountCollected() *ProofOfDeliveryUpsertBulk {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.UpdateAmountCollected()
+	})
+}
+
+// SetCollectionMethod sets the "collection_method" field.
+func (u *ProofOfDeliveryUpsertBulk) SetCollectionMethod(v string) *ProofOfDeliveryUpsertBulk {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.SetCollectionMethod(v)
+	})
+}
+
+// UpdateCollectionMethod sets the "collection_method" field to the value that was provided on create.
+func (u *ProofOfDeliveryUpsertBulk) UpdateCollectionMethod() *ProofOfDeliveryUpsertBulk {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.UpdateCollectionMethod()
+	})
+}
+
+// ClearCollectionMethod clears the value of the "collection_method" field.
+func (u *ProofOfDeliveryUpsertBulk) ClearCollectionMethod() *ProofOfDeliveryUpsertBulk {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.ClearCollectionMethod()
 	})
 }
 

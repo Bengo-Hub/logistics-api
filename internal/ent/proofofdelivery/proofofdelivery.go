@@ -27,6 +27,10 @@ const (
 	FieldPhotoURL = "photo_url"
 	// FieldOtpCode holds the string denoting the otp_code field in the database.
 	FieldOtpCode = "otp_code"
+	// FieldAmountCollected holds the string denoting the amount_collected field in the database.
+	FieldAmountCollected = "amount_collected"
+	// FieldCollectionMethod holds the string denoting the collection_method field in the database.
+	FieldCollectionMethod = "collection_method"
 	// FieldCapturedAt holds the string denoting the captured_at field in the database.
 	FieldCapturedAt = "captured_at"
 	// FieldMetadata holds the string denoting the metadata field in the database.
@@ -53,6 +57,8 @@ var Columns = []string{
 	FieldSignatureURL,
 	FieldPhotoURL,
 	FieldOtpCode,
+	FieldAmountCollected,
+	FieldCollectionMethod,
 	FieldCapturedAt,
 	FieldMetadata,
 }
@@ -68,6 +74,8 @@ func ValidColumn(column string) bool {
 }
 
 var (
+	// DefaultAmountCollected holds the default value on creation for the "amount_collected" field.
+	DefaultAmountCollected float64
 	// DefaultCapturedAt holds the default value on creation for the "captured_at" field.
 	DefaultCapturedAt func() time.Time
 	// DefaultMetadata holds the default value on creation for the "metadata" field.
@@ -112,6 +120,16 @@ func ByPhotoURL(opts ...sql.OrderTermOption) OrderOption {
 // ByOtpCode orders the results by the otp_code field.
 func ByOtpCode(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldOtpCode, opts...).ToFunc()
+}
+
+// ByAmountCollected orders the results by the amount_collected field.
+func ByAmountCollected(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAmountCollected, opts...).ToFunc()
+}
+
+// ByCollectionMethod orders the results by the collection_method field.
+func ByCollectionMethod(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCollectionMethod, opts...).ToFunc()
 }
 
 // ByCapturedAt orders the results by the captured_at field.

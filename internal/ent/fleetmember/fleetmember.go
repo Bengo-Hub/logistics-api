@@ -47,6 +47,10 @@ const (
 	FieldHasColdStorage = "has_cold_storage"
 	// FieldMaxWeightCapacityKg holds the string denoting the max_weight_capacity_kg field in the database.
 	FieldMaxWeightCapacityKg = "max_weight_capacity_kg"
+	// FieldAverageRating holds the string denoting the average_rating field in the database.
+	FieldAverageRating = "average_rating"
+	// FieldTotalRatings holds the string denoting the total_ratings field in the database.
+	FieldTotalRatings = "total_ratings"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
@@ -59,6 +63,8 @@ const (
 	EdgeVehicle = "vehicle"
 	// EdgeAssignments holds the string denoting the assignments edge name in mutations.
 	EdgeAssignments = "assignments"
+	// EdgeRatings holds the string denoting the ratings edge name in mutations.
+	EdgeRatings = "ratings"
 	// Table holds the table name of the fleetmember in the database.
 	Table = "fleet_members"
 	// FleetTable is the table that holds the fleet relation/edge.
@@ -89,6 +95,13 @@ const (
 	AssignmentsInverseTable = "task_assignments"
 	// AssignmentsColumn is the table column denoting the assignments relation/edge.
 	AssignmentsColumn = "fleet_member_id"
+	// RatingsTable is the table that holds the ratings relation/edge.
+	RatingsTable = "rider_ratings"
+	// RatingsInverseTable is the table name for the RiderRating entity.
+	// It exists in this package in order to avoid circular dependency with the "riderrating" package.
+	RatingsInverseTable = "rider_ratings"
+	// RatingsColumn is the table column denoting the ratings relation/edge.
+	RatingsColumn = "fleet_member_id"
 )
 
 // Columns holds all SQL columns for fleetmember fields.
@@ -110,6 +123,8 @@ var Columns = []string{
 	FieldSpecializationTags,
 	FieldHasColdStorage,
 	FieldMaxWeightCapacityKg,
+	FieldAverageRating,
+	FieldTotalRatings,
 	FieldCreatedAt,
 	FieldUpdatedAt,
 }
@@ -135,6 +150,10 @@ var (
 	DefaultSpecializationTags []string
 	// DefaultHasColdStorage holds the default value on creation for the "has_cold_storage" field.
 	DefaultHasColdStorage bool
+	// DefaultAverageRating holds the default value on creation for the "average_rating" field.
+	DefaultAverageRating float64
+	// DefaultTotalRatings holds the default value on creation for the "total_ratings" field.
+	DefaultTotalRatings int
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultUpdatedAt holds the default value on creation for the "updated_at" field.
@@ -223,6 +242,16 @@ func ByMaxWeightCapacityKg(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldMaxWeightCapacityKg, opts...).ToFunc()
 }
 
+// ByAverageRating orders the results by the average_rating field.
+func ByAverageRating(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAverageRating, opts...).ToFunc()
+}
+
+// ByTotalRatings orders the results by the total_ratings field.
+func ByTotalRatings(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTotalRatings, opts...).ToFunc()
+}
+
 // ByCreatedAt orders the results by the created_at field.
 func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCreatedAt, opts...).ToFunc()
@@ -267,6 +296,20 @@ func ByAssignments(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newAssignmentsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByRatingsCount orders the results by ratings count.
+func ByRatingsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newRatingsStep(), opts...)
+	}
+}
+
+// ByRatings orders the results by ratings terms.
+func ByRatings(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newRatingsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newFleetStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -293,5 +336,12 @@ func newAssignmentsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(AssignmentsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, AssignmentsTable, AssignmentsColumn),
+	)
+}
+func newRatingsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(RatingsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, RatingsTable, RatingsColumn),
 	)
 }
