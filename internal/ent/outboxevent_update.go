@@ -146,6 +146,46 @@ func (_u *OutboxEventUpdate) ClearLastAttemptAt() *OutboxEventUpdate {
 	return _u
 }
 
+// SetPublishedAt sets the "published_at" field.
+func (_u *OutboxEventUpdate) SetPublishedAt(v time.Time) *OutboxEventUpdate {
+	_u.mutation.SetPublishedAt(v)
+	return _u
+}
+
+// SetNillablePublishedAt sets the "published_at" field if the given value is not nil.
+func (_u *OutboxEventUpdate) SetNillablePublishedAt(v *time.Time) *OutboxEventUpdate {
+	if v != nil {
+		_u.SetPublishedAt(*v)
+	}
+	return _u
+}
+
+// ClearPublishedAt clears the value of the "published_at" field.
+func (_u *OutboxEventUpdate) ClearPublishedAt() *OutboxEventUpdate {
+	_u.mutation.ClearPublishedAt()
+	return _u
+}
+
+// SetErrorMessage sets the "error_message" field.
+func (_u *OutboxEventUpdate) SetErrorMessage(v string) *OutboxEventUpdate {
+	_u.mutation.SetErrorMessage(v)
+	return _u
+}
+
+// SetNillableErrorMessage sets the "error_message" field if the given value is not nil.
+func (_u *OutboxEventUpdate) SetNillableErrorMessage(v *string) *OutboxEventUpdate {
+	if v != nil {
+		_u.SetErrorMessage(*v)
+	}
+	return _u
+}
+
+// ClearErrorMessage clears the value of the "error_message" field.
+func (_u *OutboxEventUpdate) ClearErrorMessage() *OutboxEventUpdate {
+	_u.mutation.ClearErrorMessage()
+	return _u
+}
+
 // Mutation returns the OutboxEventMutation object of the builder.
 func (_u *OutboxEventUpdate) Mutation() *OutboxEventMutation {
 	return _u.mutation
@@ -234,6 +274,18 @@ func (_u *OutboxEventUpdate) sqlSave(ctx context.Context) (_node int, err error)
 	}
 	if _u.mutation.LastAttemptAtCleared() {
 		_spec.ClearField(outboxevent.FieldLastAttemptAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.PublishedAt(); ok {
+		_spec.SetField(outboxevent.FieldPublishedAt, field.TypeTime, value)
+	}
+	if _u.mutation.PublishedAtCleared() {
+		_spec.ClearField(outboxevent.FieldPublishedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.ErrorMessage(); ok {
+		_spec.SetField(outboxevent.FieldErrorMessage, field.TypeString, value)
+	}
+	if _u.mutation.ErrorMessageCleared() {
+		_spec.ClearField(outboxevent.FieldErrorMessage, field.TypeString)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -372,6 +424,46 @@ func (_u *OutboxEventUpdateOne) ClearLastAttemptAt() *OutboxEventUpdateOne {
 	return _u
 }
 
+// SetPublishedAt sets the "published_at" field.
+func (_u *OutboxEventUpdateOne) SetPublishedAt(v time.Time) *OutboxEventUpdateOne {
+	_u.mutation.SetPublishedAt(v)
+	return _u
+}
+
+// SetNillablePublishedAt sets the "published_at" field if the given value is not nil.
+func (_u *OutboxEventUpdateOne) SetNillablePublishedAt(v *time.Time) *OutboxEventUpdateOne {
+	if v != nil {
+		_u.SetPublishedAt(*v)
+	}
+	return _u
+}
+
+// ClearPublishedAt clears the value of the "published_at" field.
+func (_u *OutboxEventUpdateOne) ClearPublishedAt() *OutboxEventUpdateOne {
+	_u.mutation.ClearPublishedAt()
+	return _u
+}
+
+// SetErrorMessage sets the "error_message" field.
+func (_u *OutboxEventUpdateOne) SetErrorMessage(v string) *OutboxEventUpdateOne {
+	_u.mutation.SetErrorMessage(v)
+	return _u
+}
+
+// SetNillableErrorMessage sets the "error_message" field if the given value is not nil.
+func (_u *OutboxEventUpdateOne) SetNillableErrorMessage(v *string) *OutboxEventUpdateOne {
+	if v != nil {
+		_u.SetErrorMessage(*v)
+	}
+	return _u
+}
+
+// ClearErrorMessage clears the value of the "error_message" field.
+func (_u *OutboxEventUpdateOne) ClearErrorMessage() *OutboxEventUpdateOne {
+	_u.mutation.ClearErrorMessage()
+	return _u
+}
+
 // Mutation returns the OutboxEventMutation object of the builder.
 func (_u *OutboxEventUpdateOne) Mutation() *OutboxEventMutation {
 	return _u.mutation
@@ -490,6 +582,18 @@ func (_u *OutboxEventUpdateOne) sqlSave(ctx context.Context) (_node *OutboxEvent
 	}
 	if _u.mutation.LastAttemptAtCleared() {
 		_spec.ClearField(outboxevent.FieldLastAttemptAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.PublishedAt(); ok {
+		_spec.SetField(outboxevent.FieldPublishedAt, field.TypeTime, value)
+	}
+	if _u.mutation.PublishedAtCleared() {
+		_spec.ClearField(outboxevent.FieldPublishedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.ErrorMessage(); ok {
+		_spec.SetField(outboxevent.FieldErrorMessage, field.TypeString, value)
+	}
+	if _u.mutation.ErrorMessageCleared() {
+		_spec.ClearField(outboxevent.FieldErrorMessage, field.TypeString)
 	}
 	_node = &OutboxEvent{config: _u.config}
 	_spec.Assign = _node.assignValues

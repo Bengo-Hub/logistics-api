@@ -35,6 +35,10 @@ type OutboxEvent struct {
 	Attempts int `json:"attempts,omitempty"`
 	// LastAttemptAt holds the value of the "last_attempt_at" field.
 	LastAttemptAt *time.Time `json:"last_attempt_at,omitempty"`
+	// PublishedAt holds the value of the "published_at" field.
+	PublishedAt *time.Time `json:"published_at,omitempty"`
+	// ErrorMessage holds the value of the "error_message" field.
+	ErrorMessage *string `json:"error_message,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt    time.Time `json:"created_at,omitempty"`
 	selectValues sql.SelectValues
@@ -49,9 +53,9 @@ func (*OutboxEvent) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case outboxevent.FieldAttempts:
 			values[i] = new(sql.NullInt64)
-		case outboxevent.FieldAggregateType, outboxevent.FieldEventType, outboxevent.FieldStatus:
+		case outboxevent.FieldAggregateType, outboxevent.FieldEventType, outboxevent.FieldStatus, outboxevent.FieldErrorMessage:
 			values[i] = new(sql.NullString)
-		case outboxevent.FieldLastAttemptAt, outboxevent.FieldCreatedAt:
+		case outboxevent.FieldLastAttemptAt, outboxevent.FieldPublishedAt, outboxevent.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
 		case outboxevent.FieldID, outboxevent.FieldTenantID, outboxevent.FieldAggregateID:
 			values[i] = new(uuid.UUID)
@@ -127,6 +131,20 @@ func (_m *OutboxEvent) assignValues(columns []string, values []any) error {
 				_m.LastAttemptAt = new(time.Time)
 				*_m.LastAttemptAt = value.Time
 			}
+		case outboxevent.FieldPublishedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field published_at", values[i])
+			} else if value.Valid {
+				_m.PublishedAt = new(time.Time)
+				*_m.PublishedAt = value.Time
+			}
+		case outboxevent.FieldErrorMessage:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field error_message", values[i])
+			} else if value.Valid {
+				_m.ErrorMessage = new(string)
+				*_m.ErrorMessage = value.String
+			}
 		case outboxevent.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
@@ -193,6 +211,16 @@ func (_m *OutboxEvent) String() string {
 	if v := _m.LastAttemptAt; v != nil {
 		builder.WriteString("last_attempt_at=")
 		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
+	if v := _m.PublishedAt; v != nil {
+		builder.WriteString("published_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
+	if v := _m.ErrorMessage; v != nil {
+		builder.WriteString("error_message=")
+		builder.WriteString(*v)
 	}
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")

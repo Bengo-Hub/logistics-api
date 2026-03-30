@@ -327,6 +327,8 @@ var (
 		{Name: "status", Type: field.TypeString, Default: "pending"},
 		{Name: "attempts", Type: field.TypeInt, Default: 0},
 		{Name: "last_attempt_at", Type: field.TypeTime, Nullable: true},
+		{Name: "published_at", Type: field.TypeTime, Nullable: true},
+		{Name: "error_message", Type: field.TypeString, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 	}
 	// OutboxEventsTable holds the schema information for the "outbox_events" table.
@@ -343,7 +345,7 @@ var (
 			{
 				Name:    "outboxevent_status_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{OutboxEventsColumns[6], OutboxEventsColumns[9]},
+				Columns: []*schema.Column{OutboxEventsColumns[6], OutboxEventsColumns[11]},
 			},
 		},
 	}
