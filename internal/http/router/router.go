@@ -154,6 +154,9 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 				})
 			}
 
+			// Media upload (tenant-scoped so the rider-app path /{slug}/media/upload works)
+			tenant.Post("/media/upload", mediaHandler.Upload)
+
 			if rbacH != nil {
 				rbacH.RegisterRoutes(tenant)
 			}
@@ -166,6 +169,7 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 					taskR.Patch("/{taskId}/status", lh.UpdateTaskStatus)
 					taskR.Post("/{taskId}/assign", lh.AssignTask)
 					taskR.Post("/{taskId}/pod", lh.SubmitPoD)
+					taskR.Post("/{taskId}/rate", lh.RateRider)
 				})
 
 				tenant.Route("/fleet", func(fleetR chi.Router) {

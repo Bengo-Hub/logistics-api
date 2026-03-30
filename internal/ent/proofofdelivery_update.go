@@ -132,6 +132,47 @@ func (_u *ProofOfDeliveryUpdate) ClearOtpCode() *ProofOfDeliveryUpdate {
 	return _u
 }
 
+// SetAmountCollected sets the "amount_collected" field.
+func (_u *ProofOfDeliveryUpdate) SetAmountCollected(v float64) *ProofOfDeliveryUpdate {
+	_u.mutation.ResetAmountCollected()
+	_u.mutation.SetAmountCollected(v)
+	return _u
+}
+
+// SetNillableAmountCollected sets the "amount_collected" field if the given value is not nil.
+func (_u *ProofOfDeliveryUpdate) SetNillableAmountCollected(v *float64) *ProofOfDeliveryUpdate {
+	if v != nil {
+		_u.SetAmountCollected(*v)
+	}
+	return _u
+}
+
+// AddAmountCollected adds value to the "amount_collected" field.
+func (_u *ProofOfDeliveryUpdate) AddAmountCollected(v float64) *ProofOfDeliveryUpdate {
+	_u.mutation.AddAmountCollected(v)
+	return _u
+}
+
+// SetCollectionMethod sets the "collection_method" field.
+func (_u *ProofOfDeliveryUpdate) SetCollectionMethod(v string) *ProofOfDeliveryUpdate {
+	_u.mutation.SetCollectionMethod(v)
+	return _u
+}
+
+// SetNillableCollectionMethod sets the "collection_method" field if the given value is not nil.
+func (_u *ProofOfDeliveryUpdate) SetNillableCollectionMethod(v *string) *ProofOfDeliveryUpdate {
+	if v != nil {
+		_u.SetCollectionMethod(*v)
+	}
+	return _u
+}
+
+// ClearCollectionMethod clears the value of the "collection_method" field.
+func (_u *ProofOfDeliveryUpdate) ClearCollectionMethod() *ProofOfDeliveryUpdate {
+	_u.mutation.ClearCollectionMethod()
+	return _u
+}
+
 // SetCapturedAt sets the "captured_at" field.
 func (_u *ProofOfDeliveryUpdate) SetCapturedAt(v time.Time) *ProofOfDeliveryUpdate {
 	_u.mutation.SetCapturedAt(v)
@@ -238,6 +279,18 @@ func (_u *ProofOfDeliveryUpdate) sqlSave(ctx context.Context) (_node int, err er
 	}
 	if _u.mutation.OtpCodeCleared() {
 		_spec.ClearField(proofofdelivery.FieldOtpCode, field.TypeString)
+	}
+	if value, ok := _u.mutation.AmountCollected(); ok {
+		_spec.SetField(proofofdelivery.FieldAmountCollected, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedAmountCollected(); ok {
+		_spec.AddField(proofofdelivery.FieldAmountCollected, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.CollectionMethod(); ok {
+		_spec.SetField(proofofdelivery.FieldCollectionMethod, field.TypeString, value)
+	}
+	if _u.mutation.CollectionMethodCleared() {
+		_spec.ClearField(proofofdelivery.FieldCollectionMethod, field.TypeString)
 	}
 	if value, ok := _u.mutation.CapturedAt(); ok {
 		_spec.SetField(proofofdelivery.FieldCapturedAt, field.TypeTime, value)
@@ -396,6 +449,47 @@ func (_u *ProofOfDeliveryUpdateOne) ClearOtpCode() *ProofOfDeliveryUpdateOne {
 	return _u
 }
 
+// SetAmountCollected sets the "amount_collected" field.
+func (_u *ProofOfDeliveryUpdateOne) SetAmountCollected(v float64) *ProofOfDeliveryUpdateOne {
+	_u.mutation.ResetAmountCollected()
+	_u.mutation.SetAmountCollected(v)
+	return _u
+}
+
+// SetNillableAmountCollected sets the "amount_collected" field if the given value is not nil.
+func (_u *ProofOfDeliveryUpdateOne) SetNillableAmountCollected(v *float64) *ProofOfDeliveryUpdateOne {
+	if v != nil {
+		_u.SetAmountCollected(*v)
+	}
+	return _u
+}
+
+// AddAmountCollected adds value to the "amount_collected" field.
+func (_u *ProofOfDeliveryUpdateOne) AddAmountCollected(v float64) *ProofOfDeliveryUpdateOne {
+	_u.mutation.AddAmountCollected(v)
+	return _u
+}
+
+// SetCollectionMethod sets the "collection_method" field.
+func (_u *ProofOfDeliveryUpdateOne) SetCollectionMethod(v string) *ProofOfDeliveryUpdateOne {
+	_u.mutation.SetCollectionMethod(v)
+	return _u
+}
+
+// SetNillableCollectionMethod sets the "collection_method" field if the given value is not nil.
+func (_u *ProofOfDeliveryUpdateOne) SetNillableCollectionMethod(v *string) *ProofOfDeliveryUpdateOne {
+	if v != nil {
+		_u.SetCollectionMethod(*v)
+	}
+	return _u
+}
+
+// ClearCollectionMethod clears the value of the "collection_method" field.
+func (_u *ProofOfDeliveryUpdateOne) ClearCollectionMethod() *ProofOfDeliveryUpdateOne {
+	_u.mutation.ClearCollectionMethod()
+	return _u
+}
+
 // SetCapturedAt sets the "captured_at" field.
 func (_u *ProofOfDeliveryUpdateOne) SetCapturedAt(v time.Time) *ProofOfDeliveryUpdateOne {
 	_u.mutation.SetCapturedAt(v)
@@ -532,6 +626,18 @@ func (_u *ProofOfDeliveryUpdateOne) sqlSave(ctx context.Context) (_node *ProofOf
 	}
 	if _u.mutation.OtpCodeCleared() {
 		_spec.ClearField(proofofdelivery.FieldOtpCode, field.TypeString)
+	}
+	if value, ok := _u.mutation.AmountCollected(); ok {
+		_spec.SetField(proofofdelivery.FieldAmountCollected, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedAmountCollected(); ok {
+		_spec.AddField(proofofdelivery.FieldAmountCollected, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.CollectionMethod(); ok {
+		_spec.SetField(proofofdelivery.FieldCollectionMethod, field.TypeString, value)
+	}
+	if _u.mutation.CollectionMethodCleared() {
+		_spec.ClearField(proofofdelivery.FieldCollectionMethod, field.TypeString)
 	}
 	if value, ok := _u.mutation.CapturedAt(); ok {
 		_spec.SetField(proofofdelivery.FieldCapturedAt, field.TypeTime, value)

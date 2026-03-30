@@ -54,6 +54,10 @@ type Task struct {
 	RequiresFragileHandling bool `json:"requires_fragile_handling,omitempty"`
 	// Heavy items: furniture, hardware, building materials
 	RequiresHeavyDuty bool `json:"requires_heavy_duty,omitempty"`
+	// Amount to collect in cash from the customer (0 = prepaid)
+	CashOnDelivery float64 `json:"cash_on_delivery,omitempty"`
+	// Whether COD cash has been collected by the rider
+	CashCollected bool `json:"cash_collected,omitempty"`
 	// External carrier reference if outsourced to 3rd party
 	CarrierID string `json:"carrier_id,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
@@ -127,9 +131,9 @@ func (*Task) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case task.FieldMetadata, task.FieldPackageDimensionsCm:
 			values[i] = new([]byte)
-		case task.FieldRequiresTemperatureControl, task.FieldRequiresFragileHandling, task.FieldRequiresHeavyDuty:
+		case task.FieldRequiresTemperatureControl, task.FieldRequiresFragileHandling, task.FieldRequiresHeavyDuty, task.FieldCashCollected:
 			values[i] = new(sql.NullBool)
-		case task.FieldPackageWeightKg:
+		case task.FieldPackageWeightKg, task.FieldCashOnDelivery:
 			values[i] = new(sql.NullFloat64)
 		case task.FieldPriority:
 			values[i] = new(sql.NullInt64)
@@ -272,6 +276,18 @@ func (_m *Task) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.RequiresHeavyDuty = value.Bool
 			}
+		case task.FieldCashOnDelivery:
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
+				return fmt.Errorf("unexpected type %T for field cash_on_delivery", values[i])
+			} else if value.Valid {
+				_m.CashOnDelivery = value.Float64
+			}
+		case task.FieldCashCollected:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field cash_collected", values[i])
+			} else if value.Valid {
+				_m.CashCollected = value.Bool
+			}
 		case task.FieldCarrierID:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field carrier_id", values[i])
@@ -411,6 +427,12 @@ func (_m *Task) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("requires_heavy_duty=")
 	builder.WriteString(fmt.Sprintf("%v", _m.RequiresHeavyDuty))
+	builder.WriteString(", ")
+	builder.WriteString("cash_on_delivery=")
+	builder.WriteString(fmt.Sprintf("%v", _m.CashOnDelivery))
+	builder.WriteString(", ")
+	builder.WriteString("cash_collected=")
+	builder.WriteString(fmt.Sprintf("%v", _m.CashCollected))
 	builder.WriteString(", ")
 	builder.WriteString("carrier_id=")
 	builder.WriteString(_m.CarrierID)

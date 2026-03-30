@@ -131,6 +131,16 @@ func RequiresHeavyDuty(v bool) predicate.Task {
 	return predicate.Task(sql.FieldEQ(FieldRequiresHeavyDuty, v))
 }
 
+// CashOnDelivery applies equality check predicate on the "cash_on_delivery" field. It's identical to CashOnDeliveryEQ.
+func CashOnDelivery(v float64) predicate.Task {
+	return predicate.Task(sql.FieldEQ(FieldCashOnDelivery, v))
+}
+
+// CashCollected applies equality check predicate on the "cash_collected" field. It's identical to CashCollectedEQ.
+func CashCollected(v bool) predicate.Task {
+	return predicate.Task(sql.FieldEQ(FieldCashCollected, v))
+}
+
 // CarrierID applies equality check predicate on the "carrier_id" field. It's identical to CarrierIDEQ.
 func CarrierID(v string) predicate.Task {
 	return predicate.Task(sql.FieldEQ(FieldCarrierID, v))
@@ -894,6 +904,56 @@ func RequiresHeavyDutyEQ(v bool) predicate.Task {
 // RequiresHeavyDutyNEQ applies the NEQ predicate on the "requires_heavy_duty" field.
 func RequiresHeavyDutyNEQ(v bool) predicate.Task {
 	return predicate.Task(sql.FieldNEQ(FieldRequiresHeavyDuty, v))
+}
+
+// CashOnDeliveryEQ applies the EQ predicate on the "cash_on_delivery" field.
+func CashOnDeliveryEQ(v float64) predicate.Task {
+	return predicate.Task(sql.FieldEQ(FieldCashOnDelivery, v))
+}
+
+// CashOnDeliveryNEQ applies the NEQ predicate on the "cash_on_delivery" field.
+func CashOnDeliveryNEQ(v float64) predicate.Task {
+	return predicate.Task(sql.FieldNEQ(FieldCashOnDelivery, v))
+}
+
+// CashOnDeliveryIn applies the In predicate on the "cash_on_delivery" field.
+func CashOnDeliveryIn(vs ...float64) predicate.Task {
+	return predicate.Task(sql.FieldIn(FieldCashOnDelivery, vs...))
+}
+
+// CashOnDeliveryNotIn applies the NotIn predicate on the "cash_on_delivery" field.
+func CashOnDeliveryNotIn(vs ...float64) predicate.Task {
+	return predicate.Task(sql.FieldNotIn(FieldCashOnDelivery, vs...))
+}
+
+// CashOnDeliveryGT applies the GT predicate on the "cash_on_delivery" field.
+func CashOnDeliveryGT(v float64) predicate.Task {
+	return predicate.Task(sql.FieldGT(FieldCashOnDelivery, v))
+}
+
+// CashOnDeliveryGTE applies the GTE predicate on the "cash_on_delivery" field.
+func CashOnDeliveryGTE(v float64) predicate.Task {
+	return predicate.Task(sql.FieldGTE(FieldCashOnDelivery, v))
+}
+
+// CashOnDeliveryLT applies the LT predicate on the "cash_on_delivery" field.
+func CashOnDeliveryLT(v float64) predicate.Task {
+	return predicate.Task(sql.FieldLT(FieldCashOnDelivery, v))
+}
+
+// CashOnDeliveryLTE applies the LTE predicate on the "cash_on_delivery" field.
+func CashOnDeliveryLTE(v float64) predicate.Task {
+	return predicate.Task(sql.FieldLTE(FieldCashOnDelivery, v))
+}
+
+// CashCollectedEQ applies the EQ predicate on the "cash_collected" field.
+func CashCollectedEQ(v bool) predicate.Task {
+	return predicate.Task(sql.FieldEQ(FieldCashCollected, v))
+}
+
+// CashCollectedNEQ applies the NEQ predicate on the "cash_collected" field.
+func CashCollectedNEQ(v bool) predicate.Task {
+	return predicate.Task(sql.FieldNEQ(FieldCashCollected, v))
 }
 
 // CarrierIDEQ applies the EQ predicate on the "carrier_id" field.

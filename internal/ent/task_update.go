@@ -323,6 +323,41 @@ func (_u *TaskUpdate) SetNillableRequiresHeavyDuty(v *bool) *TaskUpdate {
 	return _u
 }
 
+// SetCashOnDelivery sets the "cash_on_delivery" field.
+func (_u *TaskUpdate) SetCashOnDelivery(v float64) *TaskUpdate {
+	_u.mutation.ResetCashOnDelivery()
+	_u.mutation.SetCashOnDelivery(v)
+	return _u
+}
+
+// SetNillableCashOnDelivery sets the "cash_on_delivery" field if the given value is not nil.
+func (_u *TaskUpdate) SetNillableCashOnDelivery(v *float64) *TaskUpdate {
+	if v != nil {
+		_u.SetCashOnDelivery(*v)
+	}
+	return _u
+}
+
+// AddCashOnDelivery adds value to the "cash_on_delivery" field.
+func (_u *TaskUpdate) AddCashOnDelivery(v float64) *TaskUpdate {
+	_u.mutation.AddCashOnDelivery(v)
+	return _u
+}
+
+// SetCashCollected sets the "cash_collected" field.
+func (_u *TaskUpdate) SetCashCollected(v bool) *TaskUpdate {
+	_u.mutation.SetCashCollected(v)
+	return _u
+}
+
+// SetNillableCashCollected sets the "cash_collected" field if the given value is not nil.
+func (_u *TaskUpdate) SetNillableCashCollected(v *bool) *TaskUpdate {
+	if v != nil {
+		_u.SetCashCollected(*v)
+	}
+	return _u
+}
+
 // SetCarrierID sets the "carrier_id" field.
 func (_u *TaskUpdate) SetCarrierID(v string) *TaskUpdate {
 	_u.mutation.SetCarrierID(v)
@@ -628,6 +663,15 @@ func (_u *TaskUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.RequiresHeavyDuty(); ok {
 		_spec.SetField(task.FieldRequiresHeavyDuty, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.CashOnDelivery(); ok {
+		_spec.SetField(task.FieldCashOnDelivery, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedCashOnDelivery(); ok {
+		_spec.AddField(task.FieldCashOnDelivery, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.CashCollected(); ok {
+		_spec.SetField(task.FieldCashCollected, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.CarrierID(); ok {
 		_spec.SetField(task.FieldCarrierID, field.TypeString, value)
@@ -1112,6 +1156,41 @@ func (_u *TaskUpdateOne) SetNillableRequiresHeavyDuty(v *bool) *TaskUpdateOne {
 	return _u
 }
 
+// SetCashOnDelivery sets the "cash_on_delivery" field.
+func (_u *TaskUpdateOne) SetCashOnDelivery(v float64) *TaskUpdateOne {
+	_u.mutation.ResetCashOnDelivery()
+	_u.mutation.SetCashOnDelivery(v)
+	return _u
+}
+
+// SetNillableCashOnDelivery sets the "cash_on_delivery" field if the given value is not nil.
+func (_u *TaskUpdateOne) SetNillableCashOnDelivery(v *float64) *TaskUpdateOne {
+	if v != nil {
+		_u.SetCashOnDelivery(*v)
+	}
+	return _u
+}
+
+// AddCashOnDelivery adds value to the "cash_on_delivery" field.
+func (_u *TaskUpdateOne) AddCashOnDelivery(v float64) *TaskUpdateOne {
+	_u.mutation.AddCashOnDelivery(v)
+	return _u
+}
+
+// SetCashCollected sets the "cash_collected" field.
+func (_u *TaskUpdateOne) SetCashCollected(v bool) *TaskUpdateOne {
+	_u.mutation.SetCashCollected(v)
+	return _u
+}
+
+// SetNillableCashCollected sets the "cash_collected" field if the given value is not nil.
+func (_u *TaskUpdateOne) SetNillableCashCollected(v *bool) *TaskUpdateOne {
+	if v != nil {
+		_u.SetCashCollected(*v)
+	}
+	return _u
+}
+
 // SetCarrierID sets the "carrier_id" field.
 func (_u *TaskUpdateOne) SetCarrierID(v string) *TaskUpdateOne {
 	_u.mutation.SetCarrierID(v)
@@ -1447,6 +1526,15 @@ func (_u *TaskUpdateOne) sqlSave(ctx context.Context) (_node *Task, err error) {
 	}
 	if value, ok := _u.mutation.RequiresHeavyDuty(); ok {
 		_spec.SetField(task.FieldRequiresHeavyDuty, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.CashOnDelivery(); ok {
+		_spec.SetField(task.FieldCashOnDelivery, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedCashOnDelivery(); ok {
+		_spec.AddField(task.FieldCashOnDelivery, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.CashCollected(); ok {
+		_spec.SetField(task.FieldCashCollected, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.CarrierID(); ok {
 		_spec.SetField(task.FieldCarrierID, field.TypeString, value)

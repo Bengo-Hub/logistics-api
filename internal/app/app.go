@@ -27,6 +27,7 @@ import (
 	router "github.com/bengobox/logistics-service/internal/http/router"
 	"github.com/bengobox/logistics-service/internal/modules/consumers"
 	"github.com/bengobox/logistics-service/internal/modules/dispatch"
+	"github.com/bengobox/logistics-service/internal/modules/earnings"
 	fleetmod "github.com/bengobox/logistics-service/internal/modules/fleet"
 	"github.com/bengobox/logistics-service/internal/modules/identity"
 	rbacmod "github.com/bengobox/logistics-service/internal/modules/rbac"
@@ -152,6 +153,13 @@ func New(ctx context.Context) (*App, error) {
 
 	taskSvc := tasks.NewService(entClient, log)
 	taskSvc.SetPublisher(eventPublisher)
+
+	// Earnings: records rider earnings on delivery completion, daily statement generation
+	earningsSvc := earnings.NewService(entClient, log)
+	taskSvc.SetEarningsService(earningsSvc)
+	go earningsSvc.StartStatementJob(ctx)
+	log.Info("app: earnings statement job started (daily)")
+
 	fleetSvc := fleetmod.NewService(entClient, log, eventPublisher)
 	logisticsHandler := handlers.NewLogisticsHandler(log, taskSvc, fleetSvc)
 

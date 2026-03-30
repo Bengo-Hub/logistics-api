@@ -191,6 +191,73 @@ func (h *LogisticsHandler) SubmitPoD(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusCreated, pod)
 }
 
+// RateRider handles POST /api/v1/{tenant}/tasks/{taskId}/rate
+func (h *LogisticsHandler) RateRider(w http.ResponseWriter, r *http.Request) {
+	tenantID := tenantIDFromClaims(r)
+	if tenantID == uuid.Nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	taskID, err := uuid.Parse(chi.URLParam(r, "taskId"))
+	if err != nil {
+		http.Error(w, "invalid task id", http.StatusBadRequest)
+		return
+	}
+
+	var body struct {
+		Rating  int    `json:"rating"`
+		Comment string `json:"comment,omitempty"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Get the task to find the assigned rider
+	t, err := h.taskSvc.GetTask(r.Context(), tenantID, taskID)
+	if err != nil {
+		http.Error(w, "task not found", http.StatusNotFound)
+		return
+	}
+
+	// Find the rider assigned to this task
+	assignments := t.Edges.Assignments
+	if len(assignments) == 0 {
+		http.Error(w, "no rider assigned to this task", http.StatusBadRequest)
+		return
+	}
+
+	riderID := assignments[0].FleetMemberID
+
+	// Get customer user ID from claims
+	customerID := ""
+	if claims, ok := authclient.ClaimsFromContext(r.Context()); ok {
+		customerID = claims.Subject
+	}
+
+	// Extract order_id from external_reference
+	orderID := ""
+	if t.ExternalReference != "" {
+		orderID = t.ExternalReference
+	}
+
+	rating, err := h.fleetSvc.RateRider(r.Context(), tenantID, riderID, fleet.RateRiderRequest{
+		TaskID:         &taskID,
+		OrderID:        orderID,
+		CustomerUserID: customerID,
+		Rating:         body.Rating,
+		Comment:        body.Comment,
+	})
+	if err != nil {
+		h.log.Error("rate rider", zap.Error(err))
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	respondJSON(w, http.StatusCreated, rating)
+}
+
 // --- Fleet ---
 
 // GetFleet handles GET /api/v1/{tenant}/fleet

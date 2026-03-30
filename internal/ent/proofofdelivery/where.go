@@ -86,6 +86,16 @@ func OtpCode(v string) predicate.ProofOfDelivery {
 	return predicate.ProofOfDelivery(sql.FieldEQ(FieldOtpCode, v))
 }
 
+// AmountCollected applies equality check predicate on the "amount_collected" field. It's identical to AmountCollectedEQ.
+func AmountCollected(v float64) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldEQ(FieldAmountCollected, v))
+}
+
+// CollectionMethod applies equality check predicate on the "collection_method" field. It's identical to CollectionMethodEQ.
+func CollectionMethod(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldEQ(FieldCollectionMethod, v))
+}
+
 // CapturedAt applies equality check predicate on the "captured_at" field. It's identical to CapturedAtEQ.
 func CapturedAt(v time.Time) predicate.ProofOfDelivery {
 	return predicate.ProofOfDelivery(sql.FieldEQ(FieldCapturedAt, v))
@@ -414,6 +424,121 @@ func OtpCodeEqualFold(v string) predicate.ProofOfDelivery {
 // OtpCodeContainsFold applies the ContainsFold predicate on the "otp_code" field.
 func OtpCodeContainsFold(v string) predicate.ProofOfDelivery {
 	return predicate.ProofOfDelivery(sql.FieldContainsFold(FieldOtpCode, v))
+}
+
+// AmountCollectedEQ applies the EQ predicate on the "amount_collected" field.
+func AmountCollectedEQ(v float64) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldEQ(FieldAmountCollected, v))
+}
+
+// AmountCollectedNEQ applies the NEQ predicate on the "amount_collected" field.
+func AmountCollectedNEQ(v float64) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldNEQ(FieldAmountCollected, v))
+}
+
+// AmountCollectedIn applies the In predicate on the "amount_collected" field.
+func AmountCollectedIn(vs ...float64) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldIn(FieldAmountCollected, vs...))
+}
+
+// AmountCollectedNotIn applies the NotIn predicate on the "amount_collected" field.
+func AmountCollectedNotIn(vs ...float64) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldNotIn(FieldAmountCollected, vs...))
+}
+
+// AmountCollectedGT applies the GT predicate on the "amount_collected" field.
+func AmountCollectedGT(v float64) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldGT(FieldAmountCollected, v))
+}
+
+// AmountCollectedGTE applies the GTE predicate on the "amount_collected" field.
+func AmountCollectedGTE(v float64) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldGTE(FieldAmountCollected, v))
+}
+
+// AmountCollectedLT applies the LT predicate on the "amount_collected" field.
+func AmountCollectedLT(v float64) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldLT(FieldAmountCollected, v))
+}
+
+// AmountCollectedLTE applies the LTE predicate on the "amount_collected" field.
+func AmountCollectedLTE(v float64) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldLTE(FieldAmountCollected, v))
+}
+
+// CollectionMethodEQ applies the EQ predicate on the "collection_method" field.
+func CollectionMethodEQ(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldEQ(FieldCollectionMethod, v))
+}
+
+// CollectionMethodNEQ applies the NEQ predicate on the "collection_method" field.
+func CollectionMethodNEQ(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldNEQ(FieldCollectionMethod, v))
+}
+
+// CollectionMethodIn applies the In predicate on the "collection_method" field.
+func CollectionMethodIn(vs ...string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldIn(FieldCollectionMethod, vs...))
+}
+
+// CollectionMethodNotIn applies the NotIn predicate on the "collection_method" field.
+func CollectionMethodNotIn(vs ...string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldNotIn(FieldCollectionMethod, vs...))
+}
+
+// CollectionMethodGT applies the GT predicate on the "collection_method" field.
+func CollectionMethodGT(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldGT(FieldCollectionMethod, v))
+}
+
+// CollectionMethodGTE applies the GTE predicate on the "collection_method" field.
+func CollectionMethodGTE(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldGTE(FieldCollectionMethod, v))
+}
+
+// CollectionMethodLT applies the LT predicate on the "collection_method" field.
+func CollectionMethodLT(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldLT(FieldCollectionMethod, v))
+}
+
+// CollectionMethodLTE applies the LTE predicate on the "collection_method" field.
+func CollectionMethodLTE(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldLTE(FieldCollectionMethod, v))
+}
+
+// CollectionMethodContains applies the Contains predicate on the "collection_method" field.
+func CollectionMethodContains(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldContains(FieldCollectionMethod, v))
+}
+
+// CollectionMethodHasPrefix applies the HasPrefix predicate on the "collection_method" field.
+func CollectionMethodHasPrefix(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldHasPrefix(FieldCollectionMethod, v))
+}
+
+// CollectionMethodHasSuffix applies the HasSuffix predicate on the "collection_method" field.
+func CollectionMethodHasSuffix(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldHasSuffix(FieldCollectionMethod, v))
+}
+
+// CollectionMethodIsNil applies the IsNil predicate on the "collection_method" field.
+func CollectionMethodIsNil() predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldIsNull(FieldCollectionMethod))
+}
+
+// CollectionMethodNotNil applies the NotNil predicate on the "collection_method" field.
+func CollectionMethodNotNil() predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldNotNull(FieldCollectionMethod))
+}
+
+// CollectionMethodEqualFold applies the EqualFold predicate on the "collection_method" field.
+func CollectionMethodEqualFold(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldEqualFold(FieldCollectionMethod, v))
+}
+
+// CollectionMethodContainsFold applies the ContainsFold predicate on the "collection_method" field.
+func CollectionMethodContainsFold(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldContainsFold(FieldCollectionMethod, v))
 }
 
 // CapturedAtEQ applies the EQ predicate on the "captured_at" field.

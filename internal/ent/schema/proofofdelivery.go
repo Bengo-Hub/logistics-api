@@ -31,6 +31,12 @@ func (ProofOfDelivery) Fields() []ent.Field {
 			Optional(),
 		field.String("otp_code").
 			Optional(),
+		field.Float("amount_collected").
+			Default(0).
+			Comment("Cash amount collected from customer (for COD orders)"),
+		field.String("collection_method").
+			Optional().
+			Comment("How cash was collected: cash, mobile_money"),
 		field.Time("captured_at").
 			Default(time.Now),
 		field.JSON("metadata", map[string]any{}).

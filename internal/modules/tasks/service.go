@@ -40,6 +40,23 @@ type CreateTaskRequest struct {
 	Metadata          map[string]any `json:"metadata,omitempty"`
 }
 
+// CreateTaskFromOrderRequest carries delivery context from the ordering event.
+type CreateTaskFromOrderRequest struct {
+	OrderID         string  `json:"order_id"`
+	OrderNumber     string  `json:"order_number"`
+	CustomerName    string  `json:"customer_name"`
+	CustomerPhone   string  `json:"customer_phone"`
+	Instructions    string  `json:"instructions"`
+	CashOnDelivery  float64 `json:"cash_on_delivery"`
+	FulfillmentType string  `json:"fulfillment_type"`
+	PickupName      string  `json:"pickup_name"`
+	PickupLat       float64 `json:"pickup_lat"`
+	PickupLng       float64 `json:"pickup_lng"`
+	DropoffName     string  `json:"dropoff_name"`
+	DropoffLat      float64 `json:"dropoff_lat"`
+	DropoffLng      float64 `json:"dropoff_lng"`
+}
+
 // AssignTaskRequest is the DTO for assigning a task to a fleet member.
 type AssignTaskRequest struct {
 	FleetMemberID uuid.UUID `json:"fleet_member_id"`
@@ -47,11 +64,13 @@ type AssignTaskRequest struct {
 
 // SubmitPoDRequest is the DTO for submitting proof of delivery.
 type SubmitPoDRequest struct {
-	FleetMemberID uuid.UUID `json:"fleet_member_id"`
-	SignatureURL  string    `json:"signature_url,omitempty"`
-	PhotoURL      string    `json:"photo_url,omitempty"`
-	OTPCode       string    `json:"otp_code,omitempty"`
-	Metadata      map[string]any `json:"metadata,omitempty"`
+	FleetMemberID    uuid.UUID      `json:"fleet_member_id"`
+	SignatureURL     string         `json:"signature_url,omitempty"`
+	PhotoURL         string         `json:"photo_url,omitempty"`
+	OTPCode          string         `json:"otp_code,omitempty"`
+	AmountCollected  float64        `json:"amount_collected,omitempty"`
+	CollectionMethod string         `json:"collection_method,omitempty"`
+	Metadata         map[string]any `json:"metadata,omitempty"`
 }
 
 // ListTasksFilter holds optional filters for listing tasks.
@@ -62,11 +81,17 @@ type ListTasksFilter struct {
 	Offset    int
 }
 
+// EarningsRecorder is the interface for recording delivery earnings.
+type EarningsRecorder interface {
+	RecordEarning(ctx context.Context, tenantID, taskID, memberID uuid.UUID, distanceKm float64) error
+}
+
 // Service handles task business logic.
 type Service struct {
-	client    *ent.Client
-	log       *zap.Logger
-	publisher *events.Publisher
+	client      *ent.Client
+	log         *zap.Logger
+	publisher   *events.Publisher
+	earningsSvc EarningsRecorder
 }
 
 // NewService creates a new task service.
@@ -75,6 +100,11 @@ func NewService(client *ent.Client, log *zap.Logger) *Service {
 		client: client,
 		log:    log.Named("tasks.service"),
 	}
+}
+
+// SetEarningsService sets the earnings service for recording delivery earnings.
+func (s *Service) SetEarningsService(svc EarningsRecorder) {
+	s.earningsSvc = svc
 }
 
 // SetPublisher sets the event publisher for task lifecycle events.
@@ -289,6 +319,11 @@ func (s *Service) SubmitPoD(ctx context.Context, tenantID, taskID uuid.UUID, req
 		return nil, fmt.Errorf("tasks: get for pod: %w", err)
 	}
 
+	// Validate COD: if task requires cash collection, ensure amount was collected
+	if t.CashOnDelivery > 0 && req.AmountCollected < t.CashOnDelivery {
+		return nil, fmt.Errorf("tasks: COD amount collected (%.2f) is less than required (%.2f)", req.AmountCollected, t.CashOnDelivery)
+	}
+
 	meta := req.Metadata
 	if meta == nil {
 		meta = map[string]any{}
@@ -299,6 +334,7 @@ func (s *Service) SubmitPoD(ctx context.Context, tenantID, taskID uuid.UUID, req
 		SetTaskID(taskID).
 		SetFleetMemberID(req.FleetMemberID).
 		SetCapturedAt(time.Now()).
+		SetAmountCollected(req.AmountCollected).
 		SetMetadata(meta)
 
 	if req.SignatureURL != "" {
@@ -310,6 +346,9 @@ func (s *Service) SubmitPoD(ctx context.Context, tenantID, taskID uuid.UUID, req
 	if req.OTPCode != "" {
 		builder.SetOtpCode(req.OTPCode)
 	}
+	if req.CollectionMethod != "" {
+		builder.SetCollectionMethod(req.CollectionMethod)
+	}
 
 	pod, err := builder.Save(ctx)
 	if err != nil {
@@ -317,8 +356,12 @@ func (s *Service) SubmitPoD(ctx context.Context, tenantID, taskID uuid.UUID, req
 	}
 
 	// Transition task to delivered
+	taskUpdate := s.client.Task.UpdateOneID(taskID).SetStatus("delivered")
+	if t.CashOnDelivery > 0 && req.AmountCollected >= t.CashOnDelivery {
+		taskUpdate.SetCashCollected(true)
+	}
 	if t.Status == "en_route" || t.Status == "accepted" {
-		_, _ = s.client.Task.UpdateOneID(taskID).SetStatus("delivered").Save(ctx)
+		_, _ = taskUpdate.Save(ctx)
 	}
 
 	// Mark assignment as completed
@@ -351,17 +394,34 @@ func (s *Service) SubmitPoD(ctx context.Context, tenantID, taskID uuid.UUID, req
 			Status:            "delivered",
 			FleetMemberID:     req.FleetMemberID.String(),
 			SourceService:     t.SourceService,
+			CashOnDelivery:    t.CashOnDelivery,
+			CashCollected:     t.CashOnDelivery > 0 && req.AmountCollected >= t.CashOnDelivery,
+			AmountCollected:   req.AmountCollected,
 		})
+	}
+
+	// Record rider earning asynchronously
+	if s.earningsSvc != nil {
+		go func() {
+			earnCtx := context.Background()
+			// TODO: Calculate actual distance from task steps once routing is integrated
+			var distanceKm float64 = 5.0 // default fallback
+			if earnErr := s.earningsSvc.RecordEarning(earnCtx, tenantID, taskID, req.FleetMemberID, distanceKm); earnErr != nil {
+				s.log.Warn("failed to record delivery earning", zap.Error(earnErr))
+			}
+		}()
 	}
 
 	return pod, nil
 }
 
-// CreateTaskFromOrder creates a delivery task from an ordering event.
-func (s *Service) CreateTaskFromOrder(ctx context.Context, tenantID uuid.UUID, orderID, externalRef string) (*ent.Task, error) {
+// CreateTaskFromOrder creates a delivery task from an ordering event, including
+// pickup/dropoff TaskSteps with coordinates for auto-dispatch.
+func (s *Service) CreateTaskFromOrder(ctx context.Context, tenantID uuid.UUID, externalRef string, req CreateTaskFromOrderRequest) (*ent.Task, error) {
 	// Idempotent: check if task already exists for this order
 	existing, err := s.client.Task.Query().
 		Where(task.TenantID(tenantID), task.ExternalReference(externalRef)).
+		WithSteps().
 		First(ctx)
 	if err == nil {
 		return existing, nil
@@ -374,12 +434,88 @@ func (s *Service) CreateTaskFromOrder(ctx context.Context, tenantID uuid.UUID, o
 	}
 	_ = fl
 
-	return s.CreateTask(ctx, tenantID, CreateTaskRequest{
+	// Build metadata with order context
+	metadata := map[string]any{
+		"order_id":     req.OrderID,
+		"order_number": req.OrderNumber,
+	}
+	if req.CashOnDelivery > 0 {
+		metadata["cash_on_delivery"] = req.CashOnDelivery
+		metadata["payment_method"] = "cod"
+	}
+	if req.FulfillmentType != "" {
+		metadata["fulfillment_type"] = req.FulfillmentType
+	}
+
+	// Store pickup/dropoff coords in metadata as fallback for dispatcher
+	if req.PickupLat != 0 && req.PickupLng != 0 {
+		metadata["pickup_lat"] = req.PickupLat
+		metadata["pickup_lng"] = req.PickupLng
+	}
+
+	// Create the task
+	t, err := s.CreateTask(ctx, tenantID, CreateTaskRequest{
 		ExternalReference: externalRef,
 		SourceService:     "ordering",
 		TaskType:          "delivery",
-		Metadata:          map[string]any{"order_id": orderID},
+		Metadata:          metadata,
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Create pickup step (sequence 1)
+	if req.PickupLat != 0 && req.PickupLng != 0 {
+		_, stepErr := s.client.TaskStep.Create().
+			SetTaskID(t.ID).
+			SetStepType("pickup").
+			SetSequence(1).
+			SetLocationName(req.PickupName).
+			SetAddressJSON(map[string]any{
+				"latitude":  req.PickupLat,
+				"longitude": req.PickupLng,
+				"name":      req.PickupName,
+			}).
+			SetMetadata(map[string]any{}).
+			Save(ctx)
+		if stepErr != nil {
+			s.log.Warn("failed to create pickup step", zap.Error(stepErr))
+		}
+	}
+
+	// Create dropoff step (sequence 2)
+	if req.DropoffLat != 0 && req.DropoffLng != 0 {
+		_, stepErr := s.client.TaskStep.Create().
+			SetTaskID(t.ID).
+			SetStepType("dropoff").
+			SetSequence(2).
+			SetLocationName(req.DropoffName).
+			SetContactName(req.CustomerName).
+			SetContactPhone(req.CustomerPhone).
+			SetAddressJSON(map[string]any{
+				"latitude":  req.DropoffLat,
+				"longitude": req.DropoffLng,
+				"name":      req.DropoffName,
+			}).
+			SetMetadata(map[string]any{
+				"instructions": req.Instructions,
+			}).
+			Save(ctx)
+		if stepErr != nil {
+			s.log.Warn("failed to create dropoff step", zap.Error(stepErr))
+		}
+	}
+
+	// Re-fetch task with steps for auto-dispatch
+	t, err = s.client.Task.Query().
+		Where(task.ID(t.ID)).
+		WithSteps().
+		Only(ctx)
+	if err != nil {
+		s.log.Warn("failed to re-fetch task with steps", zap.Error(err))
+	}
+
+	return t, nil
 }
 
 func (s *Service) getOrCreateDefaultFleet(ctx context.Context, tenantID uuid.UUID) (*ent.Fleet, error) {
