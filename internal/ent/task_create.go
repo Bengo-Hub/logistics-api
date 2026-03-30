@@ -242,6 +242,34 @@ func (_c *TaskCreate) SetNillableRequiresHeavyDuty(v *bool) *TaskCreate {
 	return _c
 }
 
+// SetCashOnDelivery sets the "cash_on_delivery" field.
+func (_c *TaskCreate) SetCashOnDelivery(v float64) *TaskCreate {
+	_c.mutation.SetCashOnDelivery(v)
+	return _c
+}
+
+// SetNillableCashOnDelivery sets the "cash_on_delivery" field if the given value is not nil.
+func (_c *TaskCreate) SetNillableCashOnDelivery(v *float64) *TaskCreate {
+	if v != nil {
+		_c.SetCashOnDelivery(*v)
+	}
+	return _c
+}
+
+// SetCashCollected sets the "cash_collected" field.
+func (_c *TaskCreate) SetCashCollected(v bool) *TaskCreate {
+	_c.mutation.SetCashCollected(v)
+	return _c
+}
+
+// SetNillableCashCollected sets the "cash_collected" field if the given value is not nil.
+func (_c *TaskCreate) SetNillableCashCollected(v *bool) *TaskCreate {
+	if v != nil {
+		_c.SetCashCollected(*v)
+	}
+	return _c
+}
+
 // SetCarrierID sets the "carrier_id" field.
 func (_c *TaskCreate) SetCarrierID(v string) *TaskCreate {
 	_c.mutation.SetCarrierID(v)
@@ -425,6 +453,14 @@ func (_c *TaskCreate) defaults() {
 		v := task.DefaultRequiresHeavyDuty
 		_c.mutation.SetRequiresHeavyDuty(v)
 	}
+	if _, ok := _c.mutation.CashOnDelivery(); !ok {
+		v := task.DefaultCashOnDelivery
+		_c.mutation.SetCashOnDelivery(v)
+	}
+	if _, ok := _c.mutation.CashCollected(); !ok {
+		v := task.DefaultCashCollected
+		_c.mutation.SetCashCollected(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := task.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
@@ -469,6 +505,12 @@ func (_c *TaskCreate) check() error {
 	}
 	if _, ok := _c.mutation.RequiresHeavyDuty(); !ok {
 		return &ValidationError{Name: "requires_heavy_duty", err: errors.New(`ent: missing required field "Task.requires_heavy_duty"`)}
+	}
+	if _, ok := _c.mutation.CashOnDelivery(); !ok {
+		return &ValidationError{Name: "cash_on_delivery", err: errors.New(`ent: missing required field "Task.cash_on_delivery"`)}
+	}
+	if _, ok := _c.mutation.CashCollected(); !ok {
+		return &ValidationError{Name: "cash_collected", err: errors.New(`ent: missing required field "Task.cash_collected"`)}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "Task.created_at"`)}
@@ -579,6 +621,14 @@ func (_c *TaskCreate) createSpec() (*Task, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.RequiresHeavyDuty(); ok {
 		_spec.SetField(task.FieldRequiresHeavyDuty, field.TypeBool, value)
 		_node.RequiresHeavyDuty = value
+	}
+	if value, ok := _c.mutation.CashOnDelivery(); ok {
+		_spec.SetField(task.FieldCashOnDelivery, field.TypeFloat64, value)
+		_node.CashOnDelivery = value
+	}
+	if value, ok := _c.mutation.CashCollected(); ok {
+		_spec.SetField(task.FieldCashCollected, field.TypeBool, value)
+		_node.CashCollected = value
 	}
 	if value, ok := _c.mutation.CarrierID(); ok {
 		_spec.SetField(task.FieldCarrierID, field.TypeString, value)
@@ -978,6 +1028,36 @@ func (u *TaskUpsert) UpdateRequiresHeavyDuty() *TaskUpsert {
 	return u
 }
 
+// SetCashOnDelivery sets the "cash_on_delivery" field.
+func (u *TaskUpsert) SetCashOnDelivery(v float64) *TaskUpsert {
+	u.Set(task.FieldCashOnDelivery, v)
+	return u
+}
+
+// UpdateCashOnDelivery sets the "cash_on_delivery" field to the value that was provided on create.
+func (u *TaskUpsert) UpdateCashOnDelivery() *TaskUpsert {
+	u.SetExcluded(task.FieldCashOnDelivery)
+	return u
+}
+
+// AddCashOnDelivery adds v to the "cash_on_delivery" field.
+func (u *TaskUpsert) AddCashOnDelivery(v float64) *TaskUpsert {
+	u.Add(task.FieldCashOnDelivery, v)
+	return u
+}
+
+// SetCashCollected sets the "cash_collected" field.
+func (u *TaskUpsert) SetCashCollected(v bool) *TaskUpsert {
+	u.Set(task.FieldCashCollected, v)
+	return u
+}
+
+// UpdateCashCollected sets the "cash_collected" field to the value that was provided on create.
+func (u *TaskUpsert) UpdateCashCollected() *TaskUpsert {
+	u.SetExcluded(task.FieldCashCollected)
+	return u
+}
+
 // SetCarrierID sets the "carrier_id" field.
 func (u *TaskUpsert) SetCarrierID(v string) *TaskUpsert {
 	u.Set(task.FieldCarrierID, v)
@@ -1371,6 +1451,41 @@ func (u *TaskUpsertOne) SetRequiresHeavyDuty(v bool) *TaskUpsertOne {
 func (u *TaskUpsertOne) UpdateRequiresHeavyDuty() *TaskUpsertOne {
 	return u.Update(func(s *TaskUpsert) {
 		s.UpdateRequiresHeavyDuty()
+	})
+}
+
+// SetCashOnDelivery sets the "cash_on_delivery" field.
+func (u *TaskUpsertOne) SetCashOnDelivery(v float64) *TaskUpsertOne {
+	return u.Update(func(s *TaskUpsert) {
+		s.SetCashOnDelivery(v)
+	})
+}
+
+// AddCashOnDelivery adds v to the "cash_on_delivery" field.
+func (u *TaskUpsertOne) AddCashOnDelivery(v float64) *TaskUpsertOne {
+	return u.Update(func(s *TaskUpsert) {
+		s.AddCashOnDelivery(v)
+	})
+}
+
+// UpdateCashOnDelivery sets the "cash_on_delivery" field to the value that was provided on create.
+func (u *TaskUpsertOne) UpdateCashOnDelivery() *TaskUpsertOne {
+	return u.Update(func(s *TaskUpsert) {
+		s.UpdateCashOnDelivery()
+	})
+}
+
+// SetCashCollected sets the "cash_collected" field.
+func (u *TaskUpsertOne) SetCashCollected(v bool) *TaskUpsertOne {
+	return u.Update(func(s *TaskUpsert) {
+		s.SetCashCollected(v)
+	})
+}
+
+// UpdateCashCollected sets the "cash_collected" field to the value that was provided on create.
+func (u *TaskUpsertOne) UpdateCashCollected() *TaskUpsertOne {
+	return u.Update(func(s *TaskUpsert) {
+		s.UpdateCashCollected()
 	})
 }
 
@@ -1939,6 +2054,41 @@ func (u *TaskUpsertBulk) SetRequiresHeavyDuty(v bool) *TaskUpsertBulk {
 func (u *TaskUpsertBulk) UpdateRequiresHeavyDuty() *TaskUpsertBulk {
 	return u.Update(func(s *TaskUpsert) {
 		s.UpdateRequiresHeavyDuty()
+	})
+}
+
+// SetCashOnDelivery sets the "cash_on_delivery" field.
+func (u *TaskUpsertBulk) SetCashOnDelivery(v float64) *TaskUpsertBulk {
+	return u.Update(func(s *TaskUpsert) {
+		s.SetCashOnDelivery(v)
+	})
+}
+
+// AddCashOnDelivery adds v to the "cash_on_delivery" field.
+func (u *TaskUpsertBulk) AddCashOnDelivery(v float64) *TaskUpsertBulk {
+	return u.Update(func(s *TaskUpsert) {
+		s.AddCashOnDelivery(v)
+	})
+}
+
+// UpdateCashOnDelivery sets the "cash_on_delivery" field to the value that was provided on create.
+func (u *TaskUpsertBulk) UpdateCashOnDelivery() *TaskUpsertBulk {
+	return u.Update(func(s *TaskUpsert) {
+		s.UpdateCashOnDelivery()
+	})
+}
+
+// SetCashCollected sets the "cash_collected" field.
+func (u *TaskUpsertBulk) SetCashCollected(v bool) *TaskUpsertBulk {
+	return u.Update(func(s *TaskUpsert) {
+		s.SetCashCollected(v)
+	})
+}
+
+// UpdateCashCollected sets the "cash_collected" field to the value that was provided on create.
+func (u *TaskUpsertBulk) UpdateCashCollected() *TaskUpsertBulk {
+	return u.Update(func(s *TaskUpsert) {
+		s.UpdateCashCollected()
 	})
 }
 

@@ -130,7 +130,7 @@ response:
 
 	// 4. Return URL
 	// Note: In production, URLBase is defined in values.yaml
-	url := fmt.Sprintf("%s/uploads/kyc/%s", h.cfg.Media.URLBase, filename)
+	url := fmt.Sprintf("%s/media/uploads/kyc/%s", h.cfg.Media.URLBase, filename)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)

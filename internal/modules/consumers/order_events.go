@@ -56,37 +56,90 @@ func (c *OrderReadyConsumer) Start(ctx context.Context, js nats.JetStreamContext
 	return sub.Unsubscribe()
 }
 
+// orderReadyEvent represents the full event envelope from ordering.order.ready.
+type orderReadyEvent struct {
+	TenantID string `json:"tenantId"`
+	Data     struct {
+		TenantID        string                 `json:"tenant_id"`
+		OrderID         string                 `json:"order_id"`
+		OrderNumber     string                 `json:"order_number"`
+		OutletID        string                 `json:"outlet_id"`
+		CustomerID      string                 `json:"customer_id"`
+		PaymentMethod   string                 `json:"payment_method"`
+		CashOnDelivery  float64                `json:"cash_on_delivery"`
+		DeliveryFee     float64                `json:"delivery_fee"`
+		GrandTotal      float64                `json:"grand_total"`
+		CustomerName    string                 `json:"customer_name"`
+		CustomerPhone   string                 `json:"customer_phone"`
+		Instructions    string                 `json:"instructions"`
+		FulfillmentType string                 `json:"fulfillment_type"`
+		OutletLocation  map[string]interface{} `json:"outlet_location"`
+		DeliveryAddress map[string]interface{} `json:"delivery_address"`
+	} `json:"data"`
+}
+
 func (c *OrderReadyConsumer) handleMessage(msg *nats.Msg) {
 	ctx := context.Background()
 
-	var envelope struct {
-		Payload struct {
-			TenantID string `json:"tenant_id"`
-			OrderID  string `json:"order_id"`
-		} `json:"payload"`
-	}
+	var envelope orderReadyEvent
 	if err := json.Unmarshal(msg.Data, &envelope); err != nil {
 		c.log.Warn("order ready: unmarshal failed", zap.Error(err))
 		_ = msg.Nak()
 		return
 	}
 
-	tenantID, err := uuid.Parse(envelope.Payload.TenantID)
+	// Resolve tenant ID (check both top-level and nested data)
+	rawTenantID := envelope.Data.TenantID
+	if rawTenantID == "" {
+		rawTenantID = envelope.TenantID
+	}
+	tenantID, err := uuid.Parse(rawTenantID)
 	if err != nil {
-		c.log.Warn("order ready: invalid tenant_id", zap.String("raw", envelope.Payload.TenantID))
+		c.log.Warn("order ready: invalid tenant_id", zap.String("raw", rawTenantID))
 		_ = msg.Ack()
 		return
 	}
 
-	orderID := envelope.Payload.OrderID
+	orderID := envelope.Data.OrderID
 	if orderID == "" {
 		_ = msg.Ack()
 		return
 	}
 
+	// Build task creation request with full delivery context
+	req := tasks.CreateTaskFromOrderRequest{
+		OrderID:         orderID,
+		OrderNumber:     envelope.Data.OrderNumber,
+		CustomerName:    envelope.Data.CustomerName,
+		CustomerPhone:   envelope.Data.CustomerPhone,
+		Instructions:    envelope.Data.Instructions,
+		CashOnDelivery:  envelope.Data.CashOnDelivery,
+		FulfillmentType: envelope.Data.FulfillmentType,
+	}
+
+	// Extract pickup location from outlet
+	if loc := envelope.Data.OutletLocation; loc != nil {
+		req.PickupName, _ = loc["name"].(string)
+		req.PickupLat, _ = toFloat64(loc["latitude"])
+		req.PickupLng, _ = toFloat64(loc["longitude"])
+	}
+
+	// Extract dropoff location from delivery address
+	if addr := envelope.Data.DeliveryAddress; addr != nil {
+		req.DropoffLat, _ = toFloat64(addr["latitude"])
+		req.DropoffLng, _ = toFloat64(addr["longitude"])
+		req.DropoffName = buildAddressLabel(addr)
+		if phone, ok := addr["contact_phone"].(string); ok && phone != "" {
+			req.CustomerPhone = phone
+		}
+		if name, ok := addr["contact_name"].(string); ok && name != "" {
+			req.CustomerName = name
+		}
+	}
+
 	// Create delivery task (idempotent — uses external_reference to deduplicate)
 	externalRef := fmt.Sprintf("order:%s", orderID)
-	t, err := c.taskSvc.CreateTaskFromOrder(ctx, tenantID, orderID, externalRef)
+	t, err := c.taskSvc.CreateTaskFromOrder(ctx, tenantID, externalRef, req)
 	if err != nil {
 		c.log.Error("order ready: create task failed",
 			zap.Error(err),
@@ -115,4 +168,41 @@ func (c *OrderReadyConsumer) handleMessage(msg *nats.Msg) {
 	}
 
 	_ = msg.Ack()
+}
+
+// toFloat64 safely converts an interface{} to float64.
+func toFloat64(v interface{}) (float64, bool) {
+	switch val := v.(type) {
+	case float64:
+		return val, true
+	case float32:
+		return float64(val), true
+	case int:
+		return float64(val), true
+	case int64:
+		return float64(val), true
+	case json.Number:
+		f, err := val.Float64()
+		return f, err == nil
+	default:
+		return 0, false
+	}
+}
+
+// buildAddressLabel constructs a human-readable address from the address map.
+func buildAddressLabel(addr map[string]interface{}) string {
+	parts := []string{}
+	for _, key := range []string{"address_line1", "city", "county"} {
+		if v, ok := addr[key].(string); ok && v != "" {
+			parts = append(parts, v)
+		}
+	}
+	result := ""
+	for i, p := range parts {
+		if i > 0 {
+			result += ", "
+		}
+		result += p
+	}
+	return result
 }

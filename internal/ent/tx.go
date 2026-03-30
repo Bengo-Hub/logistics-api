@@ -40,6 +40,8 @@ type Tx struct {
 	ProofOfDelivery *ProofOfDeliveryClient
 	// RateLimitConfig is the client for interacting with the RateLimitConfig builders.
 	RateLimitConfig *RateLimitConfigClient
+	// RiderRating is the client for interacting with the RiderRating builders.
+	RiderRating *RiderRatingClient
 	// RiderShift is the client for interacting with the RiderShift builders.
 	RiderShift *RiderShiftClient
 	// RolePermission is the client for interacting with the RolePermission builders.
@@ -213,6 +215,7 @@ func (tx *Tx) init() {
 	tx.PricingRule = NewPricingRuleClient(tx.config)
 	tx.ProofOfDelivery = NewProofOfDeliveryClient(tx.config)
 	tx.RateLimitConfig = NewRateLimitConfigClient(tx.config)
+	tx.RiderRating = NewRiderRatingClient(tx.config)
 	tx.RiderShift = NewRiderShiftClient(tx.config)
 	tx.RolePermission = NewRolePermissionClient(tx.config)
 	tx.ServiceConfig = NewServiceConfigClient(tx.config)

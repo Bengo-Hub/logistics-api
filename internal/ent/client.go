@@ -30,6 +30,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/pricingrule"
 	"github.com/bengobox/logistics-service/internal/ent/proofofdelivery"
 	"github.com/bengobox/logistics-service/internal/ent/ratelimitconfig"
+	"github.com/bengobox/logistics-service/internal/ent/riderrating"
 	"github.com/bengobox/logistics-service/internal/ent/ridershift"
 	"github.com/bengobox/logistics-service/internal/ent/rolepermission"
 	"github.com/bengobox/logistics-service/internal/ent/serviceconfig"
@@ -79,6 +80,8 @@ type Client struct {
 	ProofOfDelivery *ProofOfDeliveryClient
 	// RateLimitConfig is the client for interacting with the RateLimitConfig builders.
 	RateLimitConfig *RateLimitConfigClient
+	// RiderRating is the client for interacting with the RiderRating builders.
+	RiderRating *RiderRatingClient
 	// RiderShift is the client for interacting with the RiderShift builders.
 	RiderShift *RiderShiftClient
 	// RolePermission is the client for interacting with the RolePermission builders.
@@ -132,6 +135,7 @@ func (c *Client) init() {
 	c.PricingRule = NewPricingRuleClient(c.config)
 	c.ProofOfDelivery = NewProofOfDeliveryClient(c.config)
 	c.RateLimitConfig = NewRateLimitConfigClient(c.config)
+	c.RiderRating = NewRiderRatingClient(c.config)
 	c.RiderShift = NewRiderShiftClient(c.config)
 	c.RolePermission = NewRolePermissionClient(c.config)
 	c.ServiceConfig = NewServiceConfigClient(c.config)
@@ -252,6 +256,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		PricingRule:         NewPricingRuleClient(cfg),
 		ProofOfDelivery:     NewProofOfDeliveryClient(cfg),
 		RateLimitConfig:     NewRateLimitConfigClient(cfg),
+		RiderRating:         NewRiderRatingClient(cfg),
 		RiderShift:          NewRiderShiftClient(cfg),
 		RolePermission:      NewRolePermissionClient(cfg),
 		ServiceConfig:       NewServiceConfigClient(cfg),
@@ -299,6 +304,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		PricingRule:         NewPricingRuleClient(cfg),
 		ProofOfDelivery:     NewProofOfDeliveryClient(cfg),
 		RateLimitConfig:     NewRateLimitConfigClient(cfg),
+		RiderRating:         NewRiderRatingClient(cfg),
 		RiderShift:          NewRiderShiftClient(cfg),
 		RolePermission:      NewRolePermissionClient(cfg),
 		ServiceConfig:       NewServiceConfigClient(cfg),
@@ -345,9 +351,10 @@ func (c *Client) Use(hooks ...Hook) {
 		c.BillingEvent, c.CarrierJob, c.CarrierPartner, c.EarningsStatement, c.Fleet,
 		c.FleetMember, c.GeoFence, c.IntegrationSetting, c.LogisticsPermission,
 		c.LogisticsRole, c.OutboxEvent, c.PricingRule, c.ProofOfDelivery,
-		c.RateLimitConfig, c.RiderShift, c.RolePermission, c.ServiceConfig, c.Task,
-		c.TaskAssignment, c.TaskEvent, c.TaskStep, c.TelemetryPoint, c.TelemetryStream,
-		c.Tenant, c.TenantSyncEvent, c.User, c.UserRoleAssignment, c.Vehicle,
+		c.RateLimitConfig, c.RiderRating, c.RiderShift, c.RolePermission,
+		c.ServiceConfig, c.Task, c.TaskAssignment, c.TaskEvent, c.TaskStep,
+		c.TelemetryPoint, c.TelemetryStream, c.Tenant, c.TenantSyncEvent, c.User,
+		c.UserRoleAssignment, c.Vehicle,
 	} {
 		n.Use(hooks...)
 	}
@@ -360,9 +367,10 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.BillingEvent, c.CarrierJob, c.CarrierPartner, c.EarningsStatement, c.Fleet,
 		c.FleetMember, c.GeoFence, c.IntegrationSetting, c.LogisticsPermission,
 		c.LogisticsRole, c.OutboxEvent, c.PricingRule, c.ProofOfDelivery,
-		c.RateLimitConfig, c.RiderShift, c.RolePermission, c.ServiceConfig, c.Task,
-		c.TaskAssignment, c.TaskEvent, c.TaskStep, c.TelemetryPoint, c.TelemetryStream,
-		c.Tenant, c.TenantSyncEvent, c.User, c.UserRoleAssignment, c.Vehicle,
+		c.RateLimitConfig, c.RiderRating, c.RiderShift, c.RolePermission,
+		c.ServiceConfig, c.Task, c.TaskAssignment, c.TaskEvent, c.TaskStep,
+		c.TelemetryPoint, c.TelemetryStream, c.Tenant, c.TenantSyncEvent, c.User,
+		c.UserRoleAssignment, c.Vehicle,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -399,6 +407,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.ProofOfDelivery.mutate(ctx, m)
 	case *RateLimitConfigMutation:
 		return c.RateLimitConfig.mutate(ctx, m)
+	case *RiderRatingMutation:
+		return c.RiderRating.mutate(ctx, m)
 	case *RiderShiftMutation:
 		return c.RiderShift.mutate(ctx, m)
 	case *RolePermissionMutation:
@@ -1294,6 +1304,22 @@ func (c *FleetMemberClient) QueryAssignments(_m *FleetMember) *TaskAssignmentQue
 			sqlgraph.From(fleetmember.Table, fleetmember.FieldID, id),
 			sqlgraph.To(taskassignment.Table, taskassignment.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, fleetmember.AssignmentsTable, fleetmember.AssignmentsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryRatings queries the ratings edge of a FleetMember.
+func (c *FleetMemberClient) QueryRatings(_m *FleetMember) *RiderRatingQuery {
+	query := (&RiderRatingClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(fleetmember.Table, fleetmember.FieldID, id),
+			sqlgraph.To(riderrating.Table, riderrating.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, fleetmember.RatingsTable, fleetmember.RatingsColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -2483,6 +2509,155 @@ func (c *RateLimitConfigClient) mutate(ctx context.Context, m *RateLimitConfigMu
 		return (&RateLimitConfigDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown RateLimitConfig mutation op: %q", m.Op())
+	}
+}
+
+// RiderRatingClient is a client for the RiderRating schema.
+type RiderRatingClient struct {
+	config
+}
+
+// NewRiderRatingClient returns a client for the RiderRating from the given config.
+func NewRiderRatingClient(c config) *RiderRatingClient {
+	return &RiderRatingClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `riderrating.Hooks(f(g(h())))`.
+func (c *RiderRatingClient) Use(hooks ...Hook) {
+	c.hooks.RiderRating = append(c.hooks.RiderRating, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `riderrating.Intercept(f(g(h())))`.
+func (c *RiderRatingClient) Intercept(interceptors ...Interceptor) {
+	c.inters.RiderRating = append(c.inters.RiderRating, interceptors...)
+}
+
+// Create returns a builder for creating a RiderRating entity.
+func (c *RiderRatingClient) Create() *RiderRatingCreate {
+	mutation := newRiderRatingMutation(c.config, OpCreate)
+	return &RiderRatingCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of RiderRating entities.
+func (c *RiderRatingClient) CreateBulk(builders ...*RiderRatingCreate) *RiderRatingCreateBulk {
+	return &RiderRatingCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *RiderRatingClient) MapCreateBulk(slice any, setFunc func(*RiderRatingCreate, int)) *RiderRatingCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &RiderRatingCreateBulk{err: fmt.Errorf("calling to RiderRatingClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*RiderRatingCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &RiderRatingCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for RiderRating.
+func (c *RiderRatingClient) Update() *RiderRatingUpdate {
+	mutation := newRiderRatingMutation(c.config, OpUpdate)
+	return &RiderRatingUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *RiderRatingClient) UpdateOne(_m *RiderRating) *RiderRatingUpdateOne {
+	mutation := newRiderRatingMutation(c.config, OpUpdateOne, withRiderRating(_m))
+	return &RiderRatingUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *RiderRatingClient) UpdateOneID(id uuid.UUID) *RiderRatingUpdateOne {
+	mutation := newRiderRatingMutation(c.config, OpUpdateOne, withRiderRatingID(id))
+	return &RiderRatingUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for RiderRating.
+func (c *RiderRatingClient) Delete() *RiderRatingDelete {
+	mutation := newRiderRatingMutation(c.config, OpDelete)
+	return &RiderRatingDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *RiderRatingClient) DeleteOne(_m *RiderRating) *RiderRatingDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *RiderRatingClient) DeleteOneID(id uuid.UUID) *RiderRatingDeleteOne {
+	builder := c.Delete().Where(riderrating.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &RiderRatingDeleteOne{builder}
+}
+
+// Query returns a query builder for RiderRating.
+func (c *RiderRatingClient) Query() *RiderRatingQuery {
+	return &RiderRatingQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeRiderRating},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a RiderRating entity by its id.
+func (c *RiderRatingClient) Get(ctx context.Context, id uuid.UUID) (*RiderRating, error) {
+	return c.Query().Where(riderrating.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *RiderRatingClient) GetX(ctx context.Context, id uuid.UUID) *RiderRating {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryFleetMember queries the fleet_member edge of a RiderRating.
+func (c *RiderRatingClient) QueryFleetMember(_m *RiderRating) *FleetMemberQuery {
+	query := (&FleetMemberClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(riderrating.Table, riderrating.FieldID, id),
+			sqlgraph.To(fleetmember.Table, fleetmember.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, riderrating.FleetMemberTable, riderrating.FleetMemberColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *RiderRatingClient) Hooks() []Hook {
+	return c.hooks.RiderRating
+}
+
+// Interceptors returns the client interceptors.
+func (c *RiderRatingClient) Interceptors() []Interceptor {
+	return c.inters.RiderRating
+}
+
+func (c *RiderRatingClient) mutate(ctx context.Context, m *RiderRatingMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&RiderRatingCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&RiderRatingUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&RiderRatingUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&RiderRatingDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown RiderRating mutation op: %q", m.Op())
 	}
 }
 
@@ -4673,17 +4848,17 @@ type (
 	hooks struct {
 		BillingEvent, CarrierJob, CarrierPartner, EarningsStatement, Fleet, FleetMember,
 		GeoFence, IntegrationSetting, LogisticsPermission, LogisticsRole, OutboxEvent,
-		PricingRule, ProofOfDelivery, RateLimitConfig, RiderShift, RolePermission,
-		ServiceConfig, Task, TaskAssignment, TaskEvent, TaskStep, TelemetryPoint,
-		TelemetryStream, Tenant, TenantSyncEvent, User, UserRoleAssignment,
-		Vehicle []ent.Hook
+		PricingRule, ProofOfDelivery, RateLimitConfig, RiderRating, RiderShift,
+		RolePermission, ServiceConfig, Task, TaskAssignment, TaskEvent, TaskStep,
+		TelemetryPoint, TelemetryStream, Tenant, TenantSyncEvent, User,
+		UserRoleAssignment, Vehicle []ent.Hook
 	}
 	inters struct {
 		BillingEvent, CarrierJob, CarrierPartner, EarningsStatement, Fleet, FleetMember,
 		GeoFence, IntegrationSetting, LogisticsPermission, LogisticsRole, OutboxEvent,
-		PricingRule, ProofOfDelivery, RateLimitConfig, RiderShift, RolePermission,
-		ServiceConfig, Task, TaskAssignment, TaskEvent, TaskStep, TelemetryPoint,
-		TelemetryStream, Tenant, TenantSyncEvent, User, UserRoleAssignment,
-		Vehicle []ent.Interceptor
+		PricingRule, ProofOfDelivery, RateLimitConfig, RiderRating, RiderShift,
+		RolePermission, ServiceConfig, Task, TaskAssignment, TaskEvent, TaskStep,
+		TelemetryPoint, TelemetryStream, Tenant, TenantSyncEvent, User,
+		UserRoleAssignment, Vehicle []ent.Interceptor
 	}
 )

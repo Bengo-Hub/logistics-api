@@ -54,6 +54,10 @@ type FleetMember struct {
 	HasColdStorage bool `json:"has_cold_storage,omitempty"`
 	// Maximum carrying weight capacity
 	MaxWeightCapacityKg *float64 `json:"max_weight_capacity_kg,omitempty"`
+	// Running average of rider ratings (1-5)
+	AverageRating float64 `json:"average_rating,omitempty"`
+	// Total number of ratings received
+	TotalRatings int `json:"total_ratings,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
@@ -74,9 +78,11 @@ type FleetMemberEdges struct {
 	Vehicle *Vehicle `json:"vehicle,omitempty"`
 	// Assignments holds the value of the assignments edge.
 	Assignments []*TaskAssignment `json:"assignments,omitempty"`
+	// Ratings holds the value of the ratings edge.
+	Ratings []*RiderRating `json:"ratings,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [4]bool
+	loadedTypes [5]bool
 }
 
 // FleetOrErr returns the Fleet value or an error if the edge
@@ -121,6 +127,15 @@ func (e FleetMemberEdges) AssignmentsOrErr() ([]*TaskAssignment, error) {
 	return nil, &NotLoadedError{edge: "assignments"}
 }
 
+// RatingsOrErr returns the Ratings value or an error if the edge
+// was not loaded in eager-loading.
+func (e FleetMemberEdges) RatingsOrErr() ([]*RiderRating, error) {
+	if e.loadedTypes[4] {
+		return e.Ratings, nil
+	}
+	return nil, &NotLoadedError{edge: "ratings"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*FleetMember) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
@@ -132,8 +147,10 @@ func (*FleetMember) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case fleetmember.FieldHasColdStorage:
 			values[i] = new(sql.NullBool)
-		case fleetmember.FieldMaxWeightCapacityKg:
+		case fleetmember.FieldMaxWeightCapacityKg, fleetmember.FieldAverageRating:
 			values[i] = new(sql.NullFloat64)
+		case fleetmember.FieldTotalRatings:
+			values[i] = new(sql.NullInt64)
 		case fleetmember.FieldDriverCode, fleetmember.FieldIDNumber, fleetmember.FieldLicenseNo, fleetmember.FieldStatus, fleetmember.FieldIDPassportAttachment, fleetmember.FieldRiderPhoto:
 			values[i] = new(sql.NullString)
 		case fleetmember.FieldJoinedAt, fleetmember.FieldSuspendedAt, fleetmember.FieldCreatedAt, fleetmember.FieldUpdatedAt:
@@ -264,6 +281,18 @@ func (_m *FleetMember) assignValues(columns []string, values []any) error {
 				_m.MaxWeightCapacityKg = new(float64)
 				*_m.MaxWeightCapacityKg = value.Float64
 			}
+		case fleetmember.FieldAverageRating:
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
+				return fmt.Errorf("unexpected type %T for field average_rating", values[i])
+			} else if value.Valid {
+				_m.AverageRating = value.Float64
+			}
+		case fleetmember.FieldTotalRatings:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field total_ratings", values[i])
+			} else if value.Valid {
+				_m.TotalRatings = int(value.Int64)
+			}
 		case fleetmember.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
@@ -307,6 +336,11 @@ func (_m *FleetMember) QueryVehicle() *VehicleQuery {
 // QueryAssignments queries the "assignments" edge of the FleetMember entity.
 func (_m *FleetMember) QueryAssignments() *TaskAssignmentQuery {
 	return NewFleetMemberClient(_m.config).QueryAssignments(_m)
+}
+
+// QueryRatings queries the "ratings" edge of the FleetMember entity.
+func (_m *FleetMember) QueryRatings() *RiderRatingQuery {
+	return NewFleetMemberClient(_m.config).QueryRatings(_m)
 }
 
 // Update returns a builder for updating this FleetMember.
@@ -385,6 +419,12 @@ func (_m *FleetMember) String() string {
 		builder.WriteString("max_weight_capacity_kg=")
 		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
+	builder.WriteString(", ")
+	builder.WriteString("average_rating=")
+	builder.WriteString(fmt.Sprintf("%v", _m.AverageRating))
+	builder.WriteString(", ")
+	builder.WriteString("total_ratings=")
+	builder.WriteString(fmt.Sprintf("%v", _m.TotalRatings))
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))

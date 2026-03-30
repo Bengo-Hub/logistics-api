@@ -26,6 +26,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/pricingrule"
 	"github.com/bengobox/logistics-service/internal/ent/proofofdelivery"
 	"github.com/bengobox/logistics-service/internal/ent/ratelimitconfig"
+	"github.com/bengobox/logistics-service/internal/ent/riderrating"
 	"github.com/bengobox/logistics-service/internal/ent/ridershift"
 	"github.com/bengobox/logistics-service/internal/ent/rolepermission"
 	"github.com/bengobox/logistics-service/internal/ent/serviceconfig"
@@ -66,6 +67,7 @@ const (
 	TypePricingRule         = "PricingRule"
 	TypeProofOfDelivery     = "ProofOfDelivery"
 	TypeRateLimitConfig     = "RateLimitConfig"
+	TypeRiderRating         = "RiderRating"
 	TypeRiderShift          = "RiderShift"
 	TypeRolePermission      = "RolePermission"
 	TypeServiceConfig       = "ServiceConfig"
@@ -4357,6 +4359,10 @@ type FleetMemberMutation struct {
 	has_cold_storage          *bool
 	max_weight_capacity_kg    *float64
 	addmax_weight_capacity_kg *float64
+	average_rating            *float64
+	addaverage_rating         *float64
+	total_ratings             *int
+	addtotal_ratings          *int
 	created_at                *time.Time
 	updated_at                *time.Time
 	clearedFields             map[string]struct{}
@@ -4369,6 +4375,9 @@ type FleetMemberMutation struct {
 	assignments               map[uuid.UUID]struct{}
 	removedassignments        map[uuid.UUID]struct{}
 	clearedassignments        bool
+	ratings                   map[uuid.UUID]struct{}
+	removedratings            map[uuid.UUID]struct{}
+	clearedratings            bool
 	done                      bool
 	oldValue                  func(context.Context) (*FleetMember, error)
 	predicates                []predicate.FleetMember
@@ -5194,6 +5203,118 @@ func (m *FleetMemberMutation) ResetMaxWeightCapacityKg() {
 	delete(m.clearedFields, fleetmember.FieldMaxWeightCapacityKg)
 }
 
+// SetAverageRating sets the "average_rating" field.
+func (m *FleetMemberMutation) SetAverageRating(f float64) {
+	m.average_rating = &f
+	m.addaverage_rating = nil
+}
+
+// AverageRating returns the value of the "average_rating" field in the mutation.
+func (m *FleetMemberMutation) AverageRating() (r float64, exists bool) {
+	v := m.average_rating
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAverageRating returns the old "average_rating" field's value of the FleetMember entity.
+// If the FleetMember object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *FleetMemberMutation) OldAverageRating(ctx context.Context) (v float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAverageRating is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAverageRating requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAverageRating: %w", err)
+	}
+	return oldValue.AverageRating, nil
+}
+
+// AddAverageRating adds f to the "average_rating" field.
+func (m *FleetMemberMutation) AddAverageRating(f float64) {
+	if m.addaverage_rating != nil {
+		*m.addaverage_rating += f
+	} else {
+		m.addaverage_rating = &f
+	}
+}
+
+// AddedAverageRating returns the value that was added to the "average_rating" field in this mutation.
+func (m *FleetMemberMutation) AddedAverageRating() (r float64, exists bool) {
+	v := m.addaverage_rating
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetAverageRating resets all changes to the "average_rating" field.
+func (m *FleetMemberMutation) ResetAverageRating() {
+	m.average_rating = nil
+	m.addaverage_rating = nil
+}
+
+// SetTotalRatings sets the "total_ratings" field.
+func (m *FleetMemberMutation) SetTotalRatings(i int) {
+	m.total_ratings = &i
+	m.addtotal_ratings = nil
+}
+
+// TotalRatings returns the value of the "total_ratings" field in the mutation.
+func (m *FleetMemberMutation) TotalRatings() (r int, exists bool) {
+	v := m.total_ratings
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTotalRatings returns the old "total_ratings" field's value of the FleetMember entity.
+// If the FleetMember object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *FleetMemberMutation) OldTotalRatings(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTotalRatings is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTotalRatings requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTotalRatings: %w", err)
+	}
+	return oldValue.TotalRatings, nil
+}
+
+// AddTotalRatings adds i to the "total_ratings" field.
+func (m *FleetMemberMutation) AddTotalRatings(i int) {
+	if m.addtotal_ratings != nil {
+		*m.addtotal_ratings += i
+	} else {
+		m.addtotal_ratings = &i
+	}
+}
+
+// AddedTotalRatings returns the value that was added to the "total_ratings" field in this mutation.
+func (m *FleetMemberMutation) AddedTotalRatings() (r int, exists bool) {
+	v := m.addtotal_ratings
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetTotalRatings resets all changes to the "total_ratings" field.
+func (m *FleetMemberMutation) ResetTotalRatings() {
+	m.total_ratings = nil
+	m.addtotal_ratings = nil
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (m *FleetMemberMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -5401,6 +5522,60 @@ func (m *FleetMemberMutation) ResetAssignments() {
 	m.removedassignments = nil
 }
 
+// AddRatingIDs adds the "ratings" edge to the RiderRating entity by ids.
+func (m *FleetMemberMutation) AddRatingIDs(ids ...uuid.UUID) {
+	if m.ratings == nil {
+		m.ratings = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.ratings[ids[i]] = struct{}{}
+	}
+}
+
+// ClearRatings clears the "ratings" edge to the RiderRating entity.
+func (m *FleetMemberMutation) ClearRatings() {
+	m.clearedratings = true
+}
+
+// RatingsCleared reports if the "ratings" edge to the RiderRating entity was cleared.
+func (m *FleetMemberMutation) RatingsCleared() bool {
+	return m.clearedratings
+}
+
+// RemoveRatingIDs removes the "ratings" edge to the RiderRating entity by IDs.
+func (m *FleetMemberMutation) RemoveRatingIDs(ids ...uuid.UUID) {
+	if m.removedratings == nil {
+		m.removedratings = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.ratings, ids[i])
+		m.removedratings[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedRatings returns the removed IDs of the "ratings" edge to the RiderRating entity.
+func (m *FleetMemberMutation) RemovedRatingsIDs() (ids []uuid.UUID) {
+	for id := range m.removedratings {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// RatingsIDs returns the "ratings" edge IDs in the mutation.
+func (m *FleetMemberMutation) RatingsIDs() (ids []uuid.UUID) {
+	for id := range m.ratings {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetRatings resets all changes to the "ratings" edge.
+func (m *FleetMemberMutation) ResetRatings() {
+	m.ratings = nil
+	m.clearedratings = false
+	m.removedratings = nil
+}
+
 // Where appends a list predicates to the FleetMemberMutation builder.
 func (m *FleetMemberMutation) Where(ps ...predicate.FleetMember) {
 	m.predicates = append(m.predicates, ps...)
@@ -5435,7 +5610,7 @@ func (m *FleetMemberMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *FleetMemberMutation) Fields() []string {
-	fields := make([]string, 0, 18)
+	fields := make([]string, 0, 20)
 	if m.tenant_id != nil {
 		fields = append(fields, fleetmember.FieldTenantID)
 	}
@@ -5484,6 +5659,12 @@ func (m *FleetMemberMutation) Fields() []string {
 	if m.max_weight_capacity_kg != nil {
 		fields = append(fields, fleetmember.FieldMaxWeightCapacityKg)
 	}
+	if m.average_rating != nil {
+		fields = append(fields, fleetmember.FieldAverageRating)
+	}
+	if m.total_ratings != nil {
+		fields = append(fields, fleetmember.FieldTotalRatings)
+	}
 	if m.created_at != nil {
 		fields = append(fields, fleetmember.FieldCreatedAt)
 	}
@@ -5530,6 +5711,10 @@ func (m *FleetMemberMutation) Field(name string) (ent.Value, bool) {
 		return m.HasColdStorage()
 	case fleetmember.FieldMaxWeightCapacityKg:
 		return m.MaxWeightCapacityKg()
+	case fleetmember.FieldAverageRating:
+		return m.AverageRating()
+	case fleetmember.FieldTotalRatings:
+		return m.TotalRatings()
 	case fleetmember.FieldCreatedAt:
 		return m.CreatedAt()
 	case fleetmember.FieldUpdatedAt:
@@ -5575,6 +5760,10 @@ func (m *FleetMemberMutation) OldField(ctx context.Context, name string) (ent.Va
 		return m.OldHasColdStorage(ctx)
 	case fleetmember.FieldMaxWeightCapacityKg:
 		return m.OldMaxWeightCapacityKg(ctx)
+	case fleetmember.FieldAverageRating:
+		return m.OldAverageRating(ctx)
+	case fleetmember.FieldTotalRatings:
+		return m.OldTotalRatings(ctx)
 	case fleetmember.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case fleetmember.FieldUpdatedAt:
@@ -5700,6 +5889,20 @@ func (m *FleetMemberMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetMaxWeightCapacityKg(v)
 		return nil
+	case fleetmember.FieldAverageRating:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAverageRating(v)
+		return nil
+	case fleetmember.FieldTotalRatings:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTotalRatings(v)
+		return nil
 	case fleetmember.FieldCreatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -5725,6 +5928,12 @@ func (m *FleetMemberMutation) AddedFields() []string {
 	if m.addmax_weight_capacity_kg != nil {
 		fields = append(fields, fleetmember.FieldMaxWeightCapacityKg)
 	}
+	if m.addaverage_rating != nil {
+		fields = append(fields, fleetmember.FieldAverageRating)
+	}
+	if m.addtotal_ratings != nil {
+		fields = append(fields, fleetmember.FieldTotalRatings)
+	}
 	return fields
 }
 
@@ -5735,6 +5944,10 @@ func (m *FleetMemberMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
 	case fleetmember.FieldMaxWeightCapacityKg:
 		return m.AddedMaxWeightCapacityKg()
+	case fleetmember.FieldAverageRating:
+		return m.AddedAverageRating()
+	case fleetmember.FieldTotalRatings:
+		return m.AddedTotalRatings()
 	}
 	return nil, false
 }
@@ -5750,6 +5963,20 @@ func (m *FleetMemberMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddMaxWeightCapacityKg(v)
+		return nil
+	case fleetmember.FieldAverageRating:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddAverageRating(v)
+		return nil
+	case fleetmember.FieldTotalRatings:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddTotalRatings(v)
 		return nil
 	}
 	return fmt.Errorf("unknown FleetMember numeric field %s", name)
@@ -5877,6 +6104,12 @@ func (m *FleetMemberMutation) ResetField(name string) error {
 	case fleetmember.FieldMaxWeightCapacityKg:
 		m.ResetMaxWeightCapacityKg()
 		return nil
+	case fleetmember.FieldAverageRating:
+		m.ResetAverageRating()
+		return nil
+	case fleetmember.FieldTotalRatings:
+		m.ResetTotalRatings()
+		return nil
 	case fleetmember.FieldCreatedAt:
 		m.ResetCreatedAt()
 		return nil
@@ -5889,7 +6122,7 @@ func (m *FleetMemberMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *FleetMemberMutation) AddedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.fleet != nil {
 		edges = append(edges, fleetmember.EdgeFleet)
 	}
@@ -5901,6 +6134,9 @@ func (m *FleetMemberMutation) AddedEdges() []string {
 	}
 	if m.assignments != nil {
 		edges = append(edges, fleetmember.EdgeAssignments)
+	}
+	if m.ratings != nil {
+		edges = append(edges, fleetmember.EdgeRatings)
 	}
 	return edges
 }
@@ -5927,15 +6163,24 @@ func (m *FleetMemberMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case fleetmember.EdgeRatings:
+		ids := make([]ent.Value, 0, len(m.ratings))
+		for id := range m.ratings {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *FleetMemberMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.removedassignments != nil {
 		edges = append(edges, fleetmember.EdgeAssignments)
+	}
+	if m.removedratings != nil {
+		edges = append(edges, fleetmember.EdgeRatings)
 	}
 	return edges
 }
@@ -5950,13 +6195,19 @@ func (m *FleetMemberMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case fleetmember.EdgeRatings:
+		ids := make([]ent.Value, 0, len(m.removedratings))
+		for id := range m.removedratings {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *FleetMemberMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.clearedfleet {
 		edges = append(edges, fleetmember.EdgeFleet)
 	}
@@ -5968,6 +6219,9 @@ func (m *FleetMemberMutation) ClearedEdges() []string {
 	}
 	if m.clearedassignments {
 		edges = append(edges, fleetmember.EdgeAssignments)
+	}
+	if m.clearedratings {
+		edges = append(edges, fleetmember.EdgeRatings)
 	}
 	return edges
 }
@@ -5984,6 +6238,8 @@ func (m *FleetMemberMutation) EdgeCleared(name string) bool {
 		return m.clearedvehicle
 	case fleetmember.EdgeAssignments:
 		return m.clearedassignments
+	case fleetmember.EdgeRatings:
+		return m.clearedratings
 	}
 	return false
 }
@@ -6020,6 +6276,9 @@ func (m *FleetMemberMutation) ResetEdge(name string) error {
 		return nil
 	case fleetmember.EdgeAssignments:
 		m.ResetAssignments()
+		return nil
+	case fleetmember.EdgeRatings:
+		m.ResetRatings()
 		return nil
 	}
 	return fmt.Errorf("unknown FleetMember edge %s", name)
@@ -11550,22 +11809,25 @@ func (m *PricingRuleMutation) ResetEdge(name string) error {
 // ProofOfDeliveryMutation represents an operation that mutates the ProofOfDelivery nodes in the graph.
 type ProofOfDeliveryMutation struct {
 	config
-	op              Op
-	typ             string
-	id              *uuid.UUID
-	tenant_id       *uuid.UUID
-	fleet_member_id *uuid.UUID
-	signature_url   *string
-	photo_url       *string
-	otp_code        *string
-	captured_at     *time.Time
-	metadata        *map[string]interface{}
-	clearedFields   map[string]struct{}
-	task            *uuid.UUID
-	clearedtask     bool
-	done            bool
-	oldValue        func(context.Context) (*ProofOfDelivery, error)
-	predicates      []predicate.ProofOfDelivery
+	op                  Op
+	typ                 string
+	id                  *uuid.UUID
+	tenant_id           *uuid.UUID
+	fleet_member_id     *uuid.UUID
+	signature_url       *string
+	photo_url           *string
+	otp_code            *string
+	amount_collected    *float64
+	addamount_collected *float64
+	collection_method   *string
+	captured_at         *time.Time
+	metadata            *map[string]interface{}
+	clearedFields       map[string]struct{}
+	task                *uuid.UUID
+	clearedtask         bool
+	done                bool
+	oldValue            func(context.Context) (*ProofOfDelivery, error)
+	predicates          []predicate.ProofOfDelivery
 }
 
 var _ ent.Mutation = (*ProofOfDeliveryMutation)(nil)
@@ -11927,6 +12189,111 @@ func (m *ProofOfDeliveryMutation) ResetOtpCode() {
 	delete(m.clearedFields, proofofdelivery.FieldOtpCode)
 }
 
+// SetAmountCollected sets the "amount_collected" field.
+func (m *ProofOfDeliveryMutation) SetAmountCollected(f float64) {
+	m.amount_collected = &f
+	m.addamount_collected = nil
+}
+
+// AmountCollected returns the value of the "amount_collected" field in the mutation.
+func (m *ProofOfDeliveryMutation) AmountCollected() (r float64, exists bool) {
+	v := m.amount_collected
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAmountCollected returns the old "amount_collected" field's value of the ProofOfDelivery entity.
+// If the ProofOfDelivery object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProofOfDeliveryMutation) OldAmountCollected(ctx context.Context) (v float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAmountCollected is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAmountCollected requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAmountCollected: %w", err)
+	}
+	return oldValue.AmountCollected, nil
+}
+
+// AddAmountCollected adds f to the "amount_collected" field.
+func (m *ProofOfDeliveryMutation) AddAmountCollected(f float64) {
+	if m.addamount_collected != nil {
+		*m.addamount_collected += f
+	} else {
+		m.addamount_collected = &f
+	}
+}
+
+// AddedAmountCollected returns the value that was added to the "amount_collected" field in this mutation.
+func (m *ProofOfDeliveryMutation) AddedAmountCollected() (r float64, exists bool) {
+	v := m.addamount_collected
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetAmountCollected resets all changes to the "amount_collected" field.
+func (m *ProofOfDeliveryMutation) ResetAmountCollected() {
+	m.amount_collected = nil
+	m.addamount_collected = nil
+}
+
+// SetCollectionMethod sets the "collection_method" field.
+func (m *ProofOfDeliveryMutation) SetCollectionMethod(s string) {
+	m.collection_method = &s
+}
+
+// CollectionMethod returns the value of the "collection_method" field in the mutation.
+func (m *ProofOfDeliveryMutation) CollectionMethod() (r string, exists bool) {
+	v := m.collection_method
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCollectionMethod returns the old "collection_method" field's value of the ProofOfDelivery entity.
+// If the ProofOfDelivery object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProofOfDeliveryMutation) OldCollectionMethod(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCollectionMethod is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCollectionMethod requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCollectionMethod: %w", err)
+	}
+	return oldValue.CollectionMethod, nil
+}
+
+// ClearCollectionMethod clears the value of the "collection_method" field.
+func (m *ProofOfDeliveryMutation) ClearCollectionMethod() {
+	m.collection_method = nil
+	m.clearedFields[proofofdelivery.FieldCollectionMethod] = struct{}{}
+}
+
+// CollectionMethodCleared returns if the "collection_method" field was cleared in this mutation.
+func (m *ProofOfDeliveryMutation) CollectionMethodCleared() bool {
+	_, ok := m.clearedFields[proofofdelivery.FieldCollectionMethod]
+	return ok
+}
+
+// ResetCollectionMethod resets all changes to the "collection_method" field.
+func (m *ProofOfDeliveryMutation) ResetCollectionMethod() {
+	m.collection_method = nil
+	delete(m.clearedFields, proofofdelivery.FieldCollectionMethod)
+}
+
 // SetCapturedAt sets the "captured_at" field.
 func (m *ProofOfDeliveryMutation) SetCapturedAt(t time.Time) {
 	m.captured_at = &t
@@ -12060,7 +12427,7 @@ func (m *ProofOfDeliveryMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ProofOfDeliveryMutation) Fields() []string {
-	fields := make([]string, 0, 8)
+	fields := make([]string, 0, 10)
 	if m.tenant_id != nil {
 		fields = append(fields, proofofdelivery.FieldTenantID)
 	}
@@ -12078,6 +12445,12 @@ func (m *ProofOfDeliveryMutation) Fields() []string {
 	}
 	if m.otp_code != nil {
 		fields = append(fields, proofofdelivery.FieldOtpCode)
+	}
+	if m.amount_collected != nil {
+		fields = append(fields, proofofdelivery.FieldAmountCollected)
+	}
+	if m.collection_method != nil {
+		fields = append(fields, proofofdelivery.FieldCollectionMethod)
 	}
 	if m.captured_at != nil {
 		fields = append(fields, proofofdelivery.FieldCapturedAt)
@@ -12105,6 +12478,10 @@ func (m *ProofOfDeliveryMutation) Field(name string) (ent.Value, bool) {
 		return m.PhotoURL()
 	case proofofdelivery.FieldOtpCode:
 		return m.OtpCode()
+	case proofofdelivery.FieldAmountCollected:
+		return m.AmountCollected()
+	case proofofdelivery.FieldCollectionMethod:
+		return m.CollectionMethod()
 	case proofofdelivery.FieldCapturedAt:
 		return m.CapturedAt()
 	case proofofdelivery.FieldMetadata:
@@ -12130,6 +12507,10 @@ func (m *ProofOfDeliveryMutation) OldField(ctx context.Context, name string) (en
 		return m.OldPhotoURL(ctx)
 	case proofofdelivery.FieldOtpCode:
 		return m.OldOtpCode(ctx)
+	case proofofdelivery.FieldAmountCollected:
+		return m.OldAmountCollected(ctx)
+	case proofofdelivery.FieldCollectionMethod:
+		return m.OldCollectionMethod(ctx)
 	case proofofdelivery.FieldCapturedAt:
 		return m.OldCapturedAt(ctx)
 	case proofofdelivery.FieldMetadata:
@@ -12185,6 +12566,20 @@ func (m *ProofOfDeliveryMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetOtpCode(v)
 		return nil
+	case proofofdelivery.FieldAmountCollected:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAmountCollected(v)
+		return nil
+	case proofofdelivery.FieldCollectionMethod:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCollectionMethod(v)
+		return nil
 	case proofofdelivery.FieldCapturedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -12206,13 +12601,21 @@ func (m *ProofOfDeliveryMutation) SetField(name string, value ent.Value) error {
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
 func (m *ProofOfDeliveryMutation) AddedFields() []string {
-	return nil
+	var fields []string
+	if m.addamount_collected != nil {
+		fields = append(fields, proofofdelivery.FieldAmountCollected)
+	}
+	return fields
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
 func (m *ProofOfDeliveryMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case proofofdelivery.FieldAmountCollected:
+		return m.AddedAmountCollected()
+	}
 	return nil, false
 }
 
@@ -12221,6 +12624,13 @@ func (m *ProofOfDeliveryMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *ProofOfDeliveryMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case proofofdelivery.FieldAmountCollected:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddAmountCollected(v)
+		return nil
 	}
 	return fmt.Errorf("unknown ProofOfDelivery numeric field %s", name)
 }
@@ -12237,6 +12647,9 @@ func (m *ProofOfDeliveryMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(proofofdelivery.FieldOtpCode) {
 		fields = append(fields, proofofdelivery.FieldOtpCode)
+	}
+	if m.FieldCleared(proofofdelivery.FieldCollectionMethod) {
+		fields = append(fields, proofofdelivery.FieldCollectionMethod)
 	}
 	return fields
 }
@@ -12260,6 +12673,9 @@ func (m *ProofOfDeliveryMutation) ClearField(name string) error {
 		return nil
 	case proofofdelivery.FieldOtpCode:
 		m.ClearOtpCode()
+		return nil
+	case proofofdelivery.FieldCollectionMethod:
+		m.ClearCollectionMethod()
 		return nil
 	}
 	return fmt.Errorf("unknown ProofOfDelivery nullable field %s", name)
@@ -12286,6 +12702,12 @@ func (m *ProofOfDeliveryMutation) ResetField(name string) error {
 		return nil
 	case proofofdelivery.FieldOtpCode:
 		m.ResetOtpCode()
+		return nil
+	case proofofdelivery.FieldAmountCollected:
+		m.ResetAmountCollected()
+		return nil
+	case proofofdelivery.FieldCollectionMethod:
+		m.ResetCollectionMethod()
 		return nil
 	case proofofdelivery.FieldCapturedAt:
 		m.ResetCapturedAt()
@@ -13311,6 +13733,885 @@ func (m *RateLimitConfigMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *RateLimitConfigMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown RateLimitConfig edge %s", name)
+}
+
+// RiderRatingMutation represents an operation that mutates the RiderRating nodes in the graph.
+type RiderRatingMutation struct {
+	config
+	op                  Op
+	typ                 string
+	id                  *uuid.UUID
+	tenant_id           *uuid.UUID
+	task_id             *uuid.UUID
+	order_id            *string
+	customer_user_id    *string
+	rating              *int
+	addrating           *int
+	comment             *string
+	created_at          *time.Time
+	clearedFields       map[string]struct{}
+	fleet_member        *uuid.UUID
+	clearedfleet_member bool
+	done                bool
+	oldValue            func(context.Context) (*RiderRating, error)
+	predicates          []predicate.RiderRating
+}
+
+var _ ent.Mutation = (*RiderRatingMutation)(nil)
+
+// riderratingOption allows management of the mutation configuration using functional options.
+type riderratingOption func(*RiderRatingMutation)
+
+// newRiderRatingMutation creates new mutation for the RiderRating entity.
+func newRiderRatingMutation(c config, op Op, opts ...riderratingOption) *RiderRatingMutation {
+	m := &RiderRatingMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeRiderRating,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withRiderRatingID sets the ID field of the mutation.
+func withRiderRatingID(id uuid.UUID) riderratingOption {
+	return func(m *RiderRatingMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *RiderRating
+		)
+		m.oldValue = func(ctx context.Context) (*RiderRating, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().RiderRating.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withRiderRating sets the old RiderRating of the mutation.
+func withRiderRating(node *RiderRating) riderratingOption {
+	return func(m *RiderRatingMutation) {
+		m.oldValue = func(context.Context) (*RiderRating, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m RiderRatingMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m RiderRatingMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of RiderRating entities.
+func (m *RiderRatingMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *RiderRatingMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *RiderRatingMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().RiderRating.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetTenantID sets the "tenant_id" field.
+func (m *RiderRatingMutation) SetTenantID(u uuid.UUID) {
+	m.tenant_id = &u
+}
+
+// TenantID returns the value of the "tenant_id" field in the mutation.
+func (m *RiderRatingMutation) TenantID() (r uuid.UUID, exists bool) {
+	v := m.tenant_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTenantID returns the old "tenant_id" field's value of the RiderRating entity.
+// If the RiderRating object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RiderRatingMutation) OldTenantID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTenantID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTenantID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTenantID: %w", err)
+	}
+	return oldValue.TenantID, nil
+}
+
+// ResetTenantID resets all changes to the "tenant_id" field.
+func (m *RiderRatingMutation) ResetTenantID() {
+	m.tenant_id = nil
+}
+
+// SetFleetMemberID sets the "fleet_member_id" field.
+func (m *RiderRatingMutation) SetFleetMemberID(u uuid.UUID) {
+	m.fleet_member = &u
+}
+
+// FleetMemberID returns the value of the "fleet_member_id" field in the mutation.
+func (m *RiderRatingMutation) FleetMemberID() (r uuid.UUID, exists bool) {
+	v := m.fleet_member
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFleetMemberID returns the old "fleet_member_id" field's value of the RiderRating entity.
+// If the RiderRating object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RiderRatingMutation) OldFleetMemberID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFleetMemberID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFleetMemberID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFleetMemberID: %w", err)
+	}
+	return oldValue.FleetMemberID, nil
+}
+
+// ResetFleetMemberID resets all changes to the "fleet_member_id" field.
+func (m *RiderRatingMutation) ResetFleetMemberID() {
+	m.fleet_member = nil
+}
+
+// SetTaskID sets the "task_id" field.
+func (m *RiderRatingMutation) SetTaskID(u uuid.UUID) {
+	m.task_id = &u
+}
+
+// TaskID returns the value of the "task_id" field in the mutation.
+func (m *RiderRatingMutation) TaskID() (r uuid.UUID, exists bool) {
+	v := m.task_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTaskID returns the old "task_id" field's value of the RiderRating entity.
+// If the RiderRating object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RiderRatingMutation) OldTaskID(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTaskID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTaskID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTaskID: %w", err)
+	}
+	return oldValue.TaskID, nil
+}
+
+// ClearTaskID clears the value of the "task_id" field.
+func (m *RiderRatingMutation) ClearTaskID() {
+	m.task_id = nil
+	m.clearedFields[riderrating.FieldTaskID] = struct{}{}
+}
+
+// TaskIDCleared returns if the "task_id" field was cleared in this mutation.
+func (m *RiderRatingMutation) TaskIDCleared() bool {
+	_, ok := m.clearedFields[riderrating.FieldTaskID]
+	return ok
+}
+
+// ResetTaskID resets all changes to the "task_id" field.
+func (m *RiderRatingMutation) ResetTaskID() {
+	m.task_id = nil
+	delete(m.clearedFields, riderrating.FieldTaskID)
+}
+
+// SetOrderID sets the "order_id" field.
+func (m *RiderRatingMutation) SetOrderID(s string) {
+	m.order_id = &s
+}
+
+// OrderID returns the value of the "order_id" field in the mutation.
+func (m *RiderRatingMutation) OrderID() (r string, exists bool) {
+	v := m.order_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOrderID returns the old "order_id" field's value of the RiderRating entity.
+// If the RiderRating object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RiderRatingMutation) OldOrderID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOrderID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOrderID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOrderID: %w", err)
+	}
+	return oldValue.OrderID, nil
+}
+
+// ClearOrderID clears the value of the "order_id" field.
+func (m *RiderRatingMutation) ClearOrderID() {
+	m.order_id = nil
+	m.clearedFields[riderrating.FieldOrderID] = struct{}{}
+}
+
+// OrderIDCleared returns if the "order_id" field was cleared in this mutation.
+func (m *RiderRatingMutation) OrderIDCleared() bool {
+	_, ok := m.clearedFields[riderrating.FieldOrderID]
+	return ok
+}
+
+// ResetOrderID resets all changes to the "order_id" field.
+func (m *RiderRatingMutation) ResetOrderID() {
+	m.order_id = nil
+	delete(m.clearedFields, riderrating.FieldOrderID)
+}
+
+// SetCustomerUserID sets the "customer_user_id" field.
+func (m *RiderRatingMutation) SetCustomerUserID(s string) {
+	m.customer_user_id = &s
+}
+
+// CustomerUserID returns the value of the "customer_user_id" field in the mutation.
+func (m *RiderRatingMutation) CustomerUserID() (r string, exists bool) {
+	v := m.customer_user_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCustomerUserID returns the old "customer_user_id" field's value of the RiderRating entity.
+// If the RiderRating object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RiderRatingMutation) OldCustomerUserID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCustomerUserID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCustomerUserID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCustomerUserID: %w", err)
+	}
+	return oldValue.CustomerUserID, nil
+}
+
+// ClearCustomerUserID clears the value of the "customer_user_id" field.
+func (m *RiderRatingMutation) ClearCustomerUserID() {
+	m.customer_user_id = nil
+	m.clearedFields[riderrating.FieldCustomerUserID] = struct{}{}
+}
+
+// CustomerUserIDCleared returns if the "customer_user_id" field was cleared in this mutation.
+func (m *RiderRatingMutation) CustomerUserIDCleared() bool {
+	_, ok := m.clearedFields[riderrating.FieldCustomerUserID]
+	return ok
+}
+
+// ResetCustomerUserID resets all changes to the "customer_user_id" field.
+func (m *RiderRatingMutation) ResetCustomerUserID() {
+	m.customer_user_id = nil
+	delete(m.clearedFields, riderrating.FieldCustomerUserID)
+}
+
+// SetRating sets the "rating" field.
+func (m *RiderRatingMutation) SetRating(i int) {
+	m.rating = &i
+	m.addrating = nil
+}
+
+// Rating returns the value of the "rating" field in the mutation.
+func (m *RiderRatingMutation) Rating() (r int, exists bool) {
+	v := m.rating
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRating returns the old "rating" field's value of the RiderRating entity.
+// If the RiderRating object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RiderRatingMutation) OldRating(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRating is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRating requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRating: %w", err)
+	}
+	return oldValue.Rating, nil
+}
+
+// AddRating adds i to the "rating" field.
+func (m *RiderRatingMutation) AddRating(i int) {
+	if m.addrating != nil {
+		*m.addrating += i
+	} else {
+		m.addrating = &i
+	}
+}
+
+// AddedRating returns the value that was added to the "rating" field in this mutation.
+func (m *RiderRatingMutation) AddedRating() (r int, exists bool) {
+	v := m.addrating
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetRating resets all changes to the "rating" field.
+func (m *RiderRatingMutation) ResetRating() {
+	m.rating = nil
+	m.addrating = nil
+}
+
+// SetComment sets the "comment" field.
+func (m *RiderRatingMutation) SetComment(s string) {
+	m.comment = &s
+}
+
+// Comment returns the value of the "comment" field in the mutation.
+func (m *RiderRatingMutation) Comment() (r string, exists bool) {
+	v := m.comment
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldComment returns the old "comment" field's value of the RiderRating entity.
+// If the RiderRating object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RiderRatingMutation) OldComment(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldComment is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldComment requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldComment: %w", err)
+	}
+	return oldValue.Comment, nil
+}
+
+// ClearComment clears the value of the "comment" field.
+func (m *RiderRatingMutation) ClearComment() {
+	m.comment = nil
+	m.clearedFields[riderrating.FieldComment] = struct{}{}
+}
+
+// CommentCleared returns if the "comment" field was cleared in this mutation.
+func (m *RiderRatingMutation) CommentCleared() bool {
+	_, ok := m.clearedFields[riderrating.FieldComment]
+	return ok
+}
+
+// ResetComment resets all changes to the "comment" field.
+func (m *RiderRatingMutation) ResetComment() {
+	m.comment = nil
+	delete(m.clearedFields, riderrating.FieldComment)
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *RiderRatingMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *RiderRatingMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the RiderRating entity.
+// If the RiderRating object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RiderRatingMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *RiderRatingMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// ClearFleetMember clears the "fleet_member" edge to the FleetMember entity.
+func (m *RiderRatingMutation) ClearFleetMember() {
+	m.clearedfleet_member = true
+	m.clearedFields[riderrating.FieldFleetMemberID] = struct{}{}
+}
+
+// FleetMemberCleared reports if the "fleet_member" edge to the FleetMember entity was cleared.
+func (m *RiderRatingMutation) FleetMemberCleared() bool {
+	return m.clearedfleet_member
+}
+
+// FleetMemberIDs returns the "fleet_member" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// FleetMemberID instead. It exists only for internal usage by the builders.
+func (m *RiderRatingMutation) FleetMemberIDs() (ids []uuid.UUID) {
+	if id := m.fleet_member; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetFleetMember resets all changes to the "fleet_member" edge.
+func (m *RiderRatingMutation) ResetFleetMember() {
+	m.fleet_member = nil
+	m.clearedfleet_member = false
+}
+
+// Where appends a list predicates to the RiderRatingMutation builder.
+func (m *RiderRatingMutation) Where(ps ...predicate.RiderRating) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the RiderRatingMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *RiderRatingMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.RiderRating, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *RiderRatingMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *RiderRatingMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (RiderRating).
+func (m *RiderRatingMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *RiderRatingMutation) Fields() []string {
+	fields := make([]string, 0, 8)
+	if m.tenant_id != nil {
+		fields = append(fields, riderrating.FieldTenantID)
+	}
+	if m.fleet_member != nil {
+		fields = append(fields, riderrating.FieldFleetMemberID)
+	}
+	if m.task_id != nil {
+		fields = append(fields, riderrating.FieldTaskID)
+	}
+	if m.order_id != nil {
+		fields = append(fields, riderrating.FieldOrderID)
+	}
+	if m.customer_user_id != nil {
+		fields = append(fields, riderrating.FieldCustomerUserID)
+	}
+	if m.rating != nil {
+		fields = append(fields, riderrating.FieldRating)
+	}
+	if m.comment != nil {
+		fields = append(fields, riderrating.FieldComment)
+	}
+	if m.created_at != nil {
+		fields = append(fields, riderrating.FieldCreatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *RiderRatingMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case riderrating.FieldTenantID:
+		return m.TenantID()
+	case riderrating.FieldFleetMemberID:
+		return m.FleetMemberID()
+	case riderrating.FieldTaskID:
+		return m.TaskID()
+	case riderrating.FieldOrderID:
+		return m.OrderID()
+	case riderrating.FieldCustomerUserID:
+		return m.CustomerUserID()
+	case riderrating.FieldRating:
+		return m.Rating()
+	case riderrating.FieldComment:
+		return m.Comment()
+	case riderrating.FieldCreatedAt:
+		return m.CreatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *RiderRatingMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case riderrating.FieldTenantID:
+		return m.OldTenantID(ctx)
+	case riderrating.FieldFleetMemberID:
+		return m.OldFleetMemberID(ctx)
+	case riderrating.FieldTaskID:
+		return m.OldTaskID(ctx)
+	case riderrating.FieldOrderID:
+		return m.OldOrderID(ctx)
+	case riderrating.FieldCustomerUserID:
+		return m.OldCustomerUserID(ctx)
+	case riderrating.FieldRating:
+		return m.OldRating(ctx)
+	case riderrating.FieldComment:
+		return m.OldComment(ctx)
+	case riderrating.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown RiderRating field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *RiderRatingMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case riderrating.FieldTenantID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTenantID(v)
+		return nil
+	case riderrating.FieldFleetMemberID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFleetMemberID(v)
+		return nil
+	case riderrating.FieldTaskID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTaskID(v)
+		return nil
+	case riderrating.FieldOrderID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOrderID(v)
+		return nil
+	case riderrating.FieldCustomerUserID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCustomerUserID(v)
+		return nil
+	case riderrating.FieldRating:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRating(v)
+		return nil
+	case riderrating.FieldComment:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetComment(v)
+		return nil
+	case riderrating.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown RiderRating field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *RiderRatingMutation) AddedFields() []string {
+	var fields []string
+	if m.addrating != nil {
+		fields = append(fields, riderrating.FieldRating)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *RiderRatingMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case riderrating.FieldRating:
+		return m.AddedRating()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *RiderRatingMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case riderrating.FieldRating:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddRating(v)
+		return nil
+	}
+	return fmt.Errorf("unknown RiderRating numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *RiderRatingMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(riderrating.FieldTaskID) {
+		fields = append(fields, riderrating.FieldTaskID)
+	}
+	if m.FieldCleared(riderrating.FieldOrderID) {
+		fields = append(fields, riderrating.FieldOrderID)
+	}
+	if m.FieldCleared(riderrating.FieldCustomerUserID) {
+		fields = append(fields, riderrating.FieldCustomerUserID)
+	}
+	if m.FieldCleared(riderrating.FieldComment) {
+		fields = append(fields, riderrating.FieldComment)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *RiderRatingMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *RiderRatingMutation) ClearField(name string) error {
+	switch name {
+	case riderrating.FieldTaskID:
+		m.ClearTaskID()
+		return nil
+	case riderrating.FieldOrderID:
+		m.ClearOrderID()
+		return nil
+	case riderrating.FieldCustomerUserID:
+		m.ClearCustomerUserID()
+		return nil
+	case riderrating.FieldComment:
+		m.ClearComment()
+		return nil
+	}
+	return fmt.Errorf("unknown RiderRating nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *RiderRatingMutation) ResetField(name string) error {
+	switch name {
+	case riderrating.FieldTenantID:
+		m.ResetTenantID()
+		return nil
+	case riderrating.FieldFleetMemberID:
+		m.ResetFleetMemberID()
+		return nil
+	case riderrating.FieldTaskID:
+		m.ResetTaskID()
+		return nil
+	case riderrating.FieldOrderID:
+		m.ResetOrderID()
+		return nil
+	case riderrating.FieldCustomerUserID:
+		m.ResetCustomerUserID()
+		return nil
+	case riderrating.FieldRating:
+		m.ResetRating()
+		return nil
+	case riderrating.FieldComment:
+		m.ResetComment()
+		return nil
+	case riderrating.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown RiderRating field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *RiderRatingMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.fleet_member != nil {
+		edges = append(edges, riderrating.EdgeFleetMember)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *RiderRatingMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case riderrating.EdgeFleetMember:
+		if id := m.fleet_member; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *RiderRatingMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *RiderRatingMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *RiderRatingMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.clearedfleet_member {
+		edges = append(edges, riderrating.EdgeFleetMember)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *RiderRatingMutation) EdgeCleared(name string) bool {
+	switch name {
+	case riderrating.EdgeFleetMember:
+		return m.clearedfleet_member
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *RiderRatingMutation) ClearEdge(name string) error {
+	switch name {
+	case riderrating.EdgeFleetMember:
+		m.ClearFleetMember()
+		return nil
+	}
+	return fmt.Errorf("unknown RiderRating unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *RiderRatingMutation) ResetEdge(name string) error {
+	switch name {
+	case riderrating.EdgeFleetMember:
+		m.ResetFleetMember()
+		return nil
+	}
+	return fmt.Errorf("unknown RiderRating edge %s", name)
 }
 
 // RiderShiftMutation represents an operation that mutates the RiderShift nodes in the graph.
@@ -15318,6 +16619,9 @@ type TaskMutation struct {
 	temperature_range            *string
 	requires_fragile_handling    *bool
 	requires_heavy_duty          *bool
+	cash_on_delivery             *float64
+	addcash_on_delivery          *float64
+	cash_collected               *bool
 	carrier_id                   *string
 	created_at                   *time.Time
 	updated_at                   *time.Time
@@ -16212,6 +17516,98 @@ func (m *TaskMutation) ResetRequiresHeavyDuty() {
 	m.requires_heavy_duty = nil
 }
 
+// SetCashOnDelivery sets the "cash_on_delivery" field.
+func (m *TaskMutation) SetCashOnDelivery(f float64) {
+	m.cash_on_delivery = &f
+	m.addcash_on_delivery = nil
+}
+
+// CashOnDelivery returns the value of the "cash_on_delivery" field in the mutation.
+func (m *TaskMutation) CashOnDelivery() (r float64, exists bool) {
+	v := m.cash_on_delivery
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCashOnDelivery returns the old "cash_on_delivery" field's value of the Task entity.
+// If the Task object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TaskMutation) OldCashOnDelivery(ctx context.Context) (v float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCashOnDelivery is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCashOnDelivery requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCashOnDelivery: %w", err)
+	}
+	return oldValue.CashOnDelivery, nil
+}
+
+// AddCashOnDelivery adds f to the "cash_on_delivery" field.
+func (m *TaskMutation) AddCashOnDelivery(f float64) {
+	if m.addcash_on_delivery != nil {
+		*m.addcash_on_delivery += f
+	} else {
+		m.addcash_on_delivery = &f
+	}
+}
+
+// AddedCashOnDelivery returns the value that was added to the "cash_on_delivery" field in this mutation.
+func (m *TaskMutation) AddedCashOnDelivery() (r float64, exists bool) {
+	v := m.addcash_on_delivery
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetCashOnDelivery resets all changes to the "cash_on_delivery" field.
+func (m *TaskMutation) ResetCashOnDelivery() {
+	m.cash_on_delivery = nil
+	m.addcash_on_delivery = nil
+}
+
+// SetCashCollected sets the "cash_collected" field.
+func (m *TaskMutation) SetCashCollected(b bool) {
+	m.cash_collected = &b
+}
+
+// CashCollected returns the value of the "cash_collected" field in the mutation.
+func (m *TaskMutation) CashCollected() (r bool, exists bool) {
+	v := m.cash_collected
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCashCollected returns the old "cash_collected" field's value of the Task entity.
+// If the Task object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TaskMutation) OldCashCollected(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCashCollected is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCashCollected requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCashCollected: %w", err)
+	}
+	return oldValue.CashCollected, nil
+}
+
+// ResetCashCollected resets all changes to the "cash_collected" field.
+func (m *TaskMutation) ResetCashCollected() {
+	m.cash_collected = nil
+}
+
 // SetCarrierID sets the "carrier_id" field.
 func (m *TaskMutation) SetCarrierID(s string) {
 	m.carrier_id = &s
@@ -16568,7 +17964,7 @@ func (m *TaskMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TaskMutation) Fields() []string {
-	fields := make([]string, 0, 20)
+	fields := make([]string, 0, 22)
 	if m.tenant_id != nil {
 		fields = append(fields, task.FieldTenantID)
 	}
@@ -16619,6 +18015,12 @@ func (m *TaskMutation) Fields() []string {
 	}
 	if m.requires_heavy_duty != nil {
 		fields = append(fields, task.FieldRequiresHeavyDuty)
+	}
+	if m.cash_on_delivery != nil {
+		fields = append(fields, task.FieldCashOnDelivery)
+	}
+	if m.cash_collected != nil {
+		fields = append(fields, task.FieldCashCollected)
 	}
 	if m.carrier_id != nil {
 		fields = append(fields, task.FieldCarrierID)
@@ -16671,6 +18073,10 @@ func (m *TaskMutation) Field(name string) (ent.Value, bool) {
 		return m.RequiresFragileHandling()
 	case task.FieldRequiresHeavyDuty:
 		return m.RequiresHeavyDuty()
+	case task.FieldCashOnDelivery:
+		return m.CashOnDelivery()
+	case task.FieldCashCollected:
+		return m.CashCollected()
 	case task.FieldCarrierID:
 		return m.CarrierID()
 	case task.FieldCreatedAt:
@@ -16720,6 +18126,10 @@ func (m *TaskMutation) OldField(ctx context.Context, name string) (ent.Value, er
 		return m.OldRequiresFragileHandling(ctx)
 	case task.FieldRequiresHeavyDuty:
 		return m.OldRequiresHeavyDuty(ctx)
+	case task.FieldCashOnDelivery:
+		return m.OldCashOnDelivery(ctx)
+	case task.FieldCashCollected:
+		return m.OldCashCollected(ctx)
 	case task.FieldCarrierID:
 		return m.OldCarrierID(ctx)
 	case task.FieldCreatedAt:
@@ -16854,6 +18264,20 @@ func (m *TaskMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetRequiresHeavyDuty(v)
 		return nil
+	case task.FieldCashOnDelivery:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCashOnDelivery(v)
+		return nil
+	case task.FieldCashCollected:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCashCollected(v)
+		return nil
 	case task.FieldCarrierID:
 		v, ok := value.(string)
 		if !ok {
@@ -16889,6 +18313,9 @@ func (m *TaskMutation) AddedFields() []string {
 	if m.addpackage_weight_kg != nil {
 		fields = append(fields, task.FieldPackageWeightKg)
 	}
+	if m.addcash_on_delivery != nil {
+		fields = append(fields, task.FieldCashOnDelivery)
+	}
 	return fields
 }
 
@@ -16901,6 +18328,8 @@ func (m *TaskMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedPriority()
 	case task.FieldPackageWeightKg:
 		return m.AddedPackageWeightKg()
+	case task.FieldCashOnDelivery:
+		return m.AddedCashOnDelivery()
 	}
 	return nil, false
 }
@@ -16923,6 +18352,13 @@ func (m *TaskMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddPackageWeightKg(v)
+		return nil
+	case task.FieldCashOnDelivery:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCashOnDelivery(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Task numeric field %s", name)
@@ -17064,6 +18500,12 @@ func (m *TaskMutation) ResetField(name string) error {
 		return nil
 	case task.FieldRequiresHeavyDuty:
 		m.ResetRequiresHeavyDuty()
+		return nil
+	case task.FieldCashOnDelivery:
+		m.ResetCashOnDelivery()
+		return nil
+	case task.FieldCashCollected:
+		m.ResetCashCollected()
 		return nil
 	case task.FieldCarrierID:
 		m.ResetCarrierID()
