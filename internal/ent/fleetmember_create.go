@@ -14,6 +14,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/bengobox/logistics-service/internal/ent/fleet"
 	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
+	"github.com/bengobox/logistics-service/internal/ent/riderrating"
 	"github.com/bengobox/logistics-service/internal/ent/taskassignment"
 	"github.com/bengobox/logistics-service/internal/ent/user"
 	"github.com/bengobox/logistics-service/internal/ent/vehicle"
@@ -212,6 +213,34 @@ func (_c *FleetMemberCreate) SetNillableMaxWeightCapacityKg(v *float64) *FleetMe
 	return _c
 }
 
+// SetAverageRating sets the "average_rating" field.
+func (_c *FleetMemberCreate) SetAverageRating(v float64) *FleetMemberCreate {
+	_c.mutation.SetAverageRating(v)
+	return _c
+}
+
+// SetNillableAverageRating sets the "average_rating" field if the given value is not nil.
+func (_c *FleetMemberCreate) SetNillableAverageRating(v *float64) *FleetMemberCreate {
+	if v != nil {
+		_c.SetAverageRating(*v)
+	}
+	return _c
+}
+
+// SetTotalRatings sets the "total_ratings" field.
+func (_c *FleetMemberCreate) SetTotalRatings(v int) *FleetMemberCreate {
+	_c.mutation.SetTotalRatings(v)
+	return _c
+}
+
+// SetNillableTotalRatings sets the "total_ratings" field if the given value is not nil.
+func (_c *FleetMemberCreate) SetNillableTotalRatings(v *int) *FleetMemberCreate {
+	if v != nil {
+		_c.SetTotalRatings(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *FleetMemberCreate) SetCreatedAt(v time.Time) *FleetMemberCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -284,6 +313,21 @@ func (_c *FleetMemberCreate) AddAssignments(v ...*TaskAssignment) *FleetMemberCr
 	return _c.AddAssignmentIDs(ids...)
 }
 
+// AddRatingIDs adds the "ratings" edge to the RiderRating entity by IDs.
+func (_c *FleetMemberCreate) AddRatingIDs(ids ...uuid.UUID) *FleetMemberCreate {
+	_c.mutation.AddRatingIDs(ids...)
+	return _c
+}
+
+// AddRatings adds the "ratings" edges to the RiderRating entity.
+func (_c *FleetMemberCreate) AddRatings(v ...*RiderRating) *FleetMemberCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddRatingIDs(ids...)
+}
+
 // Mutation returns the FleetMemberMutation object of the builder.
 func (_c *FleetMemberCreate) Mutation() *FleetMemberMutation {
 	return _c.mutation
@@ -339,6 +383,14 @@ func (_c *FleetMemberCreate) defaults() {
 		v := fleetmember.DefaultHasColdStorage
 		_c.mutation.SetHasColdStorage(v)
 	}
+	if _, ok := _c.mutation.AverageRating(); !ok {
+		v := fleetmember.DefaultAverageRating
+		_c.mutation.SetAverageRating(v)
+	}
+	if _, ok := _c.mutation.TotalRatings(); !ok {
+		v := fleetmember.DefaultTotalRatings
+		_c.mutation.SetTotalRatings(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := fleetmember.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
@@ -378,6 +430,12 @@ func (_c *FleetMemberCreate) check() error {
 	}
 	if _, ok := _c.mutation.HasColdStorage(); !ok {
 		return &ValidationError{Name: "has_cold_storage", err: errors.New(`ent: missing required field "FleetMember.has_cold_storage"`)}
+	}
+	if _, ok := _c.mutation.AverageRating(); !ok {
+		return &ValidationError{Name: "average_rating", err: errors.New(`ent: missing required field "FleetMember.average_rating"`)}
+	}
+	if _, ok := _c.mutation.TotalRatings(); !ok {
+		return &ValidationError{Name: "total_ratings", err: errors.New(`ent: missing required field "FleetMember.total_ratings"`)}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "FleetMember.created_at"`)}
@@ -479,6 +537,14 @@ func (_c *FleetMemberCreate) createSpec() (*FleetMember, *sqlgraph.CreateSpec) {
 		_spec.SetField(fleetmember.FieldMaxWeightCapacityKg, field.TypeFloat64, value)
 		_node.MaxWeightCapacityKg = &value
 	}
+	if value, ok := _c.mutation.AverageRating(); ok {
+		_spec.SetField(fleetmember.FieldAverageRating, field.TypeFloat64, value)
+		_node.AverageRating = value
+	}
+	if value, ok := _c.mutation.TotalRatings(); ok {
+		_spec.SetField(fleetmember.FieldTotalRatings, field.TypeInt, value)
+		_node.TotalRatings = value
+	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(fleetmember.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -547,6 +613,22 @@ func (_c *FleetMemberCreate) createSpec() (*FleetMember, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(taskassignment.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.RatingsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   fleetmember.RatingsTable,
+			Columns: []string{fleetmember.RatingsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(riderrating.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -849,6 +931,42 @@ func (u *FleetMemberUpsert) AddMaxWeightCapacityKg(v float64) *FleetMemberUpsert
 // ClearMaxWeightCapacityKg clears the value of the "max_weight_capacity_kg" field.
 func (u *FleetMemberUpsert) ClearMaxWeightCapacityKg() *FleetMemberUpsert {
 	u.SetNull(fleetmember.FieldMaxWeightCapacityKg)
+	return u
+}
+
+// SetAverageRating sets the "average_rating" field.
+func (u *FleetMemberUpsert) SetAverageRating(v float64) *FleetMemberUpsert {
+	u.Set(fleetmember.FieldAverageRating, v)
+	return u
+}
+
+// UpdateAverageRating sets the "average_rating" field to the value that was provided on create.
+func (u *FleetMemberUpsert) UpdateAverageRating() *FleetMemberUpsert {
+	u.SetExcluded(fleetmember.FieldAverageRating)
+	return u
+}
+
+// AddAverageRating adds v to the "average_rating" field.
+func (u *FleetMemberUpsert) AddAverageRating(v float64) *FleetMemberUpsert {
+	u.Add(fleetmember.FieldAverageRating, v)
+	return u
+}
+
+// SetTotalRatings sets the "total_ratings" field.
+func (u *FleetMemberUpsert) SetTotalRatings(v int) *FleetMemberUpsert {
+	u.Set(fleetmember.FieldTotalRatings, v)
+	return u
+}
+
+// UpdateTotalRatings sets the "total_ratings" field to the value that was provided on create.
+func (u *FleetMemberUpsert) UpdateTotalRatings() *FleetMemberUpsert {
+	u.SetExcluded(fleetmember.FieldTotalRatings)
+	return u
+}
+
+// AddTotalRatings adds v to the "total_ratings" field.
+func (u *FleetMemberUpsert) AddTotalRatings(v int) *FleetMemberUpsert {
+	u.Add(fleetmember.FieldTotalRatings, v)
 	return u
 }
 
@@ -1199,6 +1317,48 @@ func (u *FleetMemberUpsertOne) UpdateMaxWeightCapacityKg() *FleetMemberUpsertOne
 func (u *FleetMemberUpsertOne) ClearMaxWeightCapacityKg() *FleetMemberUpsertOne {
 	return u.Update(func(s *FleetMemberUpsert) {
 		s.ClearMaxWeightCapacityKg()
+	})
+}
+
+// SetAverageRating sets the "average_rating" field.
+func (u *FleetMemberUpsertOne) SetAverageRating(v float64) *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetAverageRating(v)
+	})
+}
+
+// AddAverageRating adds v to the "average_rating" field.
+func (u *FleetMemberUpsertOne) AddAverageRating(v float64) *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.AddAverageRating(v)
+	})
+}
+
+// UpdateAverageRating sets the "average_rating" field to the value that was provided on create.
+func (u *FleetMemberUpsertOne) UpdateAverageRating() *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdateAverageRating()
+	})
+}
+
+// SetTotalRatings sets the "total_ratings" field.
+func (u *FleetMemberUpsertOne) SetTotalRatings(v int) *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetTotalRatings(v)
+	})
+}
+
+// AddTotalRatings adds v to the "total_ratings" field.
+func (u *FleetMemberUpsertOne) AddTotalRatings(v int) *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.AddTotalRatings(v)
+	})
+}
+
+// UpdateTotalRatings sets the "total_ratings" field to the value that was provided on create.
+func (u *FleetMemberUpsertOne) UpdateTotalRatings() *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdateTotalRatings()
 	})
 }
 
@@ -1718,6 +1878,48 @@ func (u *FleetMemberUpsertBulk) UpdateMaxWeightCapacityKg() *FleetMemberUpsertBu
 func (u *FleetMemberUpsertBulk) ClearMaxWeightCapacityKg() *FleetMemberUpsertBulk {
 	return u.Update(func(s *FleetMemberUpsert) {
 		s.ClearMaxWeightCapacityKg()
+	})
+}
+
+// SetAverageRating sets the "average_rating" field.
+func (u *FleetMemberUpsertBulk) SetAverageRating(v float64) *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetAverageRating(v)
+	})
+}
+
+// AddAverageRating adds v to the "average_rating" field.
+func (u *FleetMemberUpsertBulk) AddAverageRating(v float64) *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.AddAverageRating(v)
+	})
+}
+
+// UpdateAverageRating sets the "average_rating" field to the value that was provided on create.
+func (u *FleetMemberUpsertBulk) UpdateAverageRating() *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdateAverageRating()
+	})
+}
+
+// SetTotalRatings sets the "total_ratings" field.
+func (u *FleetMemberUpsertBulk) SetTotalRatings(v int) *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetTotalRatings(v)
+	})
+}
+
+// AddTotalRatings adds v to the "total_ratings" field.
+func (u *FleetMemberUpsertBulk) AddTotalRatings(v int) *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.AddTotalRatings(v)
+	})
+}
+
+// UpdateTotalRatings sets the "total_ratings" field to the value that was provided on create.
+func (u *FleetMemberUpsertBulk) UpdateTotalRatings() *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdateTotalRatings()
 	})
 }
 

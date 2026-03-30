@@ -106,13 +106,16 @@ func (p *Publisher) PublishFleetMemberSuspended(ctx context.Context, tenantID uu
 
 // TaskEventData represents data for task lifecycle events.
 type TaskEventData struct {
-	TaskID            string `json:"task_id"`
-	TrackingCode      string `json:"tracking_code"`
-	ExternalReference string `json:"external_reference,omitempty"`
-	Status            string `json:"status"`
-	PreviousStatus    string `json:"previous_status,omitempty"`
-	FleetMemberID     string `json:"fleet_member_id,omitempty"`
-	SourceService     string `json:"source_service,omitempty"`
+	TaskID            string  `json:"task_id"`
+	TrackingCode      string  `json:"tracking_code"`
+	ExternalReference string  `json:"external_reference,omitempty"`
+	Status            string  `json:"status"`
+	PreviousStatus    string  `json:"previous_status,omitempty"`
+	FleetMemberID     string  `json:"fleet_member_id,omitempty"`
+	SourceService     string  `json:"source_service,omitempty"`
+	CashOnDelivery    float64 `json:"cash_on_delivery,omitempty"`
+	CashCollected     bool    `json:"cash_collected,omitempty"`
+	AmountCollected   float64 `json:"amount_collected,omitempty"`
 }
 
 func (d TaskEventData) toMap() map[string]interface{} {
@@ -135,6 +138,11 @@ func (d TaskEventData) toMap() map[string]interface{} {
 	}
 	if d.SourceService != "" {
 		m["source_service"] = d.SourceService
+	}
+	if d.CashOnDelivery > 0 {
+		m["cash_on_delivery"] = d.CashOnDelivery
+		m["cash_collected"] = d.CashCollected
+		m["amount_collected"] = d.AmountCollected
 	}
 	return m
 }

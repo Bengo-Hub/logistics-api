@@ -126,6 +126,16 @@ func MaxWeightCapacityKg(v float64) predicate.FleetMember {
 	return predicate.FleetMember(sql.FieldEQ(FieldMaxWeightCapacityKg, v))
 }
 
+// AverageRating applies equality check predicate on the "average_rating" field. It's identical to AverageRatingEQ.
+func AverageRating(v float64) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEQ(FieldAverageRating, v))
+}
+
+// TotalRatings applies equality check predicate on the "total_ratings" field. It's identical to TotalRatingsEQ.
+func TotalRatings(v int) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEQ(FieldTotalRatings, v))
+}
+
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.FleetMember {
 	return predicate.FleetMember(sql.FieldEQ(FieldCreatedAt, v))
@@ -836,6 +846,86 @@ func MaxWeightCapacityKgNotNil() predicate.FleetMember {
 	return predicate.FleetMember(sql.FieldNotNull(FieldMaxWeightCapacityKg))
 }
 
+// AverageRatingEQ applies the EQ predicate on the "average_rating" field.
+func AverageRatingEQ(v float64) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEQ(FieldAverageRating, v))
+}
+
+// AverageRatingNEQ applies the NEQ predicate on the "average_rating" field.
+func AverageRatingNEQ(v float64) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNEQ(FieldAverageRating, v))
+}
+
+// AverageRatingIn applies the In predicate on the "average_rating" field.
+func AverageRatingIn(vs ...float64) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldIn(FieldAverageRating, vs...))
+}
+
+// AverageRatingNotIn applies the NotIn predicate on the "average_rating" field.
+func AverageRatingNotIn(vs ...float64) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNotIn(FieldAverageRating, vs...))
+}
+
+// AverageRatingGT applies the GT predicate on the "average_rating" field.
+func AverageRatingGT(v float64) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldGT(FieldAverageRating, v))
+}
+
+// AverageRatingGTE applies the GTE predicate on the "average_rating" field.
+func AverageRatingGTE(v float64) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldGTE(FieldAverageRating, v))
+}
+
+// AverageRatingLT applies the LT predicate on the "average_rating" field.
+func AverageRatingLT(v float64) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldLT(FieldAverageRating, v))
+}
+
+// AverageRatingLTE applies the LTE predicate on the "average_rating" field.
+func AverageRatingLTE(v float64) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldLTE(FieldAverageRating, v))
+}
+
+// TotalRatingsEQ applies the EQ predicate on the "total_ratings" field.
+func TotalRatingsEQ(v int) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEQ(FieldTotalRatings, v))
+}
+
+// TotalRatingsNEQ applies the NEQ predicate on the "total_ratings" field.
+func TotalRatingsNEQ(v int) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNEQ(FieldTotalRatings, v))
+}
+
+// TotalRatingsIn applies the In predicate on the "total_ratings" field.
+func TotalRatingsIn(vs ...int) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldIn(FieldTotalRatings, vs...))
+}
+
+// TotalRatingsNotIn applies the NotIn predicate on the "total_ratings" field.
+func TotalRatingsNotIn(vs ...int) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNotIn(FieldTotalRatings, vs...))
+}
+
+// TotalRatingsGT applies the GT predicate on the "total_ratings" field.
+func TotalRatingsGT(v int) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldGT(FieldTotalRatings, v))
+}
+
+// TotalRatingsGTE applies the GTE predicate on the "total_ratings" field.
+func TotalRatingsGTE(v int) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldGTE(FieldTotalRatings, v))
+}
+
+// TotalRatingsLT applies the LT predicate on the "total_ratings" field.
+func TotalRatingsLT(v int) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldLT(FieldTotalRatings, v))
+}
+
+// TotalRatingsLTE applies the LTE predicate on the "total_ratings" field.
+func TotalRatingsLTE(v int) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldLTE(FieldTotalRatings, v))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.FleetMember {
 	return predicate.FleetMember(sql.FieldEQ(FieldCreatedAt, v))
@@ -1000,6 +1090,29 @@ func HasAssignments() predicate.FleetMember {
 func HasAssignmentsWith(preds ...predicate.TaskAssignment) predicate.FleetMember {
 	return predicate.FleetMember(func(s *sql.Selector) {
 		step := newAssignmentsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasRatings applies the HasEdge predicate on the "ratings" edge.
+func HasRatings() predicate.FleetMember {
+	return predicate.FleetMember(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, RatingsTable, RatingsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasRatingsWith applies the HasEdge predicate on the "ratings" edge with a given conditions (other predicates).
+func HasRatingsWith(preds ...predicate.RiderRating) predicate.FleetMember {
+	return predicate.FleetMember(func(s *sql.Selector) {
+		step := newRatingsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

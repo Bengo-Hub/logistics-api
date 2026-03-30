@@ -70,6 +70,12 @@ func (Task) Fields() []ent.Field {
 		field.Bool("requires_heavy_duty").
 			Default(false).
 			Comment("Heavy items: furniture, hardware, building materials"),
+		field.Float("cash_on_delivery").
+			Default(0).
+			Comment("Amount to collect in cash from the customer (0 = prepaid)"),
+		field.Bool("cash_collected").
+			Default(false).
+			Comment("Whether COD cash has been collected by the rider"),
 		field.String("carrier_id").
 			Optional().
 			Comment("External carrier reference if outsourced to 3rd party"),

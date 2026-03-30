@@ -15,6 +15,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/fleet"
 	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
 	"github.com/bengobox/logistics-service/internal/ent/predicate"
+	"github.com/bengobox/logistics-service/internal/ent/riderrating"
 	"github.com/bengobox/logistics-service/internal/ent/taskassignment"
 	"github.com/bengobox/logistics-service/internal/ent/user"
 	"github.com/bengobox/logistics-service/internal/ent/vehicle"
@@ -303,6 +304,48 @@ func (_u *FleetMemberUpdate) ClearMaxWeightCapacityKg() *FleetMemberUpdate {
 	return _u
 }
 
+// SetAverageRating sets the "average_rating" field.
+func (_u *FleetMemberUpdate) SetAverageRating(v float64) *FleetMemberUpdate {
+	_u.mutation.ResetAverageRating()
+	_u.mutation.SetAverageRating(v)
+	return _u
+}
+
+// SetNillableAverageRating sets the "average_rating" field if the given value is not nil.
+func (_u *FleetMemberUpdate) SetNillableAverageRating(v *float64) *FleetMemberUpdate {
+	if v != nil {
+		_u.SetAverageRating(*v)
+	}
+	return _u
+}
+
+// AddAverageRating adds value to the "average_rating" field.
+func (_u *FleetMemberUpdate) AddAverageRating(v float64) *FleetMemberUpdate {
+	_u.mutation.AddAverageRating(v)
+	return _u
+}
+
+// SetTotalRatings sets the "total_ratings" field.
+func (_u *FleetMemberUpdate) SetTotalRatings(v int) *FleetMemberUpdate {
+	_u.mutation.ResetTotalRatings()
+	_u.mutation.SetTotalRatings(v)
+	return _u
+}
+
+// SetNillableTotalRatings sets the "total_ratings" field if the given value is not nil.
+func (_u *FleetMemberUpdate) SetNillableTotalRatings(v *int) *FleetMemberUpdate {
+	if v != nil {
+		_u.SetTotalRatings(*v)
+	}
+	return _u
+}
+
+// AddTotalRatings adds value to the "total_ratings" field.
+func (_u *FleetMemberUpdate) AddTotalRatings(v int) *FleetMemberUpdate {
+	_u.mutation.AddTotalRatings(v)
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *FleetMemberUpdate) SetUpdatedAt(v time.Time) *FleetMemberUpdate {
 	_u.mutation.SetUpdatedAt(v)
@@ -337,6 +380,21 @@ func (_u *FleetMemberUpdate) AddAssignments(v ...*TaskAssignment) *FleetMemberUp
 		ids[i] = v[i].ID
 	}
 	return _u.AddAssignmentIDs(ids...)
+}
+
+// AddRatingIDs adds the "ratings" edge to the RiderRating entity by IDs.
+func (_u *FleetMemberUpdate) AddRatingIDs(ids ...uuid.UUID) *FleetMemberUpdate {
+	_u.mutation.AddRatingIDs(ids...)
+	return _u
+}
+
+// AddRatings adds the "ratings" edges to the RiderRating entity.
+func (_u *FleetMemberUpdate) AddRatings(v ...*RiderRating) *FleetMemberUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddRatingIDs(ids...)
 }
 
 // Mutation returns the FleetMemberMutation object of the builder.
@@ -381,6 +439,27 @@ func (_u *FleetMemberUpdate) RemoveAssignments(v ...*TaskAssignment) *FleetMembe
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveAssignmentIDs(ids...)
+}
+
+// ClearRatings clears all "ratings" edges to the RiderRating entity.
+func (_u *FleetMemberUpdate) ClearRatings() *FleetMemberUpdate {
+	_u.mutation.ClearRatings()
+	return _u
+}
+
+// RemoveRatingIDs removes the "ratings" edge to RiderRating entities by IDs.
+func (_u *FleetMemberUpdate) RemoveRatingIDs(ids ...uuid.UUID) *FleetMemberUpdate {
+	_u.mutation.RemoveRatingIDs(ids...)
+	return _u
+}
+
+// RemoveRatings removes "ratings" edges to RiderRating entities.
+func (_u *FleetMemberUpdate) RemoveRatings(v ...*RiderRating) *FleetMemberUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveRatingIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -510,6 +589,18 @@ func (_u *FleetMemberUpdate) sqlSave(ctx context.Context) (_node int, err error)
 	if _u.mutation.MaxWeightCapacityKgCleared() {
 		_spec.ClearField(fleetmember.FieldMaxWeightCapacityKg, field.TypeFloat64)
 	}
+	if value, ok := _u.mutation.AverageRating(); ok {
+		_spec.SetField(fleetmember.FieldAverageRating, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedAverageRating(); ok {
+		_spec.AddField(fleetmember.FieldAverageRating, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.TotalRatings(); ok {
+		_spec.SetField(fleetmember.FieldTotalRatings, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedTotalRatings(); ok {
+		_spec.AddField(fleetmember.FieldTotalRatings, field.TypeInt, value)
+	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(fleetmember.FieldUpdatedAt, field.TypeTime, value)
 	}
@@ -638,6 +729,51 @@ func (_u *FleetMemberUpdate) sqlSave(ctx context.Context) (_node int, err error)
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(taskassignment.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.RatingsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   fleetmember.RatingsTable,
+			Columns: []string{fleetmember.RatingsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(riderrating.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedRatingsIDs(); len(nodes) > 0 && !_u.mutation.RatingsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   fleetmember.RatingsTable,
+			Columns: []string{fleetmember.RatingsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(riderrating.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RatingsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   fleetmember.RatingsTable,
+			Columns: []string{fleetmember.RatingsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(riderrating.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -934,6 +1070,48 @@ func (_u *FleetMemberUpdateOne) ClearMaxWeightCapacityKg() *FleetMemberUpdateOne
 	return _u
 }
 
+// SetAverageRating sets the "average_rating" field.
+func (_u *FleetMemberUpdateOne) SetAverageRating(v float64) *FleetMemberUpdateOne {
+	_u.mutation.ResetAverageRating()
+	_u.mutation.SetAverageRating(v)
+	return _u
+}
+
+// SetNillableAverageRating sets the "average_rating" field if the given value is not nil.
+func (_u *FleetMemberUpdateOne) SetNillableAverageRating(v *float64) *FleetMemberUpdateOne {
+	if v != nil {
+		_u.SetAverageRating(*v)
+	}
+	return _u
+}
+
+// AddAverageRating adds value to the "average_rating" field.
+func (_u *FleetMemberUpdateOne) AddAverageRating(v float64) *FleetMemberUpdateOne {
+	_u.mutation.AddAverageRating(v)
+	return _u
+}
+
+// SetTotalRatings sets the "total_ratings" field.
+func (_u *FleetMemberUpdateOne) SetTotalRatings(v int) *FleetMemberUpdateOne {
+	_u.mutation.ResetTotalRatings()
+	_u.mutation.SetTotalRatings(v)
+	return _u
+}
+
+// SetNillableTotalRatings sets the "total_ratings" field if the given value is not nil.
+func (_u *FleetMemberUpdateOne) SetNillableTotalRatings(v *int) *FleetMemberUpdateOne {
+	if v != nil {
+		_u.SetTotalRatings(*v)
+	}
+	return _u
+}
+
+// AddTotalRatings adds value to the "total_ratings" field.
+func (_u *FleetMemberUpdateOne) AddTotalRatings(v int) *FleetMemberUpdateOne {
+	_u.mutation.AddTotalRatings(v)
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *FleetMemberUpdateOne) SetUpdatedAt(v time.Time) *FleetMemberUpdateOne {
 	_u.mutation.SetUpdatedAt(v)
@@ -968,6 +1146,21 @@ func (_u *FleetMemberUpdateOne) AddAssignments(v ...*TaskAssignment) *FleetMembe
 		ids[i] = v[i].ID
 	}
 	return _u.AddAssignmentIDs(ids...)
+}
+
+// AddRatingIDs adds the "ratings" edge to the RiderRating entity by IDs.
+func (_u *FleetMemberUpdateOne) AddRatingIDs(ids ...uuid.UUID) *FleetMemberUpdateOne {
+	_u.mutation.AddRatingIDs(ids...)
+	return _u
+}
+
+// AddRatings adds the "ratings" edges to the RiderRating entity.
+func (_u *FleetMemberUpdateOne) AddRatings(v ...*RiderRating) *FleetMemberUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddRatingIDs(ids...)
 }
 
 // Mutation returns the FleetMemberMutation object of the builder.
@@ -1012,6 +1205,27 @@ func (_u *FleetMemberUpdateOne) RemoveAssignments(v ...*TaskAssignment) *FleetMe
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveAssignmentIDs(ids...)
+}
+
+// ClearRatings clears all "ratings" edges to the RiderRating entity.
+func (_u *FleetMemberUpdateOne) ClearRatings() *FleetMemberUpdateOne {
+	_u.mutation.ClearRatings()
+	return _u
+}
+
+// RemoveRatingIDs removes the "ratings" edge to RiderRating entities by IDs.
+func (_u *FleetMemberUpdateOne) RemoveRatingIDs(ids ...uuid.UUID) *FleetMemberUpdateOne {
+	_u.mutation.RemoveRatingIDs(ids...)
+	return _u
+}
+
+// RemoveRatings removes "ratings" edges to RiderRating entities.
+func (_u *FleetMemberUpdateOne) RemoveRatings(v ...*RiderRating) *FleetMemberUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveRatingIDs(ids...)
 }
 
 // Where appends a list predicates to the FleetMemberUpdate builder.
@@ -1171,6 +1385,18 @@ func (_u *FleetMemberUpdateOne) sqlSave(ctx context.Context) (_node *FleetMember
 	if _u.mutation.MaxWeightCapacityKgCleared() {
 		_spec.ClearField(fleetmember.FieldMaxWeightCapacityKg, field.TypeFloat64)
 	}
+	if value, ok := _u.mutation.AverageRating(); ok {
+		_spec.SetField(fleetmember.FieldAverageRating, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedAverageRating(); ok {
+		_spec.AddField(fleetmember.FieldAverageRating, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.TotalRatings(); ok {
+		_spec.SetField(fleetmember.FieldTotalRatings, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedTotalRatings(); ok {
+		_spec.AddField(fleetmember.FieldTotalRatings, field.TypeInt, value)
+	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(fleetmember.FieldUpdatedAt, field.TypeTime, value)
 	}
@@ -1299,6 +1525,51 @@ func (_u *FleetMemberUpdateOne) sqlSave(ctx context.Context) (_node *FleetMember
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(taskassignment.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.RatingsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   fleetmember.RatingsTable,
+			Columns: []string{fleetmember.RatingsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(riderrating.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedRatingsIDs(); len(nodes) > 0 && !_u.mutation.RatingsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   fleetmember.RatingsTable,
+			Columns: []string{fleetmember.RatingsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(riderrating.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RatingsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   fleetmember.RatingsTable,
+			Columns: []string{fleetmember.RatingsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(riderrating.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

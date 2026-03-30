@@ -63,6 +63,12 @@ func (FleetMember) Fields() []ent.Field {
 			Optional().
 			Nillable().
 			Comment("Maximum carrying weight capacity"),
+		field.Float("average_rating").
+			Default(0).
+			Comment("Running average of rider ratings (1-5)"),
+		field.Int("total_ratings").
+			Default(0).
+			Comment("Total number of ratings received"),
 		field.Time("created_at").
 			Default(time.Now).
 			Immutable(),
@@ -89,6 +95,7 @@ func (FleetMember) Edges() []ent.Edge {
 			Field("vehicle_id").
 			Unique(),
 		edge.To("assignments", TaskAssignment.Type),
+		edge.To("ratings", RiderRating.Type),
 	}
 }
 
