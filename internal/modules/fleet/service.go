@@ -86,7 +86,8 @@ func (s *Service) GetOrCreateFleet(ctx context.Context, tenantID uuid.UUID, tena
 func (s *Service) ListMembers(ctx context.Context, tenantID uuid.UUID, status string) ([]*ent.FleetMember, error) {
 	q := s.client.FleetMember.Query().
 		Where(fleetmember.TenantID(tenantID)).
-		WithVehicle()
+		WithVehicle().
+		WithUser()
 
 	if status != "" {
 		q = q.Where(fleetmember.Status(status))
@@ -104,6 +105,7 @@ func (s *Service) GetMember(ctx context.Context, tenantID, memberID uuid.UUID) (
 	m, err := s.client.FleetMember.Query().
 		Where(fleetmember.ID(memberID), fleetmember.TenantID(tenantID)).
 		WithVehicle().
+		WithUser().
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
