@@ -283,6 +283,37 @@ func (s *Service) SuspendMember(ctx context.Context, tenantID, memberID uuid.UUI
 	return updated, nil
 }
 
+// DeleteMember permanently removes a fleet member record.
+// Used for cleaning up test invites or removing members who never completed onboarding.
+func (s *Service) DeleteMember(ctx context.Context, tenantID, memberID uuid.UUID) error {
+	m, err := s.client.FleetMember.Query().
+		Where(fleetmember.ID(memberID), fleetmember.TenantID(tenantID)).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return fmt.Errorf("fleet: member not found")
+		}
+		return fmt.Errorf("fleet: get for delete: %w", err)
+	}
+
+	// Delete any associated vehicle record
+	if m.VehicleID != nil {
+		_ = s.client.Vehicle.DeleteOneID(*m.VehicleID).Exec(ctx)
+	}
+
+	// Delete the fleet member
+	if err := s.client.FleetMember.DeleteOneID(m.ID).Exec(ctx); err != nil {
+		return fmt.Errorf("fleet: delete member: %w", err)
+	}
+
+	s.log.Info("deleted fleet member",
+		zap.String("member_id", memberID.String()),
+		zap.String("tenant_id", tenantID.String()),
+	)
+
+	return nil
+}
+
 // RateRiderRequest is the DTO for rating a rider after delivery.
 type RateRiderRequest struct {
 	TaskID         *uuid.UUID `json:"task_id,omitempty"`
