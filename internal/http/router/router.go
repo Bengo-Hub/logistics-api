@@ -207,6 +207,7 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 					fleetR.Get("/members/{memberId}", lh.GetMember)
 					fleetR.Post("/members/{memberId}/approve", lh.ApproveMember)
 					fleetR.Post("/members/{memberId}/suspend", lh.SuspendMember)
+					fleetR.Delete("/members/{memberId}", lh.DeleteMember)
 				})
 			}
 		})
