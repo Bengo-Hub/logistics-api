@@ -166,6 +166,7 @@ func New(ctx context.Context) (*App, error) {
 	log.Info("app: earnings statement job started (daily)")
 
 	fleetSvc := fleetmod.NewService(entClient, log, eventPublisher)
+	go fleetSvc.StartStaleRiderCleanup(ctx)
 	logisticsHandler := handlers.NewLogisticsHandler(log, taskSvc, fleetSvc)
 
 	// Auto-dispatch: find nearest rider and assign tasks automatically
