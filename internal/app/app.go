@@ -50,7 +50,8 @@ type App struct {
 	entClient       *ent.Client
 	cache           *redis.Client
 	events          *nats.Conn
-	orderConsumer   *consumers.OrderReadyConsumer
+	orderConsumer    *consumers.OrderReadyConsumer
+	transferConsumer *consumers.TransferReadyConsumer
 	outboxPublisher *eventslib.Publisher
 	etaUpdater      *dispatch.ETAUpdater
 	batchScheduler  *dispatch.BatchScheduler
@@ -173,6 +174,7 @@ func New(ctx context.Context) (*App, error) {
 	autoDispatcher := dispatch.NewAutoDispatcher(log, fleetSvc, taskSvc, redisClient)
 
 	orderConsumer := consumers.NewOrderReadyConsumer(log, taskSvc, autoDispatcher)
+	transferConsumer := consumers.NewTransferReadyConsumer(log, taskSvc, autoDispatcher)
 
 	// Initialize routing engine (Valhalla primary, no fallback initially)
 	valhallaProvider := routing.NewValhallaProvider(cfg.Routing.PrimaryURL, cfg.Routing.RequestTimeout)
@@ -220,7 +222,8 @@ func New(ctx context.Context) (*App, error) {
 		entClient:       entClient,
 		cache:           redisClient,
 		events:          natsConn,
-		orderConsumer:   orderConsumer,
+		orderConsumer:    orderConsumer,
+		transferConsumer: transferConsumer,
 		outboxPublisher: outboxPub,
 		etaUpdater:      etaUpdater,
 		batchScheduler:  batchScheduler,
@@ -250,6 +253,21 @@ func (a *App) Run(ctx context.Context) error {
 				}
 			}()
 			a.log.Info("order ready consumer started")
+		}
+	}
+
+	// Start transfer consumer for warehouse-to-warehouse tasks from inventory
+	if a.transferConsumer != nil && a.events != nil {
+		js, err := a.events.JetStream()
+		if err != nil {
+			a.log.Warn("jetstream unavailable, transfer consumer not started", zap.Error(err))
+		} else {
+			go func() {
+				if err := a.transferConsumer.Start(ctx, js); err != nil {
+					a.log.Error("transfer consumer stopped", zap.Error(err))
+				}
+			}()
+			a.log.Info("transfer consumer started (inventory.transfer.created)")
 		}
 	}
 
