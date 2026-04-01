@@ -48,6 +48,15 @@ func (s *Service) resolveUserInfo(ctx context.Context, userID uuid.UUID) (email,
 	return u.Email, u.FullName
 }
 
+// resolveTenantSlug looks up the tenant slug from a fleet member's fleet.
+func (s *Service) resolveTenantSlug(ctx context.Context, fleetID uuid.UUID) string {
+	fl, err := s.client.Fleet.Get(ctx, fleetID)
+	if err != nil {
+		return ""
+	}
+	return fl.TenantSlug
+}
+
 // GetOrCreateFleet returns the tenant's active fleet, creating one if none exists.
 func (s *Service) GetOrCreateFleet(ctx context.Context, tenantID uuid.UUID, tenantSlug string) (*ent.Fleet, error) {
 	fl, err := s.client.Fleet.Query().
@@ -208,8 +217,9 @@ func (s *Service) InviteMember(ctx context.Context, tenantID uuid.UUID, tenantSl
 		email, name := s.resolveUserInfo(ctx, req.UserID)
 		if email != "" {
 			if pubErr := s.publisher.PublishFleetMemberInvited(ctx, tenantID, events.FleetMemberEventData{
-				MemberID: m.ID.String(), UserID: req.UserID.String(),
-				FleetID: fleetID.String(), UserEmail: email, UserName: name,
+				MemberID:   m.ID.String(), UserID: req.UserID.String(),
+				FleetID:    fleetID.String(), UserEmail: email, UserName: name,
+				TenantSlug: tenantSlug,
 			}); pubErr != nil {
 				s.log.Warn("failed to publish fleet.member_invited", zap.Error(pubErr))
 			}
@@ -240,8 +250,9 @@ func (s *Service) ApproveMember(ctx context.Context, tenantID, memberID uuid.UUI
 		email, name := s.resolveUserInfo(ctx, m.UserID)
 		if email != "" {
 			if pubErr := s.publisher.PublishFleetMemberApproved(ctx, tenantID, events.FleetMemberEventData{
-				MemberID: memberID.String(), UserID: m.UserID.String(),
-				FleetID: m.FleetID.String(), UserEmail: email, UserName: name,
+				MemberID:   memberID.String(), UserID: m.UserID.String(),
+				FleetID:    m.FleetID.String(), UserEmail: email, UserName: name,
+				TenantSlug: s.resolveTenantSlug(ctx, m.FleetID),
 			}); pubErr != nil {
 				s.log.Warn("failed to publish fleet.member_approved", zap.Error(pubErr))
 			}
@@ -272,8 +283,9 @@ func (s *Service) SuspendMember(ctx context.Context, tenantID, memberID uuid.UUI
 		email, name := s.resolveUserInfo(ctx, m.UserID)
 		if email != "" {
 			if pubErr := s.publisher.PublishFleetMemberSuspended(ctx, tenantID, events.FleetMemberEventData{
-				MemberID: memberID.String(), UserID: m.UserID.String(),
-				FleetID: m.FleetID.String(), UserEmail: email, UserName: name,
+				MemberID:   memberID.String(), UserID: m.UserID.String(),
+				FleetID:    m.FleetID.String(), UserEmail: email, UserName: name,
+				TenantSlug: s.resolveTenantSlug(ctx, m.FleetID),
 			}); pubErr != nil {
 				s.log.Warn("failed to publish fleet.member_suspended", zap.Error(pubErr))
 			}
