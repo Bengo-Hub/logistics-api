@@ -208,7 +208,10 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 					fleetR.Post("/members/{memberId}/approve", lh.ApproveMember)
 					fleetR.Post("/members/{memberId}/suspend", lh.SuspendMember)
 					fleetR.Post("/members/{memberId}/reject", lh.RejectMember)
+					fleetR.Post("/members/{memberId}/vehicle", lh.AssignVehicle)
 					fleetR.Delete("/members/{memberId}", lh.DeleteMember)
+					fleetR.Post("/members/batch", lh.BatchInviteMembers)
+					fleetR.Post("/vehicles", lh.CreateVehicle)
 				})
 			}
 		})

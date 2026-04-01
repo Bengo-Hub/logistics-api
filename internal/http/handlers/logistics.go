@@ -477,6 +477,84 @@ func (h *LogisticsHandler) DeleteMember(w http.ResponseWriter, r *http.Request) 
 	respondJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 }
 
+// BatchInviteMembers handles POST /api/v1/{tenant}/fleet/members/batch
+func (h *LogisticsHandler) BatchInviteMembers(w http.ResponseWriter, r *http.Request) {
+	tenantID := tenantIDFromClaims(r)
+	if tenantID == uuid.Nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	tenantSlug := chi.URLParam(r, "tenantSlug")
+
+	var requests []fleet.InviteByEmailRequest
+	if err := json.NewDecoder(r.Body).Decode(&requests); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	results := h.fleetSvc.BatchInviteByEmail(r.Context(), tenantID, tenantSlug, requests)
+	respondJSON(w, http.StatusOK, results)
+}
+
+// CreateVehicle handles POST /api/v1/{tenant}/fleet/vehicles
+func (h *LogisticsHandler) CreateVehicle(w http.ResponseWriter, r *http.Request) {
+	tenantID := tenantIDFromClaims(r)
+	if tenantID == uuid.Nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var req fleet.CreateVehicleRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	v, err := h.fleetSvc.CreateVehicle(r.Context(), tenantID, uuid.Nil, req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	respondJSON(w, http.StatusCreated, v)
+}
+
+// AssignVehicle handles POST /api/v1/{tenant}/fleet/members/{memberId}/vehicle
+func (h *LogisticsHandler) AssignVehicle(w http.ResponseWriter, r *http.Request) {
+	tenantID := tenantIDFromClaims(r)
+	if tenantID == uuid.Nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	memberID, err := uuid.Parse(chi.URLParam(r, "memberId"))
+	if err != nil {
+		http.Error(w, "invalid member id", http.StatusBadRequest)
+		return
+	}
+
+	var body struct {
+		VehicleID string `json:"vehicle_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	vehicleID, err := uuid.Parse(body.VehicleID)
+	if err != nil {
+		http.Error(w, "invalid vehicle id", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.fleetSvc.AssignVehicle(r.Context(), tenantID, memberID, vehicleID); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, map[string]string{"status": "assigned"})
+}
+
 // --- helpers ---
 // tenantIDFromClaims is now defined in tenant.go with platform-owner override support.
 
