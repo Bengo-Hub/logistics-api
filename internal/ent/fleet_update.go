@@ -87,6 +87,20 @@ func (_u *FleetUpdate) SetNillableType(v *string) *FleetUpdate {
 	return _u
 }
 
+// SetFleetType sets the "fleet_type" field.
+func (_u *FleetUpdate) SetFleetType(v string) *FleetUpdate {
+	_u.mutation.SetFleetType(v)
+	return _u
+}
+
+// SetNillableFleetType sets the "fleet_type" field if the given value is not nil.
+func (_u *FleetUpdate) SetNillableFleetType(v *string) *FleetUpdate {
+	if v != nil {
+		_u.SetFleetType(*v)
+	}
+	return _u
+}
+
 // SetStatus sets the "status" field.
 func (_u *FleetUpdate) SetStatus(v string) *FleetUpdate {
 	_u.mutation.SetStatus(v)
@@ -265,6 +279,9 @@ func (_u *FleetUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.GetType(); ok {
 		_spec.SetField(fleet.FieldType, field.TypeString, value)
 	}
+	if value, ok := _u.mutation.FleetType(); ok {
+		_spec.SetField(fleet.FieldFleetType, field.TypeString, value)
+	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(fleet.FieldStatus, field.TypeString, value)
 	}
@@ -436,6 +453,20 @@ func (_u *FleetUpdateOne) SetType(v string) *FleetUpdateOne {
 func (_u *FleetUpdateOne) SetNillableType(v *string) *FleetUpdateOne {
 	if v != nil {
 		_u.SetType(*v)
+	}
+	return _u
+}
+
+// SetFleetType sets the "fleet_type" field.
+func (_u *FleetUpdateOne) SetFleetType(v string) *FleetUpdateOne {
+	_u.mutation.SetFleetType(v)
+	return _u
+}
+
+// SetNillableFleetType sets the "fleet_type" field if the given value is not nil.
+func (_u *FleetUpdateOne) SetNillableFleetType(v *string) *FleetUpdateOne {
+	if v != nil {
+		_u.SetFleetType(*v)
 	}
 	return _u
 }
@@ -647,6 +678,9 @@ func (_u *FleetUpdateOne) sqlSave(ctx context.Context) (_node *Fleet, err error)
 	}
 	if value, ok := _u.mutation.GetType(); ok {
 		_spec.SetField(fleet.FieldType, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.FleetType(); ok {
+		_spec.SetField(fleet.FieldFleetType, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(fleet.FieldStatus, field.TypeString, value)

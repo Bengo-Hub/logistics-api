@@ -106,6 +106,26 @@ func ImageSideView(v string) predicate.Vehicle {
 	return predicate.Vehicle(sql.FieldEQ(FieldImageSideView, v))
 }
 
+// InsuranceExpiry applies equality check predicate on the "insurance_expiry" field. It's identical to InsuranceExpiryEQ.
+func InsuranceExpiry(v time.Time) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldEQ(FieldInsuranceExpiry, v))
+}
+
+// InsuranceDocument applies equality check predicate on the "insurance_document" field. It's identical to InsuranceDocumentEQ.
+func InsuranceDocument(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldEQ(FieldInsuranceDocument, v))
+}
+
+// InspectionExpiry applies equality check predicate on the "inspection_expiry" field. It's identical to InspectionExpiryEQ.
+func InspectionExpiry(v time.Time) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldEQ(FieldInspectionExpiry, v))
+}
+
+// InspectionDocument applies equality check predicate on the "inspection_document" field. It's identical to InspectionDocumentEQ.
+func InspectionDocument(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldEQ(FieldInspectionDocument, v))
+}
+
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.Vehicle {
 	return predicate.Vehicle(sql.FieldEQ(FieldCreatedAt, v))
@@ -724,6 +744,256 @@ func ImageSideViewEqualFold(v string) predicate.Vehicle {
 // ImageSideViewContainsFold applies the ContainsFold predicate on the "image_side_view" field.
 func ImageSideViewContainsFold(v string) predicate.Vehicle {
 	return predicate.Vehicle(sql.FieldContainsFold(FieldImageSideView, v))
+}
+
+// InsuranceExpiryEQ applies the EQ predicate on the "insurance_expiry" field.
+func InsuranceExpiryEQ(v time.Time) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldEQ(FieldInsuranceExpiry, v))
+}
+
+// InsuranceExpiryNEQ applies the NEQ predicate on the "insurance_expiry" field.
+func InsuranceExpiryNEQ(v time.Time) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldNEQ(FieldInsuranceExpiry, v))
+}
+
+// InsuranceExpiryIn applies the In predicate on the "insurance_expiry" field.
+func InsuranceExpiryIn(vs ...time.Time) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldIn(FieldInsuranceExpiry, vs...))
+}
+
+// InsuranceExpiryNotIn applies the NotIn predicate on the "insurance_expiry" field.
+func InsuranceExpiryNotIn(vs ...time.Time) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldNotIn(FieldInsuranceExpiry, vs...))
+}
+
+// InsuranceExpiryGT applies the GT predicate on the "insurance_expiry" field.
+func InsuranceExpiryGT(v time.Time) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldGT(FieldInsuranceExpiry, v))
+}
+
+// InsuranceExpiryGTE applies the GTE predicate on the "insurance_expiry" field.
+func InsuranceExpiryGTE(v time.Time) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldGTE(FieldInsuranceExpiry, v))
+}
+
+// InsuranceExpiryLT applies the LT predicate on the "insurance_expiry" field.
+func InsuranceExpiryLT(v time.Time) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldLT(FieldInsuranceExpiry, v))
+}
+
+// InsuranceExpiryLTE applies the LTE predicate on the "insurance_expiry" field.
+func InsuranceExpiryLTE(v time.Time) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldLTE(FieldInsuranceExpiry, v))
+}
+
+// InsuranceExpiryIsNil applies the IsNil predicate on the "insurance_expiry" field.
+func InsuranceExpiryIsNil() predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldIsNull(FieldInsuranceExpiry))
+}
+
+// InsuranceExpiryNotNil applies the NotNil predicate on the "insurance_expiry" field.
+func InsuranceExpiryNotNil() predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldNotNull(FieldInsuranceExpiry))
+}
+
+// InsuranceDocumentEQ applies the EQ predicate on the "insurance_document" field.
+func InsuranceDocumentEQ(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldEQ(FieldInsuranceDocument, v))
+}
+
+// InsuranceDocumentNEQ applies the NEQ predicate on the "insurance_document" field.
+func InsuranceDocumentNEQ(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldNEQ(FieldInsuranceDocument, v))
+}
+
+// InsuranceDocumentIn applies the In predicate on the "insurance_document" field.
+func InsuranceDocumentIn(vs ...string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldIn(FieldInsuranceDocument, vs...))
+}
+
+// InsuranceDocumentNotIn applies the NotIn predicate on the "insurance_document" field.
+func InsuranceDocumentNotIn(vs ...string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldNotIn(FieldInsuranceDocument, vs...))
+}
+
+// InsuranceDocumentGT applies the GT predicate on the "insurance_document" field.
+func InsuranceDocumentGT(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldGT(FieldInsuranceDocument, v))
+}
+
+// InsuranceDocumentGTE applies the GTE predicate on the "insurance_document" field.
+func InsuranceDocumentGTE(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldGTE(FieldInsuranceDocument, v))
+}
+
+// InsuranceDocumentLT applies the LT predicate on the "insurance_document" field.
+func InsuranceDocumentLT(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldLT(FieldInsuranceDocument, v))
+}
+
+// InsuranceDocumentLTE applies the LTE predicate on the "insurance_document" field.
+func InsuranceDocumentLTE(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldLTE(FieldInsuranceDocument, v))
+}
+
+// InsuranceDocumentContains applies the Contains predicate on the "insurance_document" field.
+func InsuranceDocumentContains(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldContains(FieldInsuranceDocument, v))
+}
+
+// InsuranceDocumentHasPrefix applies the HasPrefix predicate on the "insurance_document" field.
+func InsuranceDocumentHasPrefix(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldHasPrefix(FieldInsuranceDocument, v))
+}
+
+// InsuranceDocumentHasSuffix applies the HasSuffix predicate on the "insurance_document" field.
+func InsuranceDocumentHasSuffix(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldHasSuffix(FieldInsuranceDocument, v))
+}
+
+// InsuranceDocumentIsNil applies the IsNil predicate on the "insurance_document" field.
+func InsuranceDocumentIsNil() predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldIsNull(FieldInsuranceDocument))
+}
+
+// InsuranceDocumentNotNil applies the NotNil predicate on the "insurance_document" field.
+func InsuranceDocumentNotNil() predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldNotNull(FieldInsuranceDocument))
+}
+
+// InsuranceDocumentEqualFold applies the EqualFold predicate on the "insurance_document" field.
+func InsuranceDocumentEqualFold(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldEqualFold(FieldInsuranceDocument, v))
+}
+
+// InsuranceDocumentContainsFold applies the ContainsFold predicate on the "insurance_document" field.
+func InsuranceDocumentContainsFold(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldContainsFold(FieldInsuranceDocument, v))
+}
+
+// InspectionExpiryEQ applies the EQ predicate on the "inspection_expiry" field.
+func InspectionExpiryEQ(v time.Time) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldEQ(FieldInspectionExpiry, v))
+}
+
+// InspectionExpiryNEQ applies the NEQ predicate on the "inspection_expiry" field.
+func InspectionExpiryNEQ(v time.Time) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldNEQ(FieldInspectionExpiry, v))
+}
+
+// InspectionExpiryIn applies the In predicate on the "inspection_expiry" field.
+func InspectionExpiryIn(vs ...time.Time) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldIn(FieldInspectionExpiry, vs...))
+}
+
+// InspectionExpiryNotIn applies the NotIn predicate on the "inspection_expiry" field.
+func InspectionExpiryNotIn(vs ...time.Time) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldNotIn(FieldInspectionExpiry, vs...))
+}
+
+// InspectionExpiryGT applies the GT predicate on the "inspection_expiry" field.
+func InspectionExpiryGT(v time.Time) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldGT(FieldInspectionExpiry, v))
+}
+
+// InspectionExpiryGTE applies the GTE predicate on the "inspection_expiry" field.
+func InspectionExpiryGTE(v time.Time) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldGTE(FieldInspectionExpiry, v))
+}
+
+// InspectionExpiryLT applies the LT predicate on the "inspection_expiry" field.
+func InspectionExpiryLT(v time.Time) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldLT(FieldInspectionExpiry, v))
+}
+
+// InspectionExpiryLTE applies the LTE predicate on the "inspection_expiry" field.
+func InspectionExpiryLTE(v time.Time) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldLTE(FieldInspectionExpiry, v))
+}
+
+// InspectionExpiryIsNil applies the IsNil predicate on the "inspection_expiry" field.
+func InspectionExpiryIsNil() predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldIsNull(FieldInspectionExpiry))
+}
+
+// InspectionExpiryNotNil applies the NotNil predicate on the "inspection_expiry" field.
+func InspectionExpiryNotNil() predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldNotNull(FieldInspectionExpiry))
+}
+
+// InspectionDocumentEQ applies the EQ predicate on the "inspection_document" field.
+func InspectionDocumentEQ(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldEQ(FieldInspectionDocument, v))
+}
+
+// InspectionDocumentNEQ applies the NEQ predicate on the "inspection_document" field.
+func InspectionDocumentNEQ(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldNEQ(FieldInspectionDocument, v))
+}
+
+// InspectionDocumentIn applies the In predicate on the "inspection_document" field.
+func InspectionDocumentIn(vs ...string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldIn(FieldInspectionDocument, vs...))
+}
+
+// InspectionDocumentNotIn applies the NotIn predicate on the "inspection_document" field.
+func InspectionDocumentNotIn(vs ...string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldNotIn(FieldInspectionDocument, vs...))
+}
+
+// InspectionDocumentGT applies the GT predicate on the "inspection_document" field.
+func InspectionDocumentGT(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldGT(FieldInspectionDocument, v))
+}
+
+// InspectionDocumentGTE applies the GTE predicate on the "inspection_document" field.
+func InspectionDocumentGTE(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldGTE(FieldInspectionDocument, v))
+}
+
+// InspectionDocumentLT applies the LT predicate on the "inspection_document" field.
+func InspectionDocumentLT(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldLT(FieldInspectionDocument, v))
+}
+
+// InspectionDocumentLTE applies the LTE predicate on the "inspection_document" field.
+func InspectionDocumentLTE(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldLTE(FieldInspectionDocument, v))
+}
+
+// InspectionDocumentContains applies the Contains predicate on the "inspection_document" field.
+func InspectionDocumentContains(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldContains(FieldInspectionDocument, v))
+}
+
+// InspectionDocumentHasPrefix applies the HasPrefix predicate on the "inspection_document" field.
+func InspectionDocumentHasPrefix(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldHasPrefix(FieldInspectionDocument, v))
+}
+
+// InspectionDocumentHasSuffix applies the HasSuffix predicate on the "inspection_document" field.
+func InspectionDocumentHasSuffix(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldHasSuffix(FieldInspectionDocument, v))
+}
+
+// InspectionDocumentIsNil applies the IsNil predicate on the "inspection_document" field.
+func InspectionDocumentIsNil() predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldIsNull(FieldInspectionDocument))
+}
+
+// InspectionDocumentNotNil applies the NotNil predicate on the "inspection_document" field.
+func InspectionDocumentNotNil() predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldNotNull(FieldInspectionDocument))
+}
+
+// InspectionDocumentEqualFold applies the EqualFold predicate on the "inspection_document" field.
+func InspectionDocumentEqualFold(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldEqualFold(FieldInspectionDocument, v))
+}
+
+// InspectionDocumentContainsFold applies the ContainsFold predicate on the "inspection_document" field.
+func InspectionDocumentContainsFold(v string) predicate.Vehicle {
+	return predicate.Vehicle(sql.FieldContainsFold(FieldInspectionDocument, v))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.

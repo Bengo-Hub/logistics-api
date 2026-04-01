@@ -35,8 +35,30 @@ func (FleetMember) Fields() []ent.Field {
 			Optional().
 			Comment("Driving License Number"),
 		field.String("status").
-			Default("pending").
-			Comment("pending, approved, active, suspended"),
+			Default("invited").
+			Comment("invited, pending, pending_review, active, rejected, suspended"),
+		field.String("invite_code").
+			Optional().
+			Unique().
+			Comment("Unique invite token for email registration link"),
+		field.Time("kyc_submitted_at").
+			Optional().
+			Nillable().
+			Comment("When rider submitted KYC documents"),
+		field.Time("reviewed_at").
+			Optional().
+			Nillable().
+			Comment("When admin reviewed the application"),
+		field.String("reviewed_by").
+			Optional().
+			Comment("Admin user ID who reviewed"),
+		field.String("rejection_reason").
+			Optional().
+			Comment("Reason for rejection if status=rejected"),
+		field.String("onboarding_source").
+			Optional().
+			Default("invite").
+			Comment("invite | public_signup | company_created"),
 		field.String("id_passport_attachment").
 			Optional().
 			Comment("URL to ID/Passport attachment"),

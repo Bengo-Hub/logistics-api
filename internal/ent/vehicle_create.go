@@ -124,6 +124,62 @@ func (_c *VehicleCreate) SetNillableImageSideView(v *string) *VehicleCreate {
 	return _c
 }
 
+// SetInsuranceExpiry sets the "insurance_expiry" field.
+func (_c *VehicleCreate) SetInsuranceExpiry(v time.Time) *VehicleCreate {
+	_c.mutation.SetInsuranceExpiry(v)
+	return _c
+}
+
+// SetNillableInsuranceExpiry sets the "insurance_expiry" field if the given value is not nil.
+func (_c *VehicleCreate) SetNillableInsuranceExpiry(v *time.Time) *VehicleCreate {
+	if v != nil {
+		_c.SetInsuranceExpiry(*v)
+	}
+	return _c
+}
+
+// SetInsuranceDocument sets the "insurance_document" field.
+func (_c *VehicleCreate) SetInsuranceDocument(v string) *VehicleCreate {
+	_c.mutation.SetInsuranceDocument(v)
+	return _c
+}
+
+// SetNillableInsuranceDocument sets the "insurance_document" field if the given value is not nil.
+func (_c *VehicleCreate) SetNillableInsuranceDocument(v *string) *VehicleCreate {
+	if v != nil {
+		_c.SetInsuranceDocument(*v)
+	}
+	return _c
+}
+
+// SetInspectionExpiry sets the "inspection_expiry" field.
+func (_c *VehicleCreate) SetInspectionExpiry(v time.Time) *VehicleCreate {
+	_c.mutation.SetInspectionExpiry(v)
+	return _c
+}
+
+// SetNillableInspectionExpiry sets the "inspection_expiry" field if the given value is not nil.
+func (_c *VehicleCreate) SetNillableInspectionExpiry(v *time.Time) *VehicleCreate {
+	if v != nil {
+		_c.SetInspectionExpiry(*v)
+	}
+	return _c
+}
+
+// SetInspectionDocument sets the "inspection_document" field.
+func (_c *VehicleCreate) SetInspectionDocument(v string) *VehicleCreate {
+	_c.mutation.SetInspectionDocument(v)
+	return _c
+}
+
+// SetNillableInspectionDocument sets the "inspection_document" field if the given value is not nil.
+func (_c *VehicleCreate) SetNillableInspectionDocument(v *string) *VehicleCreate {
+	if v != nil {
+		_c.SetInspectionDocument(*v)
+	}
+	return _c
+}
+
 // SetMetadata sets the "metadata" field.
 func (_c *VehicleCreate) SetMetadata(v map[string]interface{}) *VehicleCreate {
 	_c.mutation.SetMetadata(v)
@@ -387,6 +443,22 @@ func (_c *VehicleCreate) createSpec() (*Vehicle, *sqlgraph.CreateSpec) {
 		_spec.SetField(vehicle.FieldImageSideView, field.TypeString, value)
 		_node.ImageSideView = value
 	}
+	if value, ok := _c.mutation.InsuranceExpiry(); ok {
+		_spec.SetField(vehicle.FieldInsuranceExpiry, field.TypeTime, value)
+		_node.InsuranceExpiry = &value
+	}
+	if value, ok := _c.mutation.InsuranceDocument(); ok {
+		_spec.SetField(vehicle.FieldInsuranceDocument, field.TypeString, value)
+		_node.InsuranceDocument = value
+	}
+	if value, ok := _c.mutation.InspectionExpiry(); ok {
+		_spec.SetField(vehicle.FieldInspectionExpiry, field.TypeTime, value)
+		_node.InspectionExpiry = &value
+	}
+	if value, ok := _c.mutation.InspectionDocument(); ok {
+		_spec.SetField(vehicle.FieldInspectionDocument, field.TypeString, value)
+		_node.InspectionDocument = value
+	}
 	if value, ok := _c.mutation.Metadata(); ok {
 		_spec.SetField(vehicle.FieldMetadata, field.TypeJSON, value)
 		_node.Metadata = value
@@ -631,6 +703,78 @@ func (u *VehicleUpsert) UpdateImageSideView() *VehicleUpsert {
 // ClearImageSideView clears the value of the "image_side_view" field.
 func (u *VehicleUpsert) ClearImageSideView() *VehicleUpsert {
 	u.SetNull(vehicle.FieldImageSideView)
+	return u
+}
+
+// SetInsuranceExpiry sets the "insurance_expiry" field.
+func (u *VehicleUpsert) SetInsuranceExpiry(v time.Time) *VehicleUpsert {
+	u.Set(vehicle.FieldInsuranceExpiry, v)
+	return u
+}
+
+// UpdateInsuranceExpiry sets the "insurance_expiry" field to the value that was provided on create.
+func (u *VehicleUpsert) UpdateInsuranceExpiry() *VehicleUpsert {
+	u.SetExcluded(vehicle.FieldInsuranceExpiry)
+	return u
+}
+
+// ClearInsuranceExpiry clears the value of the "insurance_expiry" field.
+func (u *VehicleUpsert) ClearInsuranceExpiry() *VehicleUpsert {
+	u.SetNull(vehicle.FieldInsuranceExpiry)
+	return u
+}
+
+// SetInsuranceDocument sets the "insurance_document" field.
+func (u *VehicleUpsert) SetInsuranceDocument(v string) *VehicleUpsert {
+	u.Set(vehicle.FieldInsuranceDocument, v)
+	return u
+}
+
+// UpdateInsuranceDocument sets the "insurance_document" field to the value that was provided on create.
+func (u *VehicleUpsert) UpdateInsuranceDocument() *VehicleUpsert {
+	u.SetExcluded(vehicle.FieldInsuranceDocument)
+	return u
+}
+
+// ClearInsuranceDocument clears the value of the "insurance_document" field.
+func (u *VehicleUpsert) ClearInsuranceDocument() *VehicleUpsert {
+	u.SetNull(vehicle.FieldInsuranceDocument)
+	return u
+}
+
+// SetInspectionExpiry sets the "inspection_expiry" field.
+func (u *VehicleUpsert) SetInspectionExpiry(v time.Time) *VehicleUpsert {
+	u.Set(vehicle.FieldInspectionExpiry, v)
+	return u
+}
+
+// UpdateInspectionExpiry sets the "inspection_expiry" field to the value that was provided on create.
+func (u *VehicleUpsert) UpdateInspectionExpiry() *VehicleUpsert {
+	u.SetExcluded(vehicle.FieldInspectionExpiry)
+	return u
+}
+
+// ClearInspectionExpiry clears the value of the "inspection_expiry" field.
+func (u *VehicleUpsert) ClearInspectionExpiry() *VehicleUpsert {
+	u.SetNull(vehicle.FieldInspectionExpiry)
+	return u
+}
+
+// SetInspectionDocument sets the "inspection_document" field.
+func (u *VehicleUpsert) SetInspectionDocument(v string) *VehicleUpsert {
+	u.Set(vehicle.FieldInspectionDocument, v)
+	return u
+}
+
+// UpdateInspectionDocument sets the "inspection_document" field to the value that was provided on create.
+func (u *VehicleUpsert) UpdateInspectionDocument() *VehicleUpsert {
+	u.SetExcluded(vehicle.FieldInspectionDocument)
+	return u
+}
+
+// ClearInspectionDocument clears the value of the "inspection_document" field.
+func (u *VehicleUpsert) ClearInspectionDocument() *VehicleUpsert {
+	u.SetNull(vehicle.FieldInspectionDocument)
 	return u
 }
 
@@ -881,6 +1025,90 @@ func (u *VehicleUpsertOne) UpdateImageSideView() *VehicleUpsertOne {
 func (u *VehicleUpsertOne) ClearImageSideView() *VehicleUpsertOne {
 	return u.Update(func(s *VehicleUpsert) {
 		s.ClearImageSideView()
+	})
+}
+
+// SetInsuranceExpiry sets the "insurance_expiry" field.
+func (u *VehicleUpsertOne) SetInsuranceExpiry(v time.Time) *VehicleUpsertOne {
+	return u.Update(func(s *VehicleUpsert) {
+		s.SetInsuranceExpiry(v)
+	})
+}
+
+// UpdateInsuranceExpiry sets the "insurance_expiry" field to the value that was provided on create.
+func (u *VehicleUpsertOne) UpdateInsuranceExpiry() *VehicleUpsertOne {
+	return u.Update(func(s *VehicleUpsert) {
+		s.UpdateInsuranceExpiry()
+	})
+}
+
+// ClearInsuranceExpiry clears the value of the "insurance_expiry" field.
+func (u *VehicleUpsertOne) ClearInsuranceExpiry() *VehicleUpsertOne {
+	return u.Update(func(s *VehicleUpsert) {
+		s.ClearInsuranceExpiry()
+	})
+}
+
+// SetInsuranceDocument sets the "insurance_document" field.
+func (u *VehicleUpsertOne) SetInsuranceDocument(v string) *VehicleUpsertOne {
+	return u.Update(func(s *VehicleUpsert) {
+		s.SetInsuranceDocument(v)
+	})
+}
+
+// UpdateInsuranceDocument sets the "insurance_document" field to the value that was provided on create.
+func (u *VehicleUpsertOne) UpdateInsuranceDocument() *VehicleUpsertOne {
+	return u.Update(func(s *VehicleUpsert) {
+		s.UpdateInsuranceDocument()
+	})
+}
+
+// ClearInsuranceDocument clears the value of the "insurance_document" field.
+func (u *VehicleUpsertOne) ClearInsuranceDocument() *VehicleUpsertOne {
+	return u.Update(func(s *VehicleUpsert) {
+		s.ClearInsuranceDocument()
+	})
+}
+
+// SetInspectionExpiry sets the "inspection_expiry" field.
+func (u *VehicleUpsertOne) SetInspectionExpiry(v time.Time) *VehicleUpsertOne {
+	return u.Update(func(s *VehicleUpsert) {
+		s.SetInspectionExpiry(v)
+	})
+}
+
+// UpdateInspectionExpiry sets the "inspection_expiry" field to the value that was provided on create.
+func (u *VehicleUpsertOne) UpdateInspectionExpiry() *VehicleUpsertOne {
+	return u.Update(func(s *VehicleUpsert) {
+		s.UpdateInspectionExpiry()
+	})
+}
+
+// ClearInspectionExpiry clears the value of the "inspection_expiry" field.
+func (u *VehicleUpsertOne) ClearInspectionExpiry() *VehicleUpsertOne {
+	return u.Update(func(s *VehicleUpsert) {
+		s.ClearInspectionExpiry()
+	})
+}
+
+// SetInspectionDocument sets the "inspection_document" field.
+func (u *VehicleUpsertOne) SetInspectionDocument(v string) *VehicleUpsertOne {
+	return u.Update(func(s *VehicleUpsert) {
+		s.SetInspectionDocument(v)
+	})
+}
+
+// UpdateInspectionDocument sets the "inspection_document" field to the value that was provided on create.
+func (u *VehicleUpsertOne) UpdateInspectionDocument() *VehicleUpsertOne {
+	return u.Update(func(s *VehicleUpsert) {
+		s.UpdateInspectionDocument()
+	})
+}
+
+// ClearInspectionDocument clears the value of the "inspection_document" field.
+func (u *VehicleUpsertOne) ClearInspectionDocument() *VehicleUpsertOne {
+	return u.Update(func(s *VehicleUpsert) {
+		s.ClearInspectionDocument()
 	})
 }
 
@@ -1302,6 +1530,90 @@ func (u *VehicleUpsertBulk) UpdateImageSideView() *VehicleUpsertBulk {
 func (u *VehicleUpsertBulk) ClearImageSideView() *VehicleUpsertBulk {
 	return u.Update(func(s *VehicleUpsert) {
 		s.ClearImageSideView()
+	})
+}
+
+// SetInsuranceExpiry sets the "insurance_expiry" field.
+func (u *VehicleUpsertBulk) SetInsuranceExpiry(v time.Time) *VehicleUpsertBulk {
+	return u.Update(func(s *VehicleUpsert) {
+		s.SetInsuranceExpiry(v)
+	})
+}
+
+// UpdateInsuranceExpiry sets the "insurance_expiry" field to the value that was provided on create.
+func (u *VehicleUpsertBulk) UpdateInsuranceExpiry() *VehicleUpsertBulk {
+	return u.Update(func(s *VehicleUpsert) {
+		s.UpdateInsuranceExpiry()
+	})
+}
+
+// ClearInsuranceExpiry clears the value of the "insurance_expiry" field.
+func (u *VehicleUpsertBulk) ClearInsuranceExpiry() *VehicleUpsertBulk {
+	return u.Update(func(s *VehicleUpsert) {
+		s.ClearInsuranceExpiry()
+	})
+}
+
+// SetInsuranceDocument sets the "insurance_document" field.
+func (u *VehicleUpsertBulk) SetInsuranceDocument(v string) *VehicleUpsertBulk {
+	return u.Update(func(s *VehicleUpsert) {
+		s.SetInsuranceDocument(v)
+	})
+}
+
+// UpdateInsuranceDocument sets the "insurance_document" field to the value that was provided on create.
+func (u *VehicleUpsertBulk) UpdateInsuranceDocument() *VehicleUpsertBulk {
+	return u.Update(func(s *VehicleUpsert) {
+		s.UpdateInsuranceDocument()
+	})
+}
+
+// ClearInsuranceDocument clears the value of the "insurance_document" field.
+func (u *VehicleUpsertBulk) ClearInsuranceDocument() *VehicleUpsertBulk {
+	return u.Update(func(s *VehicleUpsert) {
+		s.ClearInsuranceDocument()
+	})
+}
+
+// SetInspectionExpiry sets the "inspection_expiry" field.
+func (u *VehicleUpsertBulk) SetInspectionExpiry(v time.Time) *VehicleUpsertBulk {
+	return u.Update(func(s *VehicleUpsert) {
+		s.SetInspectionExpiry(v)
+	})
+}
+
+// UpdateInspectionExpiry sets the "inspection_expiry" field to the value that was provided on create.
+func (u *VehicleUpsertBulk) UpdateInspectionExpiry() *VehicleUpsertBulk {
+	return u.Update(func(s *VehicleUpsert) {
+		s.UpdateInspectionExpiry()
+	})
+}
+
+// ClearInspectionExpiry clears the value of the "inspection_expiry" field.
+func (u *VehicleUpsertBulk) ClearInspectionExpiry() *VehicleUpsertBulk {
+	return u.Update(func(s *VehicleUpsert) {
+		s.ClearInspectionExpiry()
+	})
+}
+
+// SetInspectionDocument sets the "inspection_document" field.
+func (u *VehicleUpsertBulk) SetInspectionDocument(v string) *VehicleUpsertBulk {
+	return u.Update(func(s *VehicleUpsert) {
+		s.SetInspectionDocument(v)
+	})
+}
+
+// UpdateInspectionDocument sets the "inspection_document" field to the value that was provided on create.
+func (u *VehicleUpsertBulk) UpdateInspectionDocument() *VehicleUpsertBulk {
+	return u.Update(func(s *VehicleUpsert) {
+		s.UpdateInspectionDocument()
+	})
+}
+
+// ClearInspectionDocument clears the value of the "inspection_document" field.
+func (u *VehicleUpsertBulk) ClearInspectionDocument() *VehicleUpsertBulk {
+	return u.Update(func(s *VehicleUpsert) {
+		s.ClearInspectionDocument()
 	})
 }
 

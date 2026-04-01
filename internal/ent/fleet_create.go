@@ -58,6 +58,20 @@ func (_c *FleetCreate) SetNillableType(v *string) *FleetCreate {
 	return _c
 }
 
+// SetFleetType sets the "fleet_type" field.
+func (_c *FleetCreate) SetFleetType(v string) *FleetCreate {
+	_c.mutation.SetFleetType(v)
+	return _c
+}
+
+// SetNillableFleetType sets the "fleet_type" field if the given value is not nil.
+func (_c *FleetCreate) SetNillableFleetType(v *string) *FleetCreate {
+	if v != nil {
+		_c.SetFleetType(*v)
+	}
+	return _c
+}
+
 // SetStatus sets the "status" field.
 func (_c *FleetCreate) SetStatus(v string) *FleetCreate {
 	_c.mutation.SetStatus(v)
@@ -189,6 +203,10 @@ func (_c *FleetCreate) defaults() {
 		v := fleet.DefaultType
 		_c.mutation.SetType(v)
 	}
+	if _, ok := _c.mutation.FleetType(); !ok {
+		v := fleet.DefaultFleetType
+		_c.mutation.SetFleetType(v)
+	}
 	if _, ok := _c.mutation.Status(); !ok {
 		v := fleet.DefaultStatus
 		_c.mutation.SetStatus(v)
@@ -234,6 +252,9 @@ func (_c *FleetCreate) check() error {
 	}
 	if _, ok := _c.mutation.GetType(); !ok {
 		return &ValidationError{Name: "type", err: errors.New(`ent: missing required field "Fleet.type"`)}
+	}
+	if _, ok := _c.mutation.FleetType(); !ok {
+		return &ValidationError{Name: "fleet_type", err: errors.New(`ent: missing required field "Fleet.fleet_type"`)}
 	}
 	if _, ok := _c.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "Fleet.status"`)}
@@ -298,6 +319,10 @@ func (_c *FleetCreate) createSpec() (*Fleet, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.GetType(); ok {
 		_spec.SetField(fleet.FieldType, field.TypeString, value)
 		_node.Type = value
+	}
+	if value, ok := _c.mutation.FleetType(); ok {
+		_spec.SetField(fleet.FieldFleetType, field.TypeString, value)
+		_node.FleetType = value
 	}
 	if value, ok := _c.mutation.Status(); ok {
 		_spec.SetField(fleet.FieldStatus, field.TypeString, value)
@@ -447,6 +472,18 @@ func (u *FleetUpsert) UpdateType() *FleetUpsert {
 	return u
 }
 
+// SetFleetType sets the "fleet_type" field.
+func (u *FleetUpsert) SetFleetType(v string) *FleetUpsert {
+	u.Set(fleet.FieldFleetType, v)
+	return u
+}
+
+// UpdateFleetType sets the "fleet_type" field to the value that was provided on create.
+func (u *FleetUpsert) UpdateFleetType() *FleetUpsert {
+	u.SetExcluded(fleet.FieldFleetType)
+	return u
+}
+
 // SetStatus sets the "status" field.
 func (u *FleetUpsert) SetStatus(v string) *FleetUpsert {
 	u.Set(fleet.FieldStatus, v)
@@ -587,6 +624,20 @@ func (u *FleetUpsertOne) SetType(v string) *FleetUpsertOne {
 func (u *FleetUpsertOne) UpdateType() *FleetUpsertOne {
 	return u.Update(func(s *FleetUpsert) {
 		s.UpdateType()
+	})
+}
+
+// SetFleetType sets the "fleet_type" field.
+func (u *FleetUpsertOne) SetFleetType(v string) *FleetUpsertOne {
+	return u.Update(func(s *FleetUpsert) {
+		s.SetFleetType(v)
+	})
+}
+
+// UpdateFleetType sets the "fleet_type" field to the value that was provided on create.
+func (u *FleetUpsertOne) UpdateFleetType() *FleetUpsertOne {
+	return u.Update(func(s *FleetUpsert) {
+		s.UpdateFleetType()
 	})
 }
 
@@ -903,6 +954,20 @@ func (u *FleetUpsertBulk) SetType(v string) *FleetUpsertBulk {
 func (u *FleetUpsertBulk) UpdateType() *FleetUpsertBulk {
 	return u.Update(func(s *FleetUpsert) {
 		s.UpdateType()
+	})
+}
+
+// SetFleetType sets the "fleet_type" field.
+func (u *FleetUpsertBulk) SetFleetType(v string) *FleetUpsertBulk {
+	return u.Update(func(s *FleetUpsert) {
+		s.SetFleetType(v)
+	})
+}
+
+// UpdateFleetType sets the "fleet_type" field to the value that was provided on create.
+func (u *FleetUpsertBulk) UpdateFleetType() *FleetUpsertBulk {
+	return u.Update(func(s *FleetUpsert) {
+		s.UpdateFleetType()
 	})
 }
 

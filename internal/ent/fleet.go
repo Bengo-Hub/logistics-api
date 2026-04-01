@@ -25,8 +25,10 @@ type Fleet struct {
 	TenantSlug string `json:"tenant_slug,omitempty"`
 	// Name holds the value of the "name" field.
 	Name string `json:"name,omitempty"`
-	// internal | third-party
+	// Deprecated: use fleet_type instead
 	Type string `json:"type,omitempty"`
+	// courier = company-managed (DHL/G4S), distribution = warehouse-to-warehouse (KEMSA), delivery = public/invite-based (Uber/Bolt)
+	FleetType string `json:"fleet_type,omitempty"`
 	// Status holds the value of the "status" field.
 	Status string `json:"status,omitempty"`
 	// Metadata holds the value of the "metadata" field.
@@ -77,7 +79,7 @@ func (*Fleet) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case fleet.FieldMetadata:
 			values[i] = new([]byte)
-		case fleet.FieldTenantSlug, fleet.FieldName, fleet.FieldType, fleet.FieldStatus:
+		case fleet.FieldTenantSlug, fleet.FieldName, fleet.FieldType, fleet.FieldFleetType, fleet.FieldStatus:
 			values[i] = new(sql.NullString)
 		case fleet.FieldCreatedAt, fleet.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -127,6 +129,12 @@ func (_m *Fleet) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field type", values[i])
 			} else if value.Valid {
 				_m.Type = value.String
+			}
+		case fleet.FieldFleetType:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field fleet_type", values[i])
+			} else if value.Valid {
+				_m.FleetType = value.String
 			}
 		case fleet.FieldStatus:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -211,6 +219,9 @@ func (_m *Fleet) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("type=")
 	builder.WriteString(_m.Type)
+	builder.WriteString(", ")
+	builder.WriteString("fleet_type=")
+	builder.WriteString(_m.FleetType)
 	builder.WriteString(", ")
 	builder.WriteString("status=")
 	builder.WriteString(_m.Status)

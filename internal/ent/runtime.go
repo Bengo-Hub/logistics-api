@@ -157,20 +157,24 @@ func init() {
 	fleetDescType := fleetFields[4].Descriptor()
 	// fleet.DefaultType holds the default value on creation for the type field.
 	fleet.DefaultType = fleetDescType.Default.(string)
+	// fleetDescFleetType is the schema descriptor for fleet_type field.
+	fleetDescFleetType := fleetFields[5].Descriptor()
+	// fleet.DefaultFleetType holds the default value on creation for the fleet_type field.
+	fleet.DefaultFleetType = fleetDescFleetType.Default.(string)
 	// fleetDescStatus is the schema descriptor for status field.
-	fleetDescStatus := fleetFields[5].Descriptor()
+	fleetDescStatus := fleetFields[6].Descriptor()
 	// fleet.DefaultStatus holds the default value on creation for the status field.
 	fleet.DefaultStatus = fleetDescStatus.Default.(string)
 	// fleetDescMetadata is the schema descriptor for metadata field.
-	fleetDescMetadata := fleetFields[6].Descriptor()
+	fleetDescMetadata := fleetFields[7].Descriptor()
 	// fleet.DefaultMetadata holds the default value on creation for the metadata field.
 	fleet.DefaultMetadata = fleetDescMetadata.Default.(map[string]interface{})
 	// fleetDescCreatedAt is the schema descriptor for created_at field.
-	fleetDescCreatedAt := fleetFields[7].Descriptor()
+	fleetDescCreatedAt := fleetFields[8].Descriptor()
 	// fleet.DefaultCreatedAt holds the default value on creation for the created_at field.
 	fleet.DefaultCreatedAt = fleetDescCreatedAt.Default.(func() time.Time)
 	// fleetDescUpdatedAt is the schema descriptor for updated_at field.
-	fleetDescUpdatedAt := fleetFields[8].Descriptor()
+	fleetDescUpdatedAt := fleetFields[9].Descriptor()
 	// fleet.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	fleet.DefaultUpdatedAt = fleetDescUpdatedAt.Default.(func() time.Time)
 	// fleet.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -185,36 +189,40 @@ func init() {
 	fleetmemberDescStatus := fleetmemberFields[7].Descriptor()
 	// fleetmember.DefaultStatus holds the default value on creation for the status field.
 	fleetmember.DefaultStatus = fleetmemberDescStatus.Default.(string)
+	// fleetmemberDescOnboardingSource is the schema descriptor for onboarding_source field.
+	fleetmemberDescOnboardingSource := fleetmemberFields[13].Descriptor()
+	// fleetmember.DefaultOnboardingSource holds the default value on creation for the onboarding_source field.
+	fleetmember.DefaultOnboardingSource = fleetmemberDescOnboardingSource.Default.(string)
 	// fleetmemberDescJoinedAt is the schema descriptor for joined_at field.
-	fleetmemberDescJoinedAt := fleetmemberFields[11].Descriptor()
+	fleetmemberDescJoinedAt := fleetmemberFields[17].Descriptor()
 	// fleetmember.DefaultJoinedAt holds the default value on creation for the joined_at field.
 	fleetmember.DefaultJoinedAt = fleetmemberDescJoinedAt.Default.(func() time.Time)
 	// fleetmemberDescMetadata is the schema descriptor for metadata field.
-	fleetmemberDescMetadata := fleetmemberFields[13].Descriptor()
+	fleetmemberDescMetadata := fleetmemberFields[19].Descriptor()
 	// fleetmember.DefaultMetadata holds the default value on creation for the metadata field.
 	fleetmember.DefaultMetadata = fleetmemberDescMetadata.Default.(map[string]interface{})
 	// fleetmemberDescSpecializationTags is the schema descriptor for specialization_tags field.
-	fleetmemberDescSpecializationTags := fleetmemberFields[14].Descriptor()
+	fleetmemberDescSpecializationTags := fleetmemberFields[20].Descriptor()
 	// fleetmember.DefaultSpecializationTags holds the default value on creation for the specialization_tags field.
 	fleetmember.DefaultSpecializationTags = fleetmemberDescSpecializationTags.Default.([]string)
 	// fleetmemberDescHasColdStorage is the schema descriptor for has_cold_storage field.
-	fleetmemberDescHasColdStorage := fleetmemberFields[15].Descriptor()
+	fleetmemberDescHasColdStorage := fleetmemberFields[21].Descriptor()
 	// fleetmember.DefaultHasColdStorage holds the default value on creation for the has_cold_storage field.
 	fleetmember.DefaultHasColdStorage = fleetmemberDescHasColdStorage.Default.(bool)
 	// fleetmemberDescAverageRating is the schema descriptor for average_rating field.
-	fleetmemberDescAverageRating := fleetmemberFields[17].Descriptor()
+	fleetmemberDescAverageRating := fleetmemberFields[23].Descriptor()
 	// fleetmember.DefaultAverageRating holds the default value on creation for the average_rating field.
 	fleetmember.DefaultAverageRating = fleetmemberDescAverageRating.Default.(float64)
 	// fleetmemberDescTotalRatings is the schema descriptor for total_ratings field.
-	fleetmemberDescTotalRatings := fleetmemberFields[18].Descriptor()
+	fleetmemberDescTotalRatings := fleetmemberFields[24].Descriptor()
 	// fleetmember.DefaultTotalRatings holds the default value on creation for the total_ratings field.
 	fleetmember.DefaultTotalRatings = fleetmemberDescTotalRatings.Default.(int)
 	// fleetmemberDescCreatedAt is the schema descriptor for created_at field.
-	fleetmemberDescCreatedAt := fleetmemberFields[19].Descriptor()
+	fleetmemberDescCreatedAt := fleetmemberFields[25].Descriptor()
 	// fleetmember.DefaultCreatedAt holds the default value on creation for the created_at field.
 	fleetmember.DefaultCreatedAt = fleetmemberDescCreatedAt.Default.(func() time.Time)
 	// fleetmemberDescUpdatedAt is the schema descriptor for updated_at field.
-	fleetmemberDescUpdatedAt := fleetmemberFields[20].Descriptor()
+	fleetmemberDescUpdatedAt := fleetmemberFields[26].Descriptor()
 	// fleetmember.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	fleetmember.DefaultUpdatedAt = fleetmemberDescUpdatedAt.Default.(func() time.Time)
 	// fleetmember.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -818,15 +826,15 @@ func init() {
 	// vehicle.DefaultComplianceStatus holds the default value on creation for the compliance_status field.
 	vehicle.DefaultComplianceStatus = vehicleDescComplianceStatus.Default.(string)
 	// vehicleDescMetadata is the schema descriptor for metadata field.
-	vehicleDescMetadata := vehicleFields[12].Descriptor()
+	vehicleDescMetadata := vehicleFields[16].Descriptor()
 	// vehicle.DefaultMetadata holds the default value on creation for the metadata field.
 	vehicle.DefaultMetadata = vehicleDescMetadata.Default.(map[string]interface{})
 	// vehicleDescCreatedAt is the schema descriptor for created_at field.
-	vehicleDescCreatedAt := vehicleFields[13].Descriptor()
+	vehicleDescCreatedAt := vehicleFields[17].Descriptor()
 	// vehicle.DefaultCreatedAt holds the default value on creation for the created_at field.
 	vehicle.DefaultCreatedAt = vehicleDescCreatedAt.Default.(func() time.Time)
 	// vehicleDescUpdatedAt is the schema descriptor for updated_at field.
-	vehicleDescUpdatedAt := vehicleFields[14].Descriptor()
+	vehicleDescUpdatedAt := vehicleFields[18].Descriptor()
 	// vehicle.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	vehicle.DefaultUpdatedAt = vehicleDescUpdatedAt.Default.(func() time.Time)
 	// vehicle.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

@@ -29,6 +29,18 @@ const (
 	FieldLicenseNo = "license_no"
 	// FieldStatus holds the string denoting the status field in the database.
 	FieldStatus = "status"
+	// FieldInviteCode holds the string denoting the invite_code field in the database.
+	FieldInviteCode = "invite_code"
+	// FieldKycSubmittedAt holds the string denoting the kyc_submitted_at field in the database.
+	FieldKycSubmittedAt = "kyc_submitted_at"
+	// FieldReviewedAt holds the string denoting the reviewed_at field in the database.
+	FieldReviewedAt = "reviewed_at"
+	// FieldReviewedBy holds the string denoting the reviewed_by field in the database.
+	FieldReviewedBy = "reviewed_by"
+	// FieldRejectionReason holds the string denoting the rejection_reason field in the database.
+	FieldRejectionReason = "rejection_reason"
+	// FieldOnboardingSource holds the string denoting the onboarding_source field in the database.
+	FieldOnboardingSource = "onboarding_source"
 	// FieldIDPassportAttachment holds the string denoting the id_passport_attachment field in the database.
 	FieldIDPassportAttachment = "id_passport_attachment"
 	// FieldRiderPhoto holds the string denoting the rider_photo field in the database.
@@ -114,6 +126,12 @@ var Columns = []string{
 	FieldIDNumber,
 	FieldLicenseNo,
 	FieldStatus,
+	FieldInviteCode,
+	FieldKycSubmittedAt,
+	FieldReviewedAt,
+	FieldReviewedBy,
+	FieldRejectionReason,
+	FieldOnboardingSource,
 	FieldIDPassportAttachment,
 	FieldRiderPhoto,
 	FieldVehicleID,
@@ -142,6 +160,8 @@ func ValidColumn(column string) bool {
 var (
 	// DefaultStatus holds the default value on creation for the "status" field.
 	DefaultStatus string
+	// DefaultOnboardingSource holds the default value on creation for the "onboarding_source" field.
+	DefaultOnboardingSource string
 	// DefaultJoinedAt holds the default value on creation for the "joined_at" field.
 	DefaultJoinedAt func() time.Time
 	// DefaultMetadata holds the default value on creation for the "metadata" field.
@@ -205,6 +225,36 @@ func ByLicenseNo(opts ...sql.OrderTermOption) OrderOption {
 // ByStatus orders the results by the status field.
 func ByStatus(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldStatus, opts...).ToFunc()
+}
+
+// ByInviteCode orders the results by the invite_code field.
+func ByInviteCode(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldInviteCode, opts...).ToFunc()
+}
+
+// ByKycSubmittedAt orders the results by the kyc_submitted_at field.
+func ByKycSubmittedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldKycSubmittedAt, opts...).ToFunc()
+}
+
+// ByReviewedAt orders the results by the reviewed_at field.
+func ByReviewedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldReviewedAt, opts...).ToFunc()
+}
+
+// ByReviewedBy orders the results by the reviewed_by field.
+func ByReviewedBy(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldReviewedBy, opts...).ToFunc()
+}
+
+// ByRejectionReason orders the results by the rejection_reason field.
+func ByRejectionReason(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRejectionReason, opts...).ToFunc()
+}
+
+// ByOnboardingSource orders the results by the onboarding_source field.
+func ByOnboardingSource(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldOnboardingSource, opts...).ToFunc()
 }
 
 // ByIDPassportAttachment orders the results by the id_passport_attachment field.

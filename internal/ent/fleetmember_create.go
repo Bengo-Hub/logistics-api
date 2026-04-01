@@ -103,6 +103,90 @@ func (_c *FleetMemberCreate) SetNillableStatus(v *string) *FleetMemberCreate {
 	return _c
 }
 
+// SetInviteCode sets the "invite_code" field.
+func (_c *FleetMemberCreate) SetInviteCode(v string) *FleetMemberCreate {
+	_c.mutation.SetInviteCode(v)
+	return _c
+}
+
+// SetNillableInviteCode sets the "invite_code" field if the given value is not nil.
+func (_c *FleetMemberCreate) SetNillableInviteCode(v *string) *FleetMemberCreate {
+	if v != nil {
+		_c.SetInviteCode(*v)
+	}
+	return _c
+}
+
+// SetKycSubmittedAt sets the "kyc_submitted_at" field.
+func (_c *FleetMemberCreate) SetKycSubmittedAt(v time.Time) *FleetMemberCreate {
+	_c.mutation.SetKycSubmittedAt(v)
+	return _c
+}
+
+// SetNillableKycSubmittedAt sets the "kyc_submitted_at" field if the given value is not nil.
+func (_c *FleetMemberCreate) SetNillableKycSubmittedAt(v *time.Time) *FleetMemberCreate {
+	if v != nil {
+		_c.SetKycSubmittedAt(*v)
+	}
+	return _c
+}
+
+// SetReviewedAt sets the "reviewed_at" field.
+func (_c *FleetMemberCreate) SetReviewedAt(v time.Time) *FleetMemberCreate {
+	_c.mutation.SetReviewedAt(v)
+	return _c
+}
+
+// SetNillableReviewedAt sets the "reviewed_at" field if the given value is not nil.
+func (_c *FleetMemberCreate) SetNillableReviewedAt(v *time.Time) *FleetMemberCreate {
+	if v != nil {
+		_c.SetReviewedAt(*v)
+	}
+	return _c
+}
+
+// SetReviewedBy sets the "reviewed_by" field.
+func (_c *FleetMemberCreate) SetReviewedBy(v string) *FleetMemberCreate {
+	_c.mutation.SetReviewedBy(v)
+	return _c
+}
+
+// SetNillableReviewedBy sets the "reviewed_by" field if the given value is not nil.
+func (_c *FleetMemberCreate) SetNillableReviewedBy(v *string) *FleetMemberCreate {
+	if v != nil {
+		_c.SetReviewedBy(*v)
+	}
+	return _c
+}
+
+// SetRejectionReason sets the "rejection_reason" field.
+func (_c *FleetMemberCreate) SetRejectionReason(v string) *FleetMemberCreate {
+	_c.mutation.SetRejectionReason(v)
+	return _c
+}
+
+// SetNillableRejectionReason sets the "rejection_reason" field if the given value is not nil.
+func (_c *FleetMemberCreate) SetNillableRejectionReason(v *string) *FleetMemberCreate {
+	if v != nil {
+		_c.SetRejectionReason(*v)
+	}
+	return _c
+}
+
+// SetOnboardingSource sets the "onboarding_source" field.
+func (_c *FleetMemberCreate) SetOnboardingSource(v string) *FleetMemberCreate {
+	_c.mutation.SetOnboardingSource(v)
+	return _c
+}
+
+// SetNillableOnboardingSource sets the "onboarding_source" field if the given value is not nil.
+func (_c *FleetMemberCreate) SetNillableOnboardingSource(v *string) *FleetMemberCreate {
+	if v != nil {
+		_c.SetOnboardingSource(*v)
+	}
+	return _c
+}
+
 // SetIDPassportAttachment sets the "id_passport_attachment" field.
 func (_c *FleetMemberCreate) SetIDPassportAttachment(v string) *FleetMemberCreate {
 	_c.mutation.SetIDPassportAttachment(v)
@@ -367,6 +451,10 @@ func (_c *FleetMemberCreate) defaults() {
 		v := fleetmember.DefaultStatus
 		_c.mutation.SetStatus(v)
 	}
+	if _, ok := _c.mutation.OnboardingSource(); !ok {
+		v := fleetmember.DefaultOnboardingSource
+		_c.mutation.SetOnboardingSource(v)
+	}
 	if _, ok := _c.mutation.JoinedAt(); !ok {
 		v := fleetmember.DefaultJoinedAt()
 		_c.mutation.SetJoinedAt(v)
@@ -504,6 +592,30 @@ func (_c *FleetMemberCreate) createSpec() (*FleetMember, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Status(); ok {
 		_spec.SetField(fleetmember.FieldStatus, field.TypeString, value)
 		_node.Status = value
+	}
+	if value, ok := _c.mutation.InviteCode(); ok {
+		_spec.SetField(fleetmember.FieldInviteCode, field.TypeString, value)
+		_node.InviteCode = value
+	}
+	if value, ok := _c.mutation.KycSubmittedAt(); ok {
+		_spec.SetField(fleetmember.FieldKycSubmittedAt, field.TypeTime, value)
+		_node.KycSubmittedAt = &value
+	}
+	if value, ok := _c.mutation.ReviewedAt(); ok {
+		_spec.SetField(fleetmember.FieldReviewedAt, field.TypeTime, value)
+		_node.ReviewedAt = &value
+	}
+	if value, ok := _c.mutation.ReviewedBy(); ok {
+		_spec.SetField(fleetmember.FieldReviewedBy, field.TypeString, value)
+		_node.ReviewedBy = value
+	}
+	if value, ok := _c.mutation.RejectionReason(); ok {
+		_spec.SetField(fleetmember.FieldRejectionReason, field.TypeString, value)
+		_node.RejectionReason = value
+	}
+	if value, ok := _c.mutation.OnboardingSource(); ok {
+		_spec.SetField(fleetmember.FieldOnboardingSource, field.TypeString, value)
+		_node.OnboardingSource = value
 	}
 	if value, ok := _c.mutation.IDPassportAttachment(); ok {
 		_spec.SetField(fleetmember.FieldIDPassportAttachment, field.TypeString, value)
@@ -787,6 +899,114 @@ func (u *FleetMemberUpsert) SetStatus(v string) *FleetMemberUpsert {
 // UpdateStatus sets the "status" field to the value that was provided on create.
 func (u *FleetMemberUpsert) UpdateStatus() *FleetMemberUpsert {
 	u.SetExcluded(fleetmember.FieldStatus)
+	return u
+}
+
+// SetInviteCode sets the "invite_code" field.
+func (u *FleetMemberUpsert) SetInviteCode(v string) *FleetMemberUpsert {
+	u.Set(fleetmember.FieldInviteCode, v)
+	return u
+}
+
+// UpdateInviteCode sets the "invite_code" field to the value that was provided on create.
+func (u *FleetMemberUpsert) UpdateInviteCode() *FleetMemberUpsert {
+	u.SetExcluded(fleetmember.FieldInviteCode)
+	return u
+}
+
+// ClearInviteCode clears the value of the "invite_code" field.
+func (u *FleetMemberUpsert) ClearInviteCode() *FleetMemberUpsert {
+	u.SetNull(fleetmember.FieldInviteCode)
+	return u
+}
+
+// SetKycSubmittedAt sets the "kyc_submitted_at" field.
+func (u *FleetMemberUpsert) SetKycSubmittedAt(v time.Time) *FleetMemberUpsert {
+	u.Set(fleetmember.FieldKycSubmittedAt, v)
+	return u
+}
+
+// UpdateKycSubmittedAt sets the "kyc_submitted_at" field to the value that was provided on create.
+func (u *FleetMemberUpsert) UpdateKycSubmittedAt() *FleetMemberUpsert {
+	u.SetExcluded(fleetmember.FieldKycSubmittedAt)
+	return u
+}
+
+// ClearKycSubmittedAt clears the value of the "kyc_submitted_at" field.
+func (u *FleetMemberUpsert) ClearKycSubmittedAt() *FleetMemberUpsert {
+	u.SetNull(fleetmember.FieldKycSubmittedAt)
+	return u
+}
+
+// SetReviewedAt sets the "reviewed_at" field.
+func (u *FleetMemberUpsert) SetReviewedAt(v time.Time) *FleetMemberUpsert {
+	u.Set(fleetmember.FieldReviewedAt, v)
+	return u
+}
+
+// UpdateReviewedAt sets the "reviewed_at" field to the value that was provided on create.
+func (u *FleetMemberUpsert) UpdateReviewedAt() *FleetMemberUpsert {
+	u.SetExcluded(fleetmember.FieldReviewedAt)
+	return u
+}
+
+// ClearReviewedAt clears the value of the "reviewed_at" field.
+func (u *FleetMemberUpsert) ClearReviewedAt() *FleetMemberUpsert {
+	u.SetNull(fleetmember.FieldReviewedAt)
+	return u
+}
+
+// SetReviewedBy sets the "reviewed_by" field.
+func (u *FleetMemberUpsert) SetReviewedBy(v string) *FleetMemberUpsert {
+	u.Set(fleetmember.FieldReviewedBy, v)
+	return u
+}
+
+// UpdateReviewedBy sets the "reviewed_by" field to the value that was provided on create.
+func (u *FleetMemberUpsert) UpdateReviewedBy() *FleetMemberUpsert {
+	u.SetExcluded(fleetmember.FieldReviewedBy)
+	return u
+}
+
+// ClearReviewedBy clears the value of the "reviewed_by" field.
+func (u *FleetMemberUpsert) ClearReviewedBy() *FleetMemberUpsert {
+	u.SetNull(fleetmember.FieldReviewedBy)
+	return u
+}
+
+// SetRejectionReason sets the "rejection_reason" field.
+func (u *FleetMemberUpsert) SetRejectionReason(v string) *FleetMemberUpsert {
+	u.Set(fleetmember.FieldRejectionReason, v)
+	return u
+}
+
+// UpdateRejectionReason sets the "rejection_reason" field to the value that was provided on create.
+func (u *FleetMemberUpsert) UpdateRejectionReason() *FleetMemberUpsert {
+	u.SetExcluded(fleetmember.FieldRejectionReason)
+	return u
+}
+
+// ClearRejectionReason clears the value of the "rejection_reason" field.
+func (u *FleetMemberUpsert) ClearRejectionReason() *FleetMemberUpsert {
+	u.SetNull(fleetmember.FieldRejectionReason)
+	return u
+}
+
+// SetOnboardingSource sets the "onboarding_source" field.
+func (u *FleetMemberUpsert) SetOnboardingSource(v string) *FleetMemberUpsert {
+	u.Set(fleetmember.FieldOnboardingSource, v)
+	return u
+}
+
+// UpdateOnboardingSource sets the "onboarding_source" field to the value that was provided on create.
+func (u *FleetMemberUpsert) UpdateOnboardingSource() *FleetMemberUpsert {
+	u.SetExcluded(fleetmember.FieldOnboardingSource)
+	return u
+}
+
+// ClearOnboardingSource clears the value of the "onboarding_source" field.
+func (u *FleetMemberUpsert) ClearOnboardingSource() *FleetMemberUpsert {
+	u.SetNull(fleetmember.FieldOnboardingSource)
 	return u
 }
 
@@ -1149,6 +1369,132 @@ func (u *FleetMemberUpsertOne) SetStatus(v string) *FleetMemberUpsertOne {
 func (u *FleetMemberUpsertOne) UpdateStatus() *FleetMemberUpsertOne {
 	return u.Update(func(s *FleetMemberUpsert) {
 		s.UpdateStatus()
+	})
+}
+
+// SetInviteCode sets the "invite_code" field.
+func (u *FleetMemberUpsertOne) SetInviteCode(v string) *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetInviteCode(v)
+	})
+}
+
+// UpdateInviteCode sets the "invite_code" field to the value that was provided on create.
+func (u *FleetMemberUpsertOne) UpdateInviteCode() *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdateInviteCode()
+	})
+}
+
+// ClearInviteCode clears the value of the "invite_code" field.
+func (u *FleetMemberUpsertOne) ClearInviteCode() *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.ClearInviteCode()
+	})
+}
+
+// SetKycSubmittedAt sets the "kyc_submitted_at" field.
+func (u *FleetMemberUpsertOne) SetKycSubmittedAt(v time.Time) *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetKycSubmittedAt(v)
+	})
+}
+
+// UpdateKycSubmittedAt sets the "kyc_submitted_at" field to the value that was provided on create.
+func (u *FleetMemberUpsertOne) UpdateKycSubmittedAt() *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdateKycSubmittedAt()
+	})
+}
+
+// ClearKycSubmittedAt clears the value of the "kyc_submitted_at" field.
+func (u *FleetMemberUpsertOne) ClearKycSubmittedAt() *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.ClearKycSubmittedAt()
+	})
+}
+
+// SetReviewedAt sets the "reviewed_at" field.
+func (u *FleetMemberUpsertOne) SetReviewedAt(v time.Time) *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetReviewedAt(v)
+	})
+}
+
+// UpdateReviewedAt sets the "reviewed_at" field to the value that was provided on create.
+func (u *FleetMemberUpsertOne) UpdateReviewedAt() *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdateReviewedAt()
+	})
+}
+
+// ClearReviewedAt clears the value of the "reviewed_at" field.
+func (u *FleetMemberUpsertOne) ClearReviewedAt() *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.ClearReviewedAt()
+	})
+}
+
+// SetReviewedBy sets the "reviewed_by" field.
+func (u *FleetMemberUpsertOne) SetReviewedBy(v string) *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetReviewedBy(v)
+	})
+}
+
+// UpdateReviewedBy sets the "reviewed_by" field to the value that was provided on create.
+func (u *FleetMemberUpsertOne) UpdateReviewedBy() *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdateReviewedBy()
+	})
+}
+
+// ClearReviewedBy clears the value of the "reviewed_by" field.
+func (u *FleetMemberUpsertOne) ClearReviewedBy() *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.ClearReviewedBy()
+	})
+}
+
+// SetRejectionReason sets the "rejection_reason" field.
+func (u *FleetMemberUpsertOne) SetRejectionReason(v string) *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetRejectionReason(v)
+	})
+}
+
+// UpdateRejectionReason sets the "rejection_reason" field to the value that was provided on create.
+func (u *FleetMemberUpsertOne) UpdateRejectionReason() *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdateRejectionReason()
+	})
+}
+
+// ClearRejectionReason clears the value of the "rejection_reason" field.
+func (u *FleetMemberUpsertOne) ClearRejectionReason() *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.ClearRejectionReason()
+	})
+}
+
+// SetOnboardingSource sets the "onboarding_source" field.
+func (u *FleetMemberUpsertOne) SetOnboardingSource(v string) *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetOnboardingSource(v)
+	})
+}
+
+// UpdateOnboardingSource sets the "onboarding_source" field to the value that was provided on create.
+func (u *FleetMemberUpsertOne) UpdateOnboardingSource() *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdateOnboardingSource()
+	})
+}
+
+// ClearOnboardingSource clears the value of the "onboarding_source" field.
+func (u *FleetMemberUpsertOne) ClearOnboardingSource() *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.ClearOnboardingSource()
 	})
 }
 
@@ -1710,6 +2056,132 @@ func (u *FleetMemberUpsertBulk) SetStatus(v string) *FleetMemberUpsertBulk {
 func (u *FleetMemberUpsertBulk) UpdateStatus() *FleetMemberUpsertBulk {
 	return u.Update(func(s *FleetMemberUpsert) {
 		s.UpdateStatus()
+	})
+}
+
+// SetInviteCode sets the "invite_code" field.
+func (u *FleetMemberUpsertBulk) SetInviteCode(v string) *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetInviteCode(v)
+	})
+}
+
+// UpdateInviteCode sets the "invite_code" field to the value that was provided on create.
+func (u *FleetMemberUpsertBulk) UpdateInviteCode() *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdateInviteCode()
+	})
+}
+
+// ClearInviteCode clears the value of the "invite_code" field.
+func (u *FleetMemberUpsertBulk) ClearInviteCode() *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.ClearInviteCode()
+	})
+}
+
+// SetKycSubmittedAt sets the "kyc_submitted_at" field.
+func (u *FleetMemberUpsertBulk) SetKycSubmittedAt(v time.Time) *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetKycSubmittedAt(v)
+	})
+}
+
+// UpdateKycSubmittedAt sets the "kyc_submitted_at" field to the value that was provided on create.
+func (u *FleetMemberUpsertBulk) UpdateKycSubmittedAt() *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdateKycSubmittedAt()
+	})
+}
+
+// ClearKycSubmittedAt clears the value of the "kyc_submitted_at" field.
+func (u *FleetMemberUpsertBulk) ClearKycSubmittedAt() *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.ClearKycSubmittedAt()
+	})
+}
+
+// SetReviewedAt sets the "reviewed_at" field.
+func (u *FleetMemberUpsertBulk) SetReviewedAt(v time.Time) *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetReviewedAt(v)
+	})
+}
+
+// UpdateReviewedAt sets the "reviewed_at" field to the value that was provided on create.
+func (u *FleetMemberUpsertBulk) UpdateReviewedAt() *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdateReviewedAt()
+	})
+}
+
+// ClearReviewedAt clears the value of the "reviewed_at" field.
+func (u *FleetMemberUpsertBulk) ClearReviewedAt() *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.ClearReviewedAt()
+	})
+}
+
+// SetReviewedBy sets the "reviewed_by" field.
+func (u *FleetMemberUpsertBulk) SetReviewedBy(v string) *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetReviewedBy(v)
+	})
+}
+
+// UpdateReviewedBy sets the "reviewed_by" field to the value that was provided on create.
+func (u *FleetMemberUpsertBulk) UpdateReviewedBy() *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdateReviewedBy()
+	})
+}
+
+// ClearReviewedBy clears the value of the "reviewed_by" field.
+func (u *FleetMemberUpsertBulk) ClearReviewedBy() *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.ClearReviewedBy()
+	})
+}
+
+// SetRejectionReason sets the "rejection_reason" field.
+func (u *FleetMemberUpsertBulk) SetRejectionReason(v string) *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetRejectionReason(v)
+	})
+}
+
+// UpdateRejectionReason sets the "rejection_reason" field to the value that was provided on create.
+func (u *FleetMemberUpsertBulk) UpdateRejectionReason() *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdateRejectionReason()
+	})
+}
+
+// ClearRejectionReason clears the value of the "rejection_reason" field.
+func (u *FleetMemberUpsertBulk) ClearRejectionReason() *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.ClearRejectionReason()
+	})
+}
+
+// SetOnboardingSource sets the "onboarding_source" field.
+func (u *FleetMemberUpsertBulk) SetOnboardingSource(v string) *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetOnboardingSource(v)
+	})
+}
+
+// UpdateOnboardingSource sets the "onboarding_source" field to the value that was provided on create.
+func (u *FleetMemberUpsertBulk) UpdateOnboardingSource() *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdateOnboardingSource()
+	})
+}
+
+// ClearOnboardingSource clears the value of the "onboarding_source" field.
+func (u *FleetMemberUpsertBulk) ClearOnboardingSource() *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.ClearOnboardingSource()
 	})
 }
 

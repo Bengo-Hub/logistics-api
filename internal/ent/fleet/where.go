@@ -76,6 +76,11 @@ func Type(v string) predicate.Fleet {
 	return predicate.Fleet(sql.FieldEQ(FieldType, v))
 }
 
+// FleetType applies equality check predicate on the "fleet_type" field. It's identical to FleetTypeEQ.
+func FleetType(v string) predicate.Fleet {
+	return predicate.Fleet(sql.FieldEQ(FieldFleetType, v))
+}
+
 // Status applies equality check predicate on the "status" field. It's identical to StatusEQ.
 func Status(v string) predicate.Fleet {
 	return predicate.Fleet(sql.FieldEQ(FieldStatus, v))
@@ -324,6 +329,71 @@ func TypeEqualFold(v string) predicate.Fleet {
 // TypeContainsFold applies the ContainsFold predicate on the "type" field.
 func TypeContainsFold(v string) predicate.Fleet {
 	return predicate.Fleet(sql.FieldContainsFold(FieldType, v))
+}
+
+// FleetTypeEQ applies the EQ predicate on the "fleet_type" field.
+func FleetTypeEQ(v string) predicate.Fleet {
+	return predicate.Fleet(sql.FieldEQ(FieldFleetType, v))
+}
+
+// FleetTypeNEQ applies the NEQ predicate on the "fleet_type" field.
+func FleetTypeNEQ(v string) predicate.Fleet {
+	return predicate.Fleet(sql.FieldNEQ(FieldFleetType, v))
+}
+
+// FleetTypeIn applies the In predicate on the "fleet_type" field.
+func FleetTypeIn(vs ...string) predicate.Fleet {
+	return predicate.Fleet(sql.FieldIn(FieldFleetType, vs...))
+}
+
+// FleetTypeNotIn applies the NotIn predicate on the "fleet_type" field.
+func FleetTypeNotIn(vs ...string) predicate.Fleet {
+	return predicate.Fleet(sql.FieldNotIn(FieldFleetType, vs...))
+}
+
+// FleetTypeGT applies the GT predicate on the "fleet_type" field.
+func FleetTypeGT(v string) predicate.Fleet {
+	return predicate.Fleet(sql.FieldGT(FieldFleetType, v))
+}
+
+// FleetTypeGTE applies the GTE predicate on the "fleet_type" field.
+func FleetTypeGTE(v string) predicate.Fleet {
+	return predicate.Fleet(sql.FieldGTE(FieldFleetType, v))
+}
+
+// FleetTypeLT applies the LT predicate on the "fleet_type" field.
+func FleetTypeLT(v string) predicate.Fleet {
+	return predicate.Fleet(sql.FieldLT(FieldFleetType, v))
+}
+
+// FleetTypeLTE applies the LTE predicate on the "fleet_type" field.
+func FleetTypeLTE(v string) predicate.Fleet {
+	return predicate.Fleet(sql.FieldLTE(FieldFleetType, v))
+}
+
+// FleetTypeContains applies the Contains predicate on the "fleet_type" field.
+func FleetTypeContains(v string) predicate.Fleet {
+	return predicate.Fleet(sql.FieldContains(FieldFleetType, v))
+}
+
+// FleetTypeHasPrefix applies the HasPrefix predicate on the "fleet_type" field.
+func FleetTypeHasPrefix(v string) predicate.Fleet {
+	return predicate.Fleet(sql.FieldHasPrefix(FieldFleetType, v))
+}
+
+// FleetTypeHasSuffix applies the HasSuffix predicate on the "fleet_type" field.
+func FleetTypeHasSuffix(v string) predicate.Fleet {
+	return predicate.Fleet(sql.FieldHasSuffix(FieldFleetType, v))
+}
+
+// FleetTypeEqualFold applies the EqualFold predicate on the "fleet_type" field.
+func FleetTypeEqualFold(v string) predicate.Fleet {
+	return predicate.Fleet(sql.FieldEqualFold(FieldFleetType, v))
+}
+
+// FleetTypeContainsFold applies the ContainsFold predicate on the "fleet_type" field.
+func FleetTypeContainsFold(v string) predicate.Fleet {
+	return predicate.Fleet(sql.FieldContainsFold(FieldFleetType, v))
 }
 
 // StatusEQ applies the EQ predicate on the "status" field.
