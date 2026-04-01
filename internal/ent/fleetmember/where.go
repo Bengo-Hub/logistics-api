@@ -91,6 +91,36 @@ func Status(v string) predicate.FleetMember {
 	return predicate.FleetMember(sql.FieldEQ(FieldStatus, v))
 }
 
+// InviteCode applies equality check predicate on the "invite_code" field. It's identical to InviteCodeEQ.
+func InviteCode(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEQ(FieldInviteCode, v))
+}
+
+// KycSubmittedAt applies equality check predicate on the "kyc_submitted_at" field. It's identical to KycSubmittedAtEQ.
+func KycSubmittedAt(v time.Time) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEQ(FieldKycSubmittedAt, v))
+}
+
+// ReviewedAt applies equality check predicate on the "reviewed_at" field. It's identical to ReviewedAtEQ.
+func ReviewedAt(v time.Time) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEQ(FieldReviewedAt, v))
+}
+
+// ReviewedBy applies equality check predicate on the "reviewed_by" field. It's identical to ReviewedByEQ.
+func ReviewedBy(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEQ(FieldReviewedBy, v))
+}
+
+// RejectionReason applies equality check predicate on the "rejection_reason" field. It's identical to RejectionReasonEQ.
+func RejectionReason(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEQ(FieldRejectionReason, v))
+}
+
+// OnboardingSource applies equality check predicate on the "onboarding_source" field. It's identical to OnboardingSourceEQ.
+func OnboardingSource(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEQ(FieldOnboardingSource, v))
+}
+
 // IDPassportAttachment applies equality check predicate on the "id_passport_attachment" field. It's identical to IDPassportAttachmentEQ.
 func IDPassportAttachment(v string) predicate.FleetMember {
 	return predicate.FleetMember(sql.FieldEQ(FieldIDPassportAttachment, v))
@@ -514,6 +544,406 @@ func StatusEqualFold(v string) predicate.FleetMember {
 // StatusContainsFold applies the ContainsFold predicate on the "status" field.
 func StatusContainsFold(v string) predicate.FleetMember {
 	return predicate.FleetMember(sql.FieldContainsFold(FieldStatus, v))
+}
+
+// InviteCodeEQ applies the EQ predicate on the "invite_code" field.
+func InviteCodeEQ(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEQ(FieldInviteCode, v))
+}
+
+// InviteCodeNEQ applies the NEQ predicate on the "invite_code" field.
+func InviteCodeNEQ(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNEQ(FieldInviteCode, v))
+}
+
+// InviteCodeIn applies the In predicate on the "invite_code" field.
+func InviteCodeIn(vs ...string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldIn(FieldInviteCode, vs...))
+}
+
+// InviteCodeNotIn applies the NotIn predicate on the "invite_code" field.
+func InviteCodeNotIn(vs ...string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNotIn(FieldInviteCode, vs...))
+}
+
+// InviteCodeGT applies the GT predicate on the "invite_code" field.
+func InviteCodeGT(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldGT(FieldInviteCode, v))
+}
+
+// InviteCodeGTE applies the GTE predicate on the "invite_code" field.
+func InviteCodeGTE(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldGTE(FieldInviteCode, v))
+}
+
+// InviteCodeLT applies the LT predicate on the "invite_code" field.
+func InviteCodeLT(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldLT(FieldInviteCode, v))
+}
+
+// InviteCodeLTE applies the LTE predicate on the "invite_code" field.
+func InviteCodeLTE(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldLTE(FieldInviteCode, v))
+}
+
+// InviteCodeContains applies the Contains predicate on the "invite_code" field.
+func InviteCodeContains(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldContains(FieldInviteCode, v))
+}
+
+// InviteCodeHasPrefix applies the HasPrefix predicate on the "invite_code" field.
+func InviteCodeHasPrefix(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldHasPrefix(FieldInviteCode, v))
+}
+
+// InviteCodeHasSuffix applies the HasSuffix predicate on the "invite_code" field.
+func InviteCodeHasSuffix(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldHasSuffix(FieldInviteCode, v))
+}
+
+// InviteCodeIsNil applies the IsNil predicate on the "invite_code" field.
+func InviteCodeIsNil() predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldIsNull(FieldInviteCode))
+}
+
+// InviteCodeNotNil applies the NotNil predicate on the "invite_code" field.
+func InviteCodeNotNil() predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNotNull(FieldInviteCode))
+}
+
+// InviteCodeEqualFold applies the EqualFold predicate on the "invite_code" field.
+func InviteCodeEqualFold(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEqualFold(FieldInviteCode, v))
+}
+
+// InviteCodeContainsFold applies the ContainsFold predicate on the "invite_code" field.
+func InviteCodeContainsFold(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldContainsFold(FieldInviteCode, v))
+}
+
+// KycSubmittedAtEQ applies the EQ predicate on the "kyc_submitted_at" field.
+func KycSubmittedAtEQ(v time.Time) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEQ(FieldKycSubmittedAt, v))
+}
+
+// KycSubmittedAtNEQ applies the NEQ predicate on the "kyc_submitted_at" field.
+func KycSubmittedAtNEQ(v time.Time) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNEQ(FieldKycSubmittedAt, v))
+}
+
+// KycSubmittedAtIn applies the In predicate on the "kyc_submitted_at" field.
+func KycSubmittedAtIn(vs ...time.Time) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldIn(FieldKycSubmittedAt, vs...))
+}
+
+// KycSubmittedAtNotIn applies the NotIn predicate on the "kyc_submitted_at" field.
+func KycSubmittedAtNotIn(vs ...time.Time) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNotIn(FieldKycSubmittedAt, vs...))
+}
+
+// KycSubmittedAtGT applies the GT predicate on the "kyc_submitted_at" field.
+func KycSubmittedAtGT(v time.Time) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldGT(FieldKycSubmittedAt, v))
+}
+
+// KycSubmittedAtGTE applies the GTE predicate on the "kyc_submitted_at" field.
+func KycSubmittedAtGTE(v time.Time) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldGTE(FieldKycSubmittedAt, v))
+}
+
+// KycSubmittedAtLT applies the LT predicate on the "kyc_submitted_at" field.
+func KycSubmittedAtLT(v time.Time) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldLT(FieldKycSubmittedAt, v))
+}
+
+// KycSubmittedAtLTE applies the LTE predicate on the "kyc_submitted_at" field.
+func KycSubmittedAtLTE(v time.Time) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldLTE(FieldKycSubmittedAt, v))
+}
+
+// KycSubmittedAtIsNil applies the IsNil predicate on the "kyc_submitted_at" field.
+func KycSubmittedAtIsNil() predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldIsNull(FieldKycSubmittedAt))
+}
+
+// KycSubmittedAtNotNil applies the NotNil predicate on the "kyc_submitted_at" field.
+func KycSubmittedAtNotNil() predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNotNull(FieldKycSubmittedAt))
+}
+
+// ReviewedAtEQ applies the EQ predicate on the "reviewed_at" field.
+func ReviewedAtEQ(v time.Time) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEQ(FieldReviewedAt, v))
+}
+
+// ReviewedAtNEQ applies the NEQ predicate on the "reviewed_at" field.
+func ReviewedAtNEQ(v time.Time) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNEQ(FieldReviewedAt, v))
+}
+
+// ReviewedAtIn applies the In predicate on the "reviewed_at" field.
+func ReviewedAtIn(vs ...time.Time) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldIn(FieldReviewedAt, vs...))
+}
+
+// ReviewedAtNotIn applies the NotIn predicate on the "reviewed_at" field.
+func ReviewedAtNotIn(vs ...time.Time) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNotIn(FieldReviewedAt, vs...))
+}
+
+// ReviewedAtGT applies the GT predicate on the "reviewed_at" field.
+func ReviewedAtGT(v time.Time) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldGT(FieldReviewedAt, v))
+}
+
+// ReviewedAtGTE applies the GTE predicate on the "reviewed_at" field.
+func ReviewedAtGTE(v time.Time) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldGTE(FieldReviewedAt, v))
+}
+
+// ReviewedAtLT applies the LT predicate on the "reviewed_at" field.
+func ReviewedAtLT(v time.Time) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldLT(FieldReviewedAt, v))
+}
+
+// ReviewedAtLTE applies the LTE predicate on the "reviewed_at" field.
+func ReviewedAtLTE(v time.Time) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldLTE(FieldReviewedAt, v))
+}
+
+// ReviewedAtIsNil applies the IsNil predicate on the "reviewed_at" field.
+func ReviewedAtIsNil() predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldIsNull(FieldReviewedAt))
+}
+
+// ReviewedAtNotNil applies the NotNil predicate on the "reviewed_at" field.
+func ReviewedAtNotNil() predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNotNull(FieldReviewedAt))
+}
+
+// ReviewedByEQ applies the EQ predicate on the "reviewed_by" field.
+func ReviewedByEQ(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEQ(FieldReviewedBy, v))
+}
+
+// ReviewedByNEQ applies the NEQ predicate on the "reviewed_by" field.
+func ReviewedByNEQ(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNEQ(FieldReviewedBy, v))
+}
+
+// ReviewedByIn applies the In predicate on the "reviewed_by" field.
+func ReviewedByIn(vs ...string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldIn(FieldReviewedBy, vs...))
+}
+
+// ReviewedByNotIn applies the NotIn predicate on the "reviewed_by" field.
+func ReviewedByNotIn(vs ...string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNotIn(FieldReviewedBy, vs...))
+}
+
+// ReviewedByGT applies the GT predicate on the "reviewed_by" field.
+func ReviewedByGT(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldGT(FieldReviewedBy, v))
+}
+
+// ReviewedByGTE applies the GTE predicate on the "reviewed_by" field.
+func ReviewedByGTE(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldGTE(FieldReviewedBy, v))
+}
+
+// ReviewedByLT applies the LT predicate on the "reviewed_by" field.
+func ReviewedByLT(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldLT(FieldReviewedBy, v))
+}
+
+// ReviewedByLTE applies the LTE predicate on the "reviewed_by" field.
+func ReviewedByLTE(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldLTE(FieldReviewedBy, v))
+}
+
+// ReviewedByContains applies the Contains predicate on the "reviewed_by" field.
+func ReviewedByContains(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldContains(FieldReviewedBy, v))
+}
+
+// ReviewedByHasPrefix applies the HasPrefix predicate on the "reviewed_by" field.
+func ReviewedByHasPrefix(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldHasPrefix(FieldReviewedBy, v))
+}
+
+// ReviewedByHasSuffix applies the HasSuffix predicate on the "reviewed_by" field.
+func ReviewedByHasSuffix(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldHasSuffix(FieldReviewedBy, v))
+}
+
+// ReviewedByIsNil applies the IsNil predicate on the "reviewed_by" field.
+func ReviewedByIsNil() predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldIsNull(FieldReviewedBy))
+}
+
+// ReviewedByNotNil applies the NotNil predicate on the "reviewed_by" field.
+func ReviewedByNotNil() predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNotNull(FieldReviewedBy))
+}
+
+// ReviewedByEqualFold applies the EqualFold predicate on the "reviewed_by" field.
+func ReviewedByEqualFold(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEqualFold(FieldReviewedBy, v))
+}
+
+// ReviewedByContainsFold applies the ContainsFold predicate on the "reviewed_by" field.
+func ReviewedByContainsFold(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldContainsFold(FieldReviewedBy, v))
+}
+
+// RejectionReasonEQ applies the EQ predicate on the "rejection_reason" field.
+func RejectionReasonEQ(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEQ(FieldRejectionReason, v))
+}
+
+// RejectionReasonNEQ applies the NEQ predicate on the "rejection_reason" field.
+func RejectionReasonNEQ(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNEQ(FieldRejectionReason, v))
+}
+
+// RejectionReasonIn applies the In predicate on the "rejection_reason" field.
+func RejectionReasonIn(vs ...string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldIn(FieldRejectionReason, vs...))
+}
+
+// RejectionReasonNotIn applies the NotIn predicate on the "rejection_reason" field.
+func RejectionReasonNotIn(vs ...string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNotIn(FieldRejectionReason, vs...))
+}
+
+// RejectionReasonGT applies the GT predicate on the "rejection_reason" field.
+func RejectionReasonGT(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldGT(FieldRejectionReason, v))
+}
+
+// RejectionReasonGTE applies the GTE predicate on the "rejection_reason" field.
+func RejectionReasonGTE(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldGTE(FieldRejectionReason, v))
+}
+
+// RejectionReasonLT applies the LT predicate on the "rejection_reason" field.
+func RejectionReasonLT(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldLT(FieldRejectionReason, v))
+}
+
+// RejectionReasonLTE applies the LTE predicate on the "rejection_reason" field.
+func RejectionReasonLTE(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldLTE(FieldRejectionReason, v))
+}
+
+// RejectionReasonContains applies the Contains predicate on the "rejection_reason" field.
+func RejectionReasonContains(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldContains(FieldRejectionReason, v))
+}
+
+// RejectionReasonHasPrefix applies the HasPrefix predicate on the "rejection_reason" field.
+func RejectionReasonHasPrefix(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldHasPrefix(FieldRejectionReason, v))
+}
+
+// RejectionReasonHasSuffix applies the HasSuffix predicate on the "rejection_reason" field.
+func RejectionReasonHasSuffix(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldHasSuffix(FieldRejectionReason, v))
+}
+
+// RejectionReasonIsNil applies the IsNil predicate on the "rejection_reason" field.
+func RejectionReasonIsNil() predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldIsNull(FieldRejectionReason))
+}
+
+// RejectionReasonNotNil applies the NotNil predicate on the "rejection_reason" field.
+func RejectionReasonNotNil() predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNotNull(FieldRejectionReason))
+}
+
+// RejectionReasonEqualFold applies the EqualFold predicate on the "rejection_reason" field.
+func RejectionReasonEqualFold(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEqualFold(FieldRejectionReason, v))
+}
+
+// RejectionReasonContainsFold applies the ContainsFold predicate on the "rejection_reason" field.
+func RejectionReasonContainsFold(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldContainsFold(FieldRejectionReason, v))
+}
+
+// OnboardingSourceEQ applies the EQ predicate on the "onboarding_source" field.
+func OnboardingSourceEQ(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEQ(FieldOnboardingSource, v))
+}
+
+// OnboardingSourceNEQ applies the NEQ predicate on the "onboarding_source" field.
+func OnboardingSourceNEQ(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNEQ(FieldOnboardingSource, v))
+}
+
+// OnboardingSourceIn applies the In predicate on the "onboarding_source" field.
+func OnboardingSourceIn(vs ...string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldIn(FieldOnboardingSource, vs...))
+}
+
+// OnboardingSourceNotIn applies the NotIn predicate on the "onboarding_source" field.
+func OnboardingSourceNotIn(vs ...string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNotIn(FieldOnboardingSource, vs...))
+}
+
+// OnboardingSourceGT applies the GT predicate on the "onboarding_source" field.
+func OnboardingSourceGT(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldGT(FieldOnboardingSource, v))
+}
+
+// OnboardingSourceGTE applies the GTE predicate on the "onboarding_source" field.
+func OnboardingSourceGTE(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldGTE(FieldOnboardingSource, v))
+}
+
+// OnboardingSourceLT applies the LT predicate on the "onboarding_source" field.
+func OnboardingSourceLT(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldLT(FieldOnboardingSource, v))
+}
+
+// OnboardingSourceLTE applies the LTE predicate on the "onboarding_source" field.
+func OnboardingSourceLTE(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldLTE(FieldOnboardingSource, v))
+}
+
+// OnboardingSourceContains applies the Contains predicate on the "onboarding_source" field.
+func OnboardingSourceContains(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldContains(FieldOnboardingSource, v))
+}
+
+// OnboardingSourceHasPrefix applies the HasPrefix predicate on the "onboarding_source" field.
+func OnboardingSourceHasPrefix(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldHasPrefix(FieldOnboardingSource, v))
+}
+
+// OnboardingSourceHasSuffix applies the HasSuffix predicate on the "onboarding_source" field.
+func OnboardingSourceHasSuffix(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldHasSuffix(FieldOnboardingSource, v))
+}
+
+// OnboardingSourceIsNil applies the IsNil predicate on the "onboarding_source" field.
+func OnboardingSourceIsNil() predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldIsNull(FieldOnboardingSource))
+}
+
+// OnboardingSourceNotNil applies the NotNil predicate on the "onboarding_source" field.
+func OnboardingSourceNotNil() predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNotNull(FieldOnboardingSource))
+}
+
+// OnboardingSourceEqualFold applies the EqualFold predicate on the "onboarding_source" field.
+func OnboardingSourceEqualFold(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEqualFold(FieldOnboardingSource, v))
+}
+
+// OnboardingSourceContainsFold applies the ContainsFold predicate on the "onboarding_source" field.
+func OnboardingSourceContainsFold(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldContainsFold(FieldOnboardingSource, v))
 }
 
 // IDPassportAttachmentEQ applies the EQ predicate on the "id_passport_attachment" field.

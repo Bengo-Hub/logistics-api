@@ -42,6 +42,14 @@ type Vehicle struct {
 	ImageLicensePlate string `json:"image_license_plate,omitempty"`
 	// URL to vehicle side view image
 	ImageSideView string `json:"image_side_view,omitempty"`
+	// Vehicle insurance expiry date
+	InsuranceExpiry *time.Time `json:"insurance_expiry,omitempty"`
+	// URL to insurance document
+	InsuranceDocument string `json:"insurance_document,omitempty"`
+	// Vehicle inspection certificate expiry
+	InspectionExpiry *time.Time `json:"inspection_expiry,omitempty"`
+	// URL to inspection certificate
+	InspectionDocument string `json:"inspection_document,omitempty"`
 	// Metadata holds the value of the "metadata" field.
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
@@ -92,9 +100,9 @@ func (*Vehicle) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case vehicle.FieldCapacityJSON, vehicle.FieldMetadata:
 			values[i] = new([]byte)
-		case vehicle.FieldVehicleType, vehicle.FieldMake, vehicle.FieldModel, vehicle.FieldLicensePlate, vehicle.FieldStatus, vehicle.FieldComplianceStatus, vehicle.FieldImageLicensePlate, vehicle.FieldImageSideView:
+		case vehicle.FieldVehicleType, vehicle.FieldMake, vehicle.FieldModel, vehicle.FieldLicensePlate, vehicle.FieldStatus, vehicle.FieldComplianceStatus, vehicle.FieldImageLicensePlate, vehicle.FieldImageSideView, vehicle.FieldInsuranceDocument, vehicle.FieldInspectionDocument:
 			values[i] = new(sql.NullString)
-		case vehicle.FieldCreatedAt, vehicle.FieldUpdatedAt:
+		case vehicle.FieldInsuranceExpiry, vehicle.FieldInspectionExpiry, vehicle.FieldCreatedAt, vehicle.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
 		case vehicle.FieldID, vehicle.FieldTenantID, vehicle.FieldFleetID:
 			values[i] = new(uuid.UUID)
@@ -186,6 +194,32 @@ func (_m *Vehicle) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field image_side_view", values[i])
 			} else if value.Valid {
 				_m.ImageSideView = value.String
+			}
+		case vehicle.FieldInsuranceExpiry:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field insurance_expiry", values[i])
+			} else if value.Valid {
+				_m.InsuranceExpiry = new(time.Time)
+				*_m.InsuranceExpiry = value.Time
+			}
+		case vehicle.FieldInsuranceDocument:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field insurance_document", values[i])
+			} else if value.Valid {
+				_m.InsuranceDocument = value.String
+			}
+		case vehicle.FieldInspectionExpiry:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field inspection_expiry", values[i])
+			} else if value.Valid {
+				_m.InspectionExpiry = new(time.Time)
+				*_m.InspectionExpiry = value.Time
+			}
+		case vehicle.FieldInspectionDocument:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field inspection_document", values[i])
+			} else if value.Valid {
+				_m.InspectionDocument = value.String
 			}
 		case vehicle.FieldMetadata:
 			if value, ok := values[i].(*[]byte); !ok {
@@ -285,6 +319,22 @@ func (_m *Vehicle) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("image_side_view=")
 	builder.WriteString(_m.ImageSideView)
+	builder.WriteString(", ")
+	if v := _m.InsuranceExpiry; v != nil {
+		builder.WriteString("insurance_expiry=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
+	builder.WriteString("insurance_document=")
+	builder.WriteString(_m.InsuranceDocument)
+	builder.WriteString(", ")
+	if v := _m.InspectionExpiry; v != nil {
+		builder.WriteString("inspection_expiry=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
+	builder.WriteString("inspection_document=")
+	builder.WriteString(_m.InspectionDocument)
 	builder.WriteString(", ")
 	builder.WriteString("metadata=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Metadata))

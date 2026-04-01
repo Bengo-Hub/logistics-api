@@ -44,6 +44,20 @@ func (Vehicle) Fields() []ent.Field {
 		field.String("image_side_view").
 			Optional().
 			Comment("URL to vehicle side view image"),
+		field.Time("insurance_expiry").
+			Optional().
+			Nillable().
+			Comment("Vehicle insurance expiry date"),
+		field.String("insurance_document").
+			Optional().
+			Comment("URL to insurance document"),
+		field.Time("inspection_expiry").
+			Optional().
+			Nillable().
+			Comment("Vehicle inspection certificate expiry"),
+		field.String("inspection_document").
+			Optional().
+			Comment("URL to inspection certificate"),
 		field.JSON("metadata", map[string]any{}).
 			Default(map[string]any{}),
 		field.Time("created_at").

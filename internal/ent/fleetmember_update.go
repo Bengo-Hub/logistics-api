@@ -151,6 +151,126 @@ func (_u *FleetMemberUpdate) SetNillableStatus(v *string) *FleetMemberUpdate {
 	return _u
 }
 
+// SetInviteCode sets the "invite_code" field.
+func (_u *FleetMemberUpdate) SetInviteCode(v string) *FleetMemberUpdate {
+	_u.mutation.SetInviteCode(v)
+	return _u
+}
+
+// SetNillableInviteCode sets the "invite_code" field if the given value is not nil.
+func (_u *FleetMemberUpdate) SetNillableInviteCode(v *string) *FleetMemberUpdate {
+	if v != nil {
+		_u.SetInviteCode(*v)
+	}
+	return _u
+}
+
+// ClearInviteCode clears the value of the "invite_code" field.
+func (_u *FleetMemberUpdate) ClearInviteCode() *FleetMemberUpdate {
+	_u.mutation.ClearInviteCode()
+	return _u
+}
+
+// SetKycSubmittedAt sets the "kyc_submitted_at" field.
+func (_u *FleetMemberUpdate) SetKycSubmittedAt(v time.Time) *FleetMemberUpdate {
+	_u.mutation.SetKycSubmittedAt(v)
+	return _u
+}
+
+// SetNillableKycSubmittedAt sets the "kyc_submitted_at" field if the given value is not nil.
+func (_u *FleetMemberUpdate) SetNillableKycSubmittedAt(v *time.Time) *FleetMemberUpdate {
+	if v != nil {
+		_u.SetKycSubmittedAt(*v)
+	}
+	return _u
+}
+
+// ClearKycSubmittedAt clears the value of the "kyc_submitted_at" field.
+func (_u *FleetMemberUpdate) ClearKycSubmittedAt() *FleetMemberUpdate {
+	_u.mutation.ClearKycSubmittedAt()
+	return _u
+}
+
+// SetReviewedAt sets the "reviewed_at" field.
+func (_u *FleetMemberUpdate) SetReviewedAt(v time.Time) *FleetMemberUpdate {
+	_u.mutation.SetReviewedAt(v)
+	return _u
+}
+
+// SetNillableReviewedAt sets the "reviewed_at" field if the given value is not nil.
+func (_u *FleetMemberUpdate) SetNillableReviewedAt(v *time.Time) *FleetMemberUpdate {
+	if v != nil {
+		_u.SetReviewedAt(*v)
+	}
+	return _u
+}
+
+// ClearReviewedAt clears the value of the "reviewed_at" field.
+func (_u *FleetMemberUpdate) ClearReviewedAt() *FleetMemberUpdate {
+	_u.mutation.ClearReviewedAt()
+	return _u
+}
+
+// SetReviewedBy sets the "reviewed_by" field.
+func (_u *FleetMemberUpdate) SetReviewedBy(v string) *FleetMemberUpdate {
+	_u.mutation.SetReviewedBy(v)
+	return _u
+}
+
+// SetNillableReviewedBy sets the "reviewed_by" field if the given value is not nil.
+func (_u *FleetMemberUpdate) SetNillableReviewedBy(v *string) *FleetMemberUpdate {
+	if v != nil {
+		_u.SetReviewedBy(*v)
+	}
+	return _u
+}
+
+// ClearReviewedBy clears the value of the "reviewed_by" field.
+func (_u *FleetMemberUpdate) ClearReviewedBy() *FleetMemberUpdate {
+	_u.mutation.ClearReviewedBy()
+	return _u
+}
+
+// SetRejectionReason sets the "rejection_reason" field.
+func (_u *FleetMemberUpdate) SetRejectionReason(v string) *FleetMemberUpdate {
+	_u.mutation.SetRejectionReason(v)
+	return _u
+}
+
+// SetNillableRejectionReason sets the "rejection_reason" field if the given value is not nil.
+func (_u *FleetMemberUpdate) SetNillableRejectionReason(v *string) *FleetMemberUpdate {
+	if v != nil {
+		_u.SetRejectionReason(*v)
+	}
+	return _u
+}
+
+// ClearRejectionReason clears the value of the "rejection_reason" field.
+func (_u *FleetMemberUpdate) ClearRejectionReason() *FleetMemberUpdate {
+	_u.mutation.ClearRejectionReason()
+	return _u
+}
+
+// SetOnboardingSource sets the "onboarding_source" field.
+func (_u *FleetMemberUpdate) SetOnboardingSource(v string) *FleetMemberUpdate {
+	_u.mutation.SetOnboardingSource(v)
+	return _u
+}
+
+// SetNillableOnboardingSource sets the "onboarding_source" field if the given value is not nil.
+func (_u *FleetMemberUpdate) SetNillableOnboardingSource(v *string) *FleetMemberUpdate {
+	if v != nil {
+		_u.SetOnboardingSource(*v)
+	}
+	return _u
+}
+
+// ClearOnboardingSource clears the value of the "onboarding_source" field.
+func (_u *FleetMemberUpdate) ClearOnboardingSource() *FleetMemberUpdate {
+	_u.mutation.ClearOnboardingSource()
+	return _u
+}
+
 // SetIDPassportAttachment sets the "id_passport_attachment" field.
 func (_u *FleetMemberUpdate) SetIDPassportAttachment(v string) *FleetMemberUpdate {
 	_u.mutation.SetIDPassportAttachment(v)
@@ -545,6 +665,42 @@ func (_u *FleetMemberUpdate) sqlSave(ctx context.Context) (_node int, err error)
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(fleetmember.FieldStatus, field.TypeString, value)
 	}
+	if value, ok := _u.mutation.InviteCode(); ok {
+		_spec.SetField(fleetmember.FieldInviteCode, field.TypeString, value)
+	}
+	if _u.mutation.InviteCodeCleared() {
+		_spec.ClearField(fleetmember.FieldInviteCode, field.TypeString)
+	}
+	if value, ok := _u.mutation.KycSubmittedAt(); ok {
+		_spec.SetField(fleetmember.FieldKycSubmittedAt, field.TypeTime, value)
+	}
+	if _u.mutation.KycSubmittedAtCleared() {
+		_spec.ClearField(fleetmember.FieldKycSubmittedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.ReviewedAt(); ok {
+		_spec.SetField(fleetmember.FieldReviewedAt, field.TypeTime, value)
+	}
+	if _u.mutation.ReviewedAtCleared() {
+		_spec.ClearField(fleetmember.FieldReviewedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.ReviewedBy(); ok {
+		_spec.SetField(fleetmember.FieldReviewedBy, field.TypeString, value)
+	}
+	if _u.mutation.ReviewedByCleared() {
+		_spec.ClearField(fleetmember.FieldReviewedBy, field.TypeString)
+	}
+	if value, ok := _u.mutation.RejectionReason(); ok {
+		_spec.SetField(fleetmember.FieldRejectionReason, field.TypeString, value)
+	}
+	if _u.mutation.RejectionReasonCleared() {
+		_spec.ClearField(fleetmember.FieldRejectionReason, field.TypeString)
+	}
+	if value, ok := _u.mutation.OnboardingSource(); ok {
+		_spec.SetField(fleetmember.FieldOnboardingSource, field.TypeString, value)
+	}
+	if _u.mutation.OnboardingSourceCleared() {
+		_spec.ClearField(fleetmember.FieldOnboardingSource, field.TypeString)
+	}
 	if value, ok := _u.mutation.IDPassportAttachment(); ok {
 		_spec.SetField(fleetmember.FieldIDPassportAttachment, field.TypeString, value)
 	}
@@ -914,6 +1070,126 @@ func (_u *FleetMemberUpdateOne) SetNillableStatus(v *string) *FleetMemberUpdateO
 	if v != nil {
 		_u.SetStatus(*v)
 	}
+	return _u
+}
+
+// SetInviteCode sets the "invite_code" field.
+func (_u *FleetMemberUpdateOne) SetInviteCode(v string) *FleetMemberUpdateOne {
+	_u.mutation.SetInviteCode(v)
+	return _u
+}
+
+// SetNillableInviteCode sets the "invite_code" field if the given value is not nil.
+func (_u *FleetMemberUpdateOne) SetNillableInviteCode(v *string) *FleetMemberUpdateOne {
+	if v != nil {
+		_u.SetInviteCode(*v)
+	}
+	return _u
+}
+
+// ClearInviteCode clears the value of the "invite_code" field.
+func (_u *FleetMemberUpdateOne) ClearInviteCode() *FleetMemberUpdateOne {
+	_u.mutation.ClearInviteCode()
+	return _u
+}
+
+// SetKycSubmittedAt sets the "kyc_submitted_at" field.
+func (_u *FleetMemberUpdateOne) SetKycSubmittedAt(v time.Time) *FleetMemberUpdateOne {
+	_u.mutation.SetKycSubmittedAt(v)
+	return _u
+}
+
+// SetNillableKycSubmittedAt sets the "kyc_submitted_at" field if the given value is not nil.
+func (_u *FleetMemberUpdateOne) SetNillableKycSubmittedAt(v *time.Time) *FleetMemberUpdateOne {
+	if v != nil {
+		_u.SetKycSubmittedAt(*v)
+	}
+	return _u
+}
+
+// ClearKycSubmittedAt clears the value of the "kyc_submitted_at" field.
+func (_u *FleetMemberUpdateOne) ClearKycSubmittedAt() *FleetMemberUpdateOne {
+	_u.mutation.ClearKycSubmittedAt()
+	return _u
+}
+
+// SetReviewedAt sets the "reviewed_at" field.
+func (_u *FleetMemberUpdateOne) SetReviewedAt(v time.Time) *FleetMemberUpdateOne {
+	_u.mutation.SetReviewedAt(v)
+	return _u
+}
+
+// SetNillableReviewedAt sets the "reviewed_at" field if the given value is not nil.
+func (_u *FleetMemberUpdateOne) SetNillableReviewedAt(v *time.Time) *FleetMemberUpdateOne {
+	if v != nil {
+		_u.SetReviewedAt(*v)
+	}
+	return _u
+}
+
+// ClearReviewedAt clears the value of the "reviewed_at" field.
+func (_u *FleetMemberUpdateOne) ClearReviewedAt() *FleetMemberUpdateOne {
+	_u.mutation.ClearReviewedAt()
+	return _u
+}
+
+// SetReviewedBy sets the "reviewed_by" field.
+func (_u *FleetMemberUpdateOne) SetReviewedBy(v string) *FleetMemberUpdateOne {
+	_u.mutation.SetReviewedBy(v)
+	return _u
+}
+
+// SetNillableReviewedBy sets the "reviewed_by" field if the given value is not nil.
+func (_u *FleetMemberUpdateOne) SetNillableReviewedBy(v *string) *FleetMemberUpdateOne {
+	if v != nil {
+		_u.SetReviewedBy(*v)
+	}
+	return _u
+}
+
+// ClearReviewedBy clears the value of the "reviewed_by" field.
+func (_u *FleetMemberUpdateOne) ClearReviewedBy() *FleetMemberUpdateOne {
+	_u.mutation.ClearReviewedBy()
+	return _u
+}
+
+// SetRejectionReason sets the "rejection_reason" field.
+func (_u *FleetMemberUpdateOne) SetRejectionReason(v string) *FleetMemberUpdateOne {
+	_u.mutation.SetRejectionReason(v)
+	return _u
+}
+
+// SetNillableRejectionReason sets the "rejection_reason" field if the given value is not nil.
+func (_u *FleetMemberUpdateOne) SetNillableRejectionReason(v *string) *FleetMemberUpdateOne {
+	if v != nil {
+		_u.SetRejectionReason(*v)
+	}
+	return _u
+}
+
+// ClearRejectionReason clears the value of the "rejection_reason" field.
+func (_u *FleetMemberUpdateOne) ClearRejectionReason() *FleetMemberUpdateOne {
+	_u.mutation.ClearRejectionReason()
+	return _u
+}
+
+// SetOnboardingSource sets the "onboarding_source" field.
+func (_u *FleetMemberUpdateOne) SetOnboardingSource(v string) *FleetMemberUpdateOne {
+	_u.mutation.SetOnboardingSource(v)
+	return _u
+}
+
+// SetNillableOnboardingSource sets the "onboarding_source" field if the given value is not nil.
+func (_u *FleetMemberUpdateOne) SetNillableOnboardingSource(v *string) *FleetMemberUpdateOne {
+	if v != nil {
+		_u.SetOnboardingSource(*v)
+	}
+	return _u
+}
+
+// ClearOnboardingSource clears the value of the "onboarding_source" field.
+func (_u *FleetMemberUpdateOne) ClearOnboardingSource() *FleetMemberUpdateOne {
+	_u.mutation.ClearOnboardingSource()
 	return _u
 }
 
@@ -1340,6 +1616,42 @@ func (_u *FleetMemberUpdateOne) sqlSave(ctx context.Context) (_node *FleetMember
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(fleetmember.FieldStatus, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.InviteCode(); ok {
+		_spec.SetField(fleetmember.FieldInviteCode, field.TypeString, value)
+	}
+	if _u.mutation.InviteCodeCleared() {
+		_spec.ClearField(fleetmember.FieldInviteCode, field.TypeString)
+	}
+	if value, ok := _u.mutation.KycSubmittedAt(); ok {
+		_spec.SetField(fleetmember.FieldKycSubmittedAt, field.TypeTime, value)
+	}
+	if _u.mutation.KycSubmittedAtCleared() {
+		_spec.ClearField(fleetmember.FieldKycSubmittedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.ReviewedAt(); ok {
+		_spec.SetField(fleetmember.FieldReviewedAt, field.TypeTime, value)
+	}
+	if _u.mutation.ReviewedAtCleared() {
+		_spec.ClearField(fleetmember.FieldReviewedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.ReviewedBy(); ok {
+		_spec.SetField(fleetmember.FieldReviewedBy, field.TypeString, value)
+	}
+	if _u.mutation.ReviewedByCleared() {
+		_spec.ClearField(fleetmember.FieldReviewedBy, field.TypeString)
+	}
+	if value, ok := _u.mutation.RejectionReason(); ok {
+		_spec.SetField(fleetmember.FieldRejectionReason, field.TypeString, value)
+	}
+	if _u.mutation.RejectionReasonCleared() {
+		_spec.ClearField(fleetmember.FieldRejectionReason, field.TypeString)
+	}
+	if value, ok := _u.mutation.OnboardingSource(); ok {
+		_spec.SetField(fleetmember.FieldOnboardingSource, field.TypeString, value)
+	}
+	if _u.mutation.OnboardingSourceCleared() {
+		_spec.ClearField(fleetmember.FieldOnboardingSource, field.TypeString)
 	}
 	if value, ok := _u.mutation.IDPassportAttachment(); ok {
 		_spec.SetField(fleetmember.FieldIDPassportAttachment, field.TypeString, value)

@@ -34,8 +34,20 @@ type FleetMember struct {
 	IDNumber string `json:"id_number,omitempty"`
 	// Driving License Number
 	LicenseNo string `json:"license_no,omitempty"`
-	// pending, approved, active, suspended
+	// invited, pending, pending_review, active, rejected, suspended
 	Status string `json:"status,omitempty"`
+	// Unique invite token for email registration link
+	InviteCode string `json:"invite_code,omitempty"`
+	// When rider submitted KYC documents
+	KycSubmittedAt *time.Time `json:"kyc_submitted_at,omitempty"`
+	// When admin reviewed the application
+	ReviewedAt *time.Time `json:"reviewed_at,omitempty"`
+	// Admin user ID who reviewed
+	ReviewedBy string `json:"reviewed_by,omitempty"`
+	// Reason for rejection if status=rejected
+	RejectionReason string `json:"rejection_reason,omitempty"`
+	// invite | public_signup | company_created
+	OnboardingSource string `json:"onboarding_source,omitempty"`
 	// URL to ID/Passport attachment
 	IDPassportAttachment string `json:"id_passport_attachment,omitempty"`
 	// URL to rider's passport photo
@@ -151,9 +163,9 @@ func (*FleetMember) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullFloat64)
 		case fleetmember.FieldTotalRatings:
 			values[i] = new(sql.NullInt64)
-		case fleetmember.FieldDriverCode, fleetmember.FieldIDNumber, fleetmember.FieldLicenseNo, fleetmember.FieldStatus, fleetmember.FieldIDPassportAttachment, fleetmember.FieldRiderPhoto:
+		case fleetmember.FieldDriverCode, fleetmember.FieldIDNumber, fleetmember.FieldLicenseNo, fleetmember.FieldStatus, fleetmember.FieldInviteCode, fleetmember.FieldReviewedBy, fleetmember.FieldRejectionReason, fleetmember.FieldOnboardingSource, fleetmember.FieldIDPassportAttachment, fleetmember.FieldRiderPhoto:
 			values[i] = new(sql.NullString)
-		case fleetmember.FieldJoinedAt, fleetmember.FieldSuspendedAt, fleetmember.FieldCreatedAt, fleetmember.FieldUpdatedAt:
+		case fleetmember.FieldKycSubmittedAt, fleetmember.FieldReviewedAt, fleetmember.FieldJoinedAt, fleetmember.FieldSuspendedAt, fleetmember.FieldCreatedAt, fleetmember.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
 		case fleetmember.FieldID, fleetmember.FieldTenantID, fleetmember.FieldFleetID, fleetmember.FieldUserID:
 			values[i] = new(uuid.UUID)
@@ -219,6 +231,44 @@ func (_m *FleetMember) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
 				_m.Status = value.String
+			}
+		case fleetmember.FieldInviteCode:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field invite_code", values[i])
+			} else if value.Valid {
+				_m.InviteCode = value.String
+			}
+		case fleetmember.FieldKycSubmittedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field kyc_submitted_at", values[i])
+			} else if value.Valid {
+				_m.KycSubmittedAt = new(time.Time)
+				*_m.KycSubmittedAt = value.Time
+			}
+		case fleetmember.FieldReviewedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field reviewed_at", values[i])
+			} else if value.Valid {
+				_m.ReviewedAt = new(time.Time)
+				*_m.ReviewedAt = value.Time
+			}
+		case fleetmember.FieldReviewedBy:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field reviewed_by", values[i])
+			} else if value.Valid {
+				_m.ReviewedBy = value.String
+			}
+		case fleetmember.FieldRejectionReason:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field rejection_reason", values[i])
+			} else if value.Valid {
+				_m.RejectionReason = value.String
+			}
+		case fleetmember.FieldOnboardingSource:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field onboarding_source", values[i])
+			} else if value.Valid {
+				_m.OnboardingSource = value.String
 			}
 		case fleetmember.FieldIDPassportAttachment:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -386,6 +436,28 @@ func (_m *FleetMember) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("status=")
 	builder.WriteString(_m.Status)
+	builder.WriteString(", ")
+	builder.WriteString("invite_code=")
+	builder.WriteString(_m.InviteCode)
+	builder.WriteString(", ")
+	if v := _m.KycSubmittedAt; v != nil {
+		builder.WriteString("kyc_submitted_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
+	if v := _m.ReviewedAt; v != nil {
+		builder.WriteString("reviewed_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
+	builder.WriteString("reviewed_by=")
+	builder.WriteString(_m.ReviewedBy)
+	builder.WriteString(", ")
+	builder.WriteString("rejection_reason=")
+	builder.WriteString(_m.RejectionReason)
+	builder.WriteString(", ")
+	builder.WriteString("onboarding_source=")
+	builder.WriteString(_m.OnboardingSource)
 	builder.WriteString(", ")
 	builder.WriteString("id_passport_attachment=")
 	builder.WriteString(_m.IDPassportAttachment)

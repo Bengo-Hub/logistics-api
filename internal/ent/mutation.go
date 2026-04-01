@@ -3462,6 +3462,7 @@ type FleetMutation struct {
 	tenant_slug     *string
 	name            *string
 	_type           *string
+	fleet_type      *string
 	status          *string
 	metadata        *map[string]interface{}
 	created_at      *time.Time
@@ -3724,6 +3725,42 @@ func (m *FleetMutation) OldType(ctx context.Context) (v string, err error) {
 // ResetType resets all changes to the "type" field.
 func (m *FleetMutation) ResetType() {
 	m._type = nil
+}
+
+// SetFleetType sets the "fleet_type" field.
+func (m *FleetMutation) SetFleetType(s string) {
+	m.fleet_type = &s
+}
+
+// FleetType returns the value of the "fleet_type" field in the mutation.
+func (m *FleetMutation) FleetType() (r string, exists bool) {
+	v := m.fleet_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFleetType returns the old "fleet_type" field's value of the Fleet entity.
+// If the Fleet object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *FleetMutation) OldFleetType(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFleetType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFleetType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFleetType: %w", err)
+	}
+	return oldValue.FleetType, nil
+}
+
+// ResetFleetType resets all changes to the "fleet_type" field.
+func (m *FleetMutation) ResetFleetType() {
+	m.fleet_type = nil
 }
 
 // SetStatus sets the "status" field.
@@ -4012,7 +4049,7 @@ func (m *FleetMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *FleetMutation) Fields() []string {
-	fields := make([]string, 0, 8)
+	fields := make([]string, 0, 9)
 	if m.tenant_id != nil {
 		fields = append(fields, fleet.FieldTenantID)
 	}
@@ -4024,6 +4061,9 @@ func (m *FleetMutation) Fields() []string {
 	}
 	if m._type != nil {
 		fields = append(fields, fleet.FieldType)
+	}
+	if m.fleet_type != nil {
+		fields = append(fields, fleet.FieldFleetType)
 	}
 	if m.status != nil {
 		fields = append(fields, fleet.FieldStatus)
@@ -4053,6 +4093,8 @@ func (m *FleetMutation) Field(name string) (ent.Value, bool) {
 		return m.Name()
 	case fleet.FieldType:
 		return m.GetType()
+	case fleet.FieldFleetType:
+		return m.FleetType()
 	case fleet.FieldStatus:
 		return m.Status()
 	case fleet.FieldMetadata:
@@ -4078,6 +4120,8 @@ func (m *FleetMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldName(ctx)
 	case fleet.FieldType:
 		return m.OldType(ctx)
+	case fleet.FieldFleetType:
+		return m.OldFleetType(ctx)
 	case fleet.FieldStatus:
 		return m.OldStatus(ctx)
 	case fleet.FieldMetadata:
@@ -4122,6 +4166,13 @@ func (m *FleetMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetType(v)
+		return nil
+	case fleet.FieldFleetType:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFleetType(v)
 		return nil
 	case fleet.FieldStatus:
 		v, ok := value.(string)
@@ -4211,6 +4262,9 @@ func (m *FleetMutation) ResetField(name string) error {
 		return nil
 	case fleet.FieldType:
 		m.ResetType()
+		return nil
+	case fleet.FieldFleetType:
+		m.ResetFleetType()
 		return nil
 	case fleet.FieldStatus:
 		m.ResetStatus()
@@ -4349,6 +4403,12 @@ type FleetMemberMutation struct {
 	id_number                 *string
 	license_no                *string
 	status                    *string
+	invite_code               *string
+	kyc_submitted_at          *time.Time
+	reviewed_at               *time.Time
+	reviewed_by               *string
+	rejection_reason          *string
+	onboarding_source         *string
 	id_passport_attachment    *string
 	rider_photo               *string
 	joined_at                 *time.Time
@@ -4776,6 +4836,300 @@ func (m *FleetMemberMutation) OldStatus(ctx context.Context) (v string, err erro
 // ResetStatus resets all changes to the "status" field.
 func (m *FleetMemberMutation) ResetStatus() {
 	m.status = nil
+}
+
+// SetInviteCode sets the "invite_code" field.
+func (m *FleetMemberMutation) SetInviteCode(s string) {
+	m.invite_code = &s
+}
+
+// InviteCode returns the value of the "invite_code" field in the mutation.
+func (m *FleetMemberMutation) InviteCode() (r string, exists bool) {
+	v := m.invite_code
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldInviteCode returns the old "invite_code" field's value of the FleetMember entity.
+// If the FleetMember object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *FleetMemberMutation) OldInviteCode(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldInviteCode is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldInviteCode requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldInviteCode: %w", err)
+	}
+	return oldValue.InviteCode, nil
+}
+
+// ClearInviteCode clears the value of the "invite_code" field.
+func (m *FleetMemberMutation) ClearInviteCode() {
+	m.invite_code = nil
+	m.clearedFields[fleetmember.FieldInviteCode] = struct{}{}
+}
+
+// InviteCodeCleared returns if the "invite_code" field was cleared in this mutation.
+func (m *FleetMemberMutation) InviteCodeCleared() bool {
+	_, ok := m.clearedFields[fleetmember.FieldInviteCode]
+	return ok
+}
+
+// ResetInviteCode resets all changes to the "invite_code" field.
+func (m *FleetMemberMutation) ResetInviteCode() {
+	m.invite_code = nil
+	delete(m.clearedFields, fleetmember.FieldInviteCode)
+}
+
+// SetKycSubmittedAt sets the "kyc_submitted_at" field.
+func (m *FleetMemberMutation) SetKycSubmittedAt(t time.Time) {
+	m.kyc_submitted_at = &t
+}
+
+// KycSubmittedAt returns the value of the "kyc_submitted_at" field in the mutation.
+func (m *FleetMemberMutation) KycSubmittedAt() (r time.Time, exists bool) {
+	v := m.kyc_submitted_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldKycSubmittedAt returns the old "kyc_submitted_at" field's value of the FleetMember entity.
+// If the FleetMember object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *FleetMemberMutation) OldKycSubmittedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldKycSubmittedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldKycSubmittedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldKycSubmittedAt: %w", err)
+	}
+	return oldValue.KycSubmittedAt, nil
+}
+
+// ClearKycSubmittedAt clears the value of the "kyc_submitted_at" field.
+func (m *FleetMemberMutation) ClearKycSubmittedAt() {
+	m.kyc_submitted_at = nil
+	m.clearedFields[fleetmember.FieldKycSubmittedAt] = struct{}{}
+}
+
+// KycSubmittedAtCleared returns if the "kyc_submitted_at" field was cleared in this mutation.
+func (m *FleetMemberMutation) KycSubmittedAtCleared() bool {
+	_, ok := m.clearedFields[fleetmember.FieldKycSubmittedAt]
+	return ok
+}
+
+// ResetKycSubmittedAt resets all changes to the "kyc_submitted_at" field.
+func (m *FleetMemberMutation) ResetKycSubmittedAt() {
+	m.kyc_submitted_at = nil
+	delete(m.clearedFields, fleetmember.FieldKycSubmittedAt)
+}
+
+// SetReviewedAt sets the "reviewed_at" field.
+func (m *FleetMemberMutation) SetReviewedAt(t time.Time) {
+	m.reviewed_at = &t
+}
+
+// ReviewedAt returns the value of the "reviewed_at" field in the mutation.
+func (m *FleetMemberMutation) ReviewedAt() (r time.Time, exists bool) {
+	v := m.reviewed_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldReviewedAt returns the old "reviewed_at" field's value of the FleetMember entity.
+// If the FleetMember object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *FleetMemberMutation) OldReviewedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldReviewedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldReviewedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldReviewedAt: %w", err)
+	}
+	return oldValue.ReviewedAt, nil
+}
+
+// ClearReviewedAt clears the value of the "reviewed_at" field.
+func (m *FleetMemberMutation) ClearReviewedAt() {
+	m.reviewed_at = nil
+	m.clearedFields[fleetmember.FieldReviewedAt] = struct{}{}
+}
+
+// ReviewedAtCleared returns if the "reviewed_at" field was cleared in this mutation.
+func (m *FleetMemberMutation) ReviewedAtCleared() bool {
+	_, ok := m.clearedFields[fleetmember.FieldReviewedAt]
+	return ok
+}
+
+// ResetReviewedAt resets all changes to the "reviewed_at" field.
+func (m *FleetMemberMutation) ResetReviewedAt() {
+	m.reviewed_at = nil
+	delete(m.clearedFields, fleetmember.FieldReviewedAt)
+}
+
+// SetReviewedBy sets the "reviewed_by" field.
+func (m *FleetMemberMutation) SetReviewedBy(s string) {
+	m.reviewed_by = &s
+}
+
+// ReviewedBy returns the value of the "reviewed_by" field in the mutation.
+func (m *FleetMemberMutation) ReviewedBy() (r string, exists bool) {
+	v := m.reviewed_by
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldReviewedBy returns the old "reviewed_by" field's value of the FleetMember entity.
+// If the FleetMember object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *FleetMemberMutation) OldReviewedBy(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldReviewedBy is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldReviewedBy requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldReviewedBy: %w", err)
+	}
+	return oldValue.ReviewedBy, nil
+}
+
+// ClearReviewedBy clears the value of the "reviewed_by" field.
+func (m *FleetMemberMutation) ClearReviewedBy() {
+	m.reviewed_by = nil
+	m.clearedFields[fleetmember.FieldReviewedBy] = struct{}{}
+}
+
+// ReviewedByCleared returns if the "reviewed_by" field was cleared in this mutation.
+func (m *FleetMemberMutation) ReviewedByCleared() bool {
+	_, ok := m.clearedFields[fleetmember.FieldReviewedBy]
+	return ok
+}
+
+// ResetReviewedBy resets all changes to the "reviewed_by" field.
+func (m *FleetMemberMutation) ResetReviewedBy() {
+	m.reviewed_by = nil
+	delete(m.clearedFields, fleetmember.FieldReviewedBy)
+}
+
+// SetRejectionReason sets the "rejection_reason" field.
+func (m *FleetMemberMutation) SetRejectionReason(s string) {
+	m.rejection_reason = &s
+}
+
+// RejectionReason returns the value of the "rejection_reason" field in the mutation.
+func (m *FleetMemberMutation) RejectionReason() (r string, exists bool) {
+	v := m.rejection_reason
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRejectionReason returns the old "rejection_reason" field's value of the FleetMember entity.
+// If the FleetMember object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *FleetMemberMutation) OldRejectionReason(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRejectionReason is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRejectionReason requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRejectionReason: %w", err)
+	}
+	return oldValue.RejectionReason, nil
+}
+
+// ClearRejectionReason clears the value of the "rejection_reason" field.
+func (m *FleetMemberMutation) ClearRejectionReason() {
+	m.rejection_reason = nil
+	m.clearedFields[fleetmember.FieldRejectionReason] = struct{}{}
+}
+
+// RejectionReasonCleared returns if the "rejection_reason" field was cleared in this mutation.
+func (m *FleetMemberMutation) RejectionReasonCleared() bool {
+	_, ok := m.clearedFields[fleetmember.FieldRejectionReason]
+	return ok
+}
+
+// ResetRejectionReason resets all changes to the "rejection_reason" field.
+func (m *FleetMemberMutation) ResetRejectionReason() {
+	m.rejection_reason = nil
+	delete(m.clearedFields, fleetmember.FieldRejectionReason)
+}
+
+// SetOnboardingSource sets the "onboarding_source" field.
+func (m *FleetMemberMutation) SetOnboardingSource(s string) {
+	m.onboarding_source = &s
+}
+
+// OnboardingSource returns the value of the "onboarding_source" field in the mutation.
+func (m *FleetMemberMutation) OnboardingSource() (r string, exists bool) {
+	v := m.onboarding_source
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOnboardingSource returns the old "onboarding_source" field's value of the FleetMember entity.
+// If the FleetMember object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *FleetMemberMutation) OldOnboardingSource(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOnboardingSource is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOnboardingSource requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOnboardingSource: %w", err)
+	}
+	return oldValue.OnboardingSource, nil
+}
+
+// ClearOnboardingSource clears the value of the "onboarding_source" field.
+func (m *FleetMemberMutation) ClearOnboardingSource() {
+	m.onboarding_source = nil
+	m.clearedFields[fleetmember.FieldOnboardingSource] = struct{}{}
+}
+
+// OnboardingSourceCleared returns if the "onboarding_source" field was cleared in this mutation.
+func (m *FleetMemberMutation) OnboardingSourceCleared() bool {
+	_, ok := m.clearedFields[fleetmember.FieldOnboardingSource]
+	return ok
+}
+
+// ResetOnboardingSource resets all changes to the "onboarding_source" field.
+func (m *FleetMemberMutation) ResetOnboardingSource() {
+	m.onboarding_source = nil
+	delete(m.clearedFields, fleetmember.FieldOnboardingSource)
 }
 
 // SetIDPassportAttachment sets the "id_passport_attachment" field.
@@ -5610,7 +5964,7 @@ func (m *FleetMemberMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *FleetMemberMutation) Fields() []string {
-	fields := make([]string, 0, 20)
+	fields := make([]string, 0, 26)
 	if m.tenant_id != nil {
 		fields = append(fields, fleetmember.FieldTenantID)
 	}
@@ -5631,6 +5985,24 @@ func (m *FleetMemberMutation) Fields() []string {
 	}
 	if m.status != nil {
 		fields = append(fields, fleetmember.FieldStatus)
+	}
+	if m.invite_code != nil {
+		fields = append(fields, fleetmember.FieldInviteCode)
+	}
+	if m.kyc_submitted_at != nil {
+		fields = append(fields, fleetmember.FieldKycSubmittedAt)
+	}
+	if m.reviewed_at != nil {
+		fields = append(fields, fleetmember.FieldReviewedAt)
+	}
+	if m.reviewed_by != nil {
+		fields = append(fields, fleetmember.FieldReviewedBy)
+	}
+	if m.rejection_reason != nil {
+		fields = append(fields, fleetmember.FieldRejectionReason)
+	}
+	if m.onboarding_source != nil {
+		fields = append(fields, fleetmember.FieldOnboardingSource)
 	}
 	if m.id_passport_attachment != nil {
 		fields = append(fields, fleetmember.FieldIDPassportAttachment)
@@ -5693,6 +6065,18 @@ func (m *FleetMemberMutation) Field(name string) (ent.Value, bool) {
 		return m.LicenseNo()
 	case fleetmember.FieldStatus:
 		return m.Status()
+	case fleetmember.FieldInviteCode:
+		return m.InviteCode()
+	case fleetmember.FieldKycSubmittedAt:
+		return m.KycSubmittedAt()
+	case fleetmember.FieldReviewedAt:
+		return m.ReviewedAt()
+	case fleetmember.FieldReviewedBy:
+		return m.ReviewedBy()
+	case fleetmember.FieldRejectionReason:
+		return m.RejectionReason()
+	case fleetmember.FieldOnboardingSource:
+		return m.OnboardingSource()
 	case fleetmember.FieldIDPassportAttachment:
 		return m.IDPassportAttachment()
 	case fleetmember.FieldRiderPhoto:
@@ -5742,6 +6126,18 @@ func (m *FleetMemberMutation) OldField(ctx context.Context, name string) (ent.Va
 		return m.OldLicenseNo(ctx)
 	case fleetmember.FieldStatus:
 		return m.OldStatus(ctx)
+	case fleetmember.FieldInviteCode:
+		return m.OldInviteCode(ctx)
+	case fleetmember.FieldKycSubmittedAt:
+		return m.OldKycSubmittedAt(ctx)
+	case fleetmember.FieldReviewedAt:
+		return m.OldReviewedAt(ctx)
+	case fleetmember.FieldReviewedBy:
+		return m.OldReviewedBy(ctx)
+	case fleetmember.FieldRejectionReason:
+		return m.OldRejectionReason(ctx)
+	case fleetmember.FieldOnboardingSource:
+		return m.OldOnboardingSource(ctx)
 	case fleetmember.FieldIDPassportAttachment:
 		return m.OldIDPassportAttachment(ctx)
 	case fleetmember.FieldRiderPhoto:
@@ -5825,6 +6221,48 @@ func (m *FleetMemberMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetStatus(v)
+		return nil
+	case fleetmember.FieldInviteCode:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetInviteCode(v)
+		return nil
+	case fleetmember.FieldKycSubmittedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetKycSubmittedAt(v)
+		return nil
+	case fleetmember.FieldReviewedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetReviewedAt(v)
+		return nil
+	case fleetmember.FieldReviewedBy:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetReviewedBy(v)
+		return nil
+	case fleetmember.FieldRejectionReason:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRejectionReason(v)
+		return nil
+	case fleetmember.FieldOnboardingSource:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOnboardingSource(v)
 		return nil
 	case fleetmember.FieldIDPassportAttachment:
 		v, ok := value.(string)
@@ -5995,6 +6433,24 @@ func (m *FleetMemberMutation) ClearedFields() []string {
 	if m.FieldCleared(fleetmember.FieldLicenseNo) {
 		fields = append(fields, fleetmember.FieldLicenseNo)
 	}
+	if m.FieldCleared(fleetmember.FieldInviteCode) {
+		fields = append(fields, fleetmember.FieldInviteCode)
+	}
+	if m.FieldCleared(fleetmember.FieldKycSubmittedAt) {
+		fields = append(fields, fleetmember.FieldKycSubmittedAt)
+	}
+	if m.FieldCleared(fleetmember.FieldReviewedAt) {
+		fields = append(fields, fleetmember.FieldReviewedAt)
+	}
+	if m.FieldCleared(fleetmember.FieldReviewedBy) {
+		fields = append(fields, fleetmember.FieldReviewedBy)
+	}
+	if m.FieldCleared(fleetmember.FieldRejectionReason) {
+		fields = append(fields, fleetmember.FieldRejectionReason)
+	}
+	if m.FieldCleared(fleetmember.FieldOnboardingSource) {
+		fields = append(fields, fleetmember.FieldOnboardingSource)
+	}
 	if m.FieldCleared(fleetmember.FieldIDPassportAttachment) {
 		fields = append(fields, fleetmember.FieldIDPassportAttachment)
 	}
@@ -6032,6 +6488,24 @@ func (m *FleetMemberMutation) ClearField(name string) error {
 		return nil
 	case fleetmember.FieldLicenseNo:
 		m.ClearLicenseNo()
+		return nil
+	case fleetmember.FieldInviteCode:
+		m.ClearInviteCode()
+		return nil
+	case fleetmember.FieldKycSubmittedAt:
+		m.ClearKycSubmittedAt()
+		return nil
+	case fleetmember.FieldReviewedAt:
+		m.ClearReviewedAt()
+		return nil
+	case fleetmember.FieldReviewedBy:
+		m.ClearReviewedBy()
+		return nil
+	case fleetmember.FieldRejectionReason:
+		m.ClearRejectionReason()
+		return nil
+	case fleetmember.FieldOnboardingSource:
+		m.ClearOnboardingSource()
 		return nil
 	case fleetmember.FieldIDPassportAttachment:
 		m.ClearIDPassportAttachment()
@@ -6076,6 +6550,24 @@ func (m *FleetMemberMutation) ResetField(name string) error {
 		return nil
 	case fleetmember.FieldStatus:
 		m.ResetStatus()
+		return nil
+	case fleetmember.FieldInviteCode:
+		m.ResetInviteCode()
+		return nil
+	case fleetmember.FieldKycSubmittedAt:
+		m.ResetKycSubmittedAt()
+		return nil
+	case fleetmember.FieldReviewedAt:
+		m.ResetReviewedAt()
+		return nil
+	case fleetmember.FieldReviewedBy:
+		m.ResetReviewedBy()
+		return nil
+	case fleetmember.FieldRejectionReason:
+		m.ResetRejectionReason()
+		return nil
+	case fleetmember.FieldOnboardingSource:
+		m.ResetOnboardingSource()
 		return nil
 	case fleetmember.FieldIDPassportAttachment:
 		m.ResetIDPassportAttachment()
@@ -26720,6 +27212,10 @@ type VehicleMutation struct {
 	compliance_status   *string
 	image_license_plate *string
 	image_side_view     *string
+	insurance_expiry    *time.Time
+	insurance_document  *string
+	inspection_expiry   *time.Time
+	inspection_document *string
 	metadata            *map[string]interface{}
 	created_at          *time.Time
 	updated_at          *time.Time
@@ -27273,6 +27769,202 @@ func (m *VehicleMutation) ResetImageSideView() {
 	delete(m.clearedFields, vehicle.FieldImageSideView)
 }
 
+// SetInsuranceExpiry sets the "insurance_expiry" field.
+func (m *VehicleMutation) SetInsuranceExpiry(t time.Time) {
+	m.insurance_expiry = &t
+}
+
+// InsuranceExpiry returns the value of the "insurance_expiry" field in the mutation.
+func (m *VehicleMutation) InsuranceExpiry() (r time.Time, exists bool) {
+	v := m.insurance_expiry
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldInsuranceExpiry returns the old "insurance_expiry" field's value of the Vehicle entity.
+// If the Vehicle object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *VehicleMutation) OldInsuranceExpiry(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldInsuranceExpiry is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldInsuranceExpiry requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldInsuranceExpiry: %w", err)
+	}
+	return oldValue.InsuranceExpiry, nil
+}
+
+// ClearInsuranceExpiry clears the value of the "insurance_expiry" field.
+func (m *VehicleMutation) ClearInsuranceExpiry() {
+	m.insurance_expiry = nil
+	m.clearedFields[vehicle.FieldInsuranceExpiry] = struct{}{}
+}
+
+// InsuranceExpiryCleared returns if the "insurance_expiry" field was cleared in this mutation.
+func (m *VehicleMutation) InsuranceExpiryCleared() bool {
+	_, ok := m.clearedFields[vehicle.FieldInsuranceExpiry]
+	return ok
+}
+
+// ResetInsuranceExpiry resets all changes to the "insurance_expiry" field.
+func (m *VehicleMutation) ResetInsuranceExpiry() {
+	m.insurance_expiry = nil
+	delete(m.clearedFields, vehicle.FieldInsuranceExpiry)
+}
+
+// SetInsuranceDocument sets the "insurance_document" field.
+func (m *VehicleMutation) SetInsuranceDocument(s string) {
+	m.insurance_document = &s
+}
+
+// InsuranceDocument returns the value of the "insurance_document" field in the mutation.
+func (m *VehicleMutation) InsuranceDocument() (r string, exists bool) {
+	v := m.insurance_document
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldInsuranceDocument returns the old "insurance_document" field's value of the Vehicle entity.
+// If the Vehicle object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *VehicleMutation) OldInsuranceDocument(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldInsuranceDocument is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldInsuranceDocument requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldInsuranceDocument: %w", err)
+	}
+	return oldValue.InsuranceDocument, nil
+}
+
+// ClearInsuranceDocument clears the value of the "insurance_document" field.
+func (m *VehicleMutation) ClearInsuranceDocument() {
+	m.insurance_document = nil
+	m.clearedFields[vehicle.FieldInsuranceDocument] = struct{}{}
+}
+
+// InsuranceDocumentCleared returns if the "insurance_document" field was cleared in this mutation.
+func (m *VehicleMutation) InsuranceDocumentCleared() bool {
+	_, ok := m.clearedFields[vehicle.FieldInsuranceDocument]
+	return ok
+}
+
+// ResetInsuranceDocument resets all changes to the "insurance_document" field.
+func (m *VehicleMutation) ResetInsuranceDocument() {
+	m.insurance_document = nil
+	delete(m.clearedFields, vehicle.FieldInsuranceDocument)
+}
+
+// SetInspectionExpiry sets the "inspection_expiry" field.
+func (m *VehicleMutation) SetInspectionExpiry(t time.Time) {
+	m.inspection_expiry = &t
+}
+
+// InspectionExpiry returns the value of the "inspection_expiry" field in the mutation.
+func (m *VehicleMutation) InspectionExpiry() (r time.Time, exists bool) {
+	v := m.inspection_expiry
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldInspectionExpiry returns the old "inspection_expiry" field's value of the Vehicle entity.
+// If the Vehicle object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *VehicleMutation) OldInspectionExpiry(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldInspectionExpiry is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldInspectionExpiry requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldInspectionExpiry: %w", err)
+	}
+	return oldValue.InspectionExpiry, nil
+}
+
+// ClearInspectionExpiry clears the value of the "inspection_expiry" field.
+func (m *VehicleMutation) ClearInspectionExpiry() {
+	m.inspection_expiry = nil
+	m.clearedFields[vehicle.FieldInspectionExpiry] = struct{}{}
+}
+
+// InspectionExpiryCleared returns if the "inspection_expiry" field was cleared in this mutation.
+func (m *VehicleMutation) InspectionExpiryCleared() bool {
+	_, ok := m.clearedFields[vehicle.FieldInspectionExpiry]
+	return ok
+}
+
+// ResetInspectionExpiry resets all changes to the "inspection_expiry" field.
+func (m *VehicleMutation) ResetInspectionExpiry() {
+	m.inspection_expiry = nil
+	delete(m.clearedFields, vehicle.FieldInspectionExpiry)
+}
+
+// SetInspectionDocument sets the "inspection_document" field.
+func (m *VehicleMutation) SetInspectionDocument(s string) {
+	m.inspection_document = &s
+}
+
+// InspectionDocument returns the value of the "inspection_document" field in the mutation.
+func (m *VehicleMutation) InspectionDocument() (r string, exists bool) {
+	v := m.inspection_document
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldInspectionDocument returns the old "inspection_document" field's value of the Vehicle entity.
+// If the Vehicle object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *VehicleMutation) OldInspectionDocument(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldInspectionDocument is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldInspectionDocument requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldInspectionDocument: %w", err)
+	}
+	return oldValue.InspectionDocument, nil
+}
+
+// ClearInspectionDocument clears the value of the "inspection_document" field.
+func (m *VehicleMutation) ClearInspectionDocument() {
+	m.inspection_document = nil
+	m.clearedFields[vehicle.FieldInspectionDocument] = struct{}{}
+}
+
+// InspectionDocumentCleared returns if the "inspection_document" field was cleared in this mutation.
+func (m *VehicleMutation) InspectionDocumentCleared() bool {
+	_, ok := m.clearedFields[vehicle.FieldInspectionDocument]
+	return ok
+}
+
+// ResetInspectionDocument resets all changes to the "inspection_document" field.
+func (m *VehicleMutation) ResetInspectionDocument() {
+	m.inspection_document = nil
+	delete(m.clearedFields, vehicle.FieldInspectionDocument)
+}
+
 // SetMetadata sets the "metadata" field.
 func (m *VehicleMutation) SetMetadata(value map[string]interface{}) {
 	m.metadata = &value
@@ -27496,7 +28188,7 @@ func (m *VehicleMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *VehicleMutation) Fields() []string {
-	fields := make([]string, 0, 14)
+	fields := make([]string, 0, 18)
 	if m.tenant_id != nil {
 		fields = append(fields, vehicle.FieldTenantID)
 	}
@@ -27529,6 +28221,18 @@ func (m *VehicleMutation) Fields() []string {
 	}
 	if m.image_side_view != nil {
 		fields = append(fields, vehicle.FieldImageSideView)
+	}
+	if m.insurance_expiry != nil {
+		fields = append(fields, vehicle.FieldInsuranceExpiry)
+	}
+	if m.insurance_document != nil {
+		fields = append(fields, vehicle.FieldInsuranceDocument)
+	}
+	if m.inspection_expiry != nil {
+		fields = append(fields, vehicle.FieldInspectionExpiry)
+	}
+	if m.inspection_document != nil {
+		fields = append(fields, vehicle.FieldInspectionDocument)
 	}
 	if m.metadata != nil {
 		fields = append(fields, vehicle.FieldMetadata)
@@ -27569,6 +28273,14 @@ func (m *VehicleMutation) Field(name string) (ent.Value, bool) {
 		return m.ImageLicensePlate()
 	case vehicle.FieldImageSideView:
 		return m.ImageSideView()
+	case vehicle.FieldInsuranceExpiry:
+		return m.InsuranceExpiry()
+	case vehicle.FieldInsuranceDocument:
+		return m.InsuranceDocument()
+	case vehicle.FieldInspectionExpiry:
+		return m.InspectionExpiry()
+	case vehicle.FieldInspectionDocument:
+		return m.InspectionDocument()
 	case vehicle.FieldMetadata:
 		return m.Metadata()
 	case vehicle.FieldCreatedAt:
@@ -27606,6 +28318,14 @@ func (m *VehicleMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldImageLicensePlate(ctx)
 	case vehicle.FieldImageSideView:
 		return m.OldImageSideView(ctx)
+	case vehicle.FieldInsuranceExpiry:
+		return m.OldInsuranceExpiry(ctx)
+	case vehicle.FieldInsuranceDocument:
+		return m.OldInsuranceDocument(ctx)
+	case vehicle.FieldInspectionExpiry:
+		return m.OldInspectionExpiry(ctx)
+	case vehicle.FieldInspectionDocument:
+		return m.OldInspectionDocument(ctx)
 	case vehicle.FieldMetadata:
 		return m.OldMetadata(ctx)
 	case vehicle.FieldCreatedAt:
@@ -27698,6 +28418,34 @@ func (m *VehicleMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetImageSideView(v)
 		return nil
+	case vehicle.FieldInsuranceExpiry:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetInsuranceExpiry(v)
+		return nil
+	case vehicle.FieldInsuranceDocument:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetInsuranceDocument(v)
+		return nil
+	case vehicle.FieldInspectionExpiry:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetInspectionExpiry(v)
+		return nil
+	case vehicle.FieldInspectionDocument:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetInspectionDocument(v)
+		return nil
 	case vehicle.FieldMetadata:
 		v, ok := value.(map[string]interface{})
 		if !ok {
@@ -27758,6 +28506,18 @@ func (m *VehicleMutation) ClearedFields() []string {
 	if m.FieldCleared(vehicle.FieldImageSideView) {
 		fields = append(fields, vehicle.FieldImageSideView)
 	}
+	if m.FieldCleared(vehicle.FieldInsuranceExpiry) {
+		fields = append(fields, vehicle.FieldInsuranceExpiry)
+	}
+	if m.FieldCleared(vehicle.FieldInsuranceDocument) {
+		fields = append(fields, vehicle.FieldInsuranceDocument)
+	}
+	if m.FieldCleared(vehicle.FieldInspectionExpiry) {
+		fields = append(fields, vehicle.FieldInspectionExpiry)
+	}
+	if m.FieldCleared(vehicle.FieldInspectionDocument) {
+		fields = append(fields, vehicle.FieldInspectionDocument)
+	}
 	return fields
 }
 
@@ -27780,6 +28540,18 @@ func (m *VehicleMutation) ClearField(name string) error {
 		return nil
 	case vehicle.FieldImageSideView:
 		m.ClearImageSideView()
+		return nil
+	case vehicle.FieldInsuranceExpiry:
+		m.ClearInsuranceExpiry()
+		return nil
+	case vehicle.FieldInsuranceDocument:
+		m.ClearInsuranceDocument()
+		return nil
+	case vehicle.FieldInspectionExpiry:
+		m.ClearInspectionExpiry()
+		return nil
+	case vehicle.FieldInspectionDocument:
+		m.ClearInspectionDocument()
 		return nil
 	}
 	return fmt.Errorf("unknown Vehicle nullable field %s", name)
@@ -27821,6 +28593,18 @@ func (m *VehicleMutation) ResetField(name string) error {
 		return nil
 	case vehicle.FieldImageSideView:
 		m.ResetImageSideView()
+		return nil
+	case vehicle.FieldInsuranceExpiry:
+		m.ResetInsuranceExpiry()
+		return nil
+	case vehicle.FieldInsuranceDocument:
+		m.ResetInsuranceDocument()
+		return nil
+	case vehicle.FieldInspectionExpiry:
+		m.ResetInspectionExpiry()
+		return nil
+	case vehicle.FieldInspectionDocument:
+		m.ResetInspectionDocument()
 		return nil
 	case vehicle.FieldMetadata:
 		m.ResetMetadata()

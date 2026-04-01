@@ -37,6 +37,14 @@ const (
 	FieldImageLicensePlate = "image_license_plate"
 	// FieldImageSideView holds the string denoting the image_side_view field in the database.
 	FieldImageSideView = "image_side_view"
+	// FieldInsuranceExpiry holds the string denoting the insurance_expiry field in the database.
+	FieldInsuranceExpiry = "insurance_expiry"
+	// FieldInsuranceDocument holds the string denoting the insurance_document field in the database.
+	FieldInsuranceDocument = "insurance_document"
+	// FieldInspectionExpiry holds the string denoting the inspection_expiry field in the database.
+	FieldInspectionExpiry = "inspection_expiry"
+	// FieldInspectionDocument holds the string denoting the inspection_document field in the database.
+	FieldInspectionDocument = "inspection_document"
 	// FieldMetadata holds the string denoting the metadata field in the database.
 	FieldMetadata = "metadata"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
@@ -79,6 +87,10 @@ var Columns = []string{
 	FieldComplianceStatus,
 	FieldImageLicensePlate,
 	FieldImageSideView,
+	FieldInsuranceExpiry,
+	FieldInsuranceDocument,
+	FieldInspectionExpiry,
+	FieldInspectionDocument,
 	FieldMetadata,
 	FieldCreatedAt,
 	FieldUpdatedAt,
@@ -175,6 +187,26 @@ func ByImageLicensePlate(opts ...sql.OrderTermOption) OrderOption {
 // ByImageSideView orders the results by the image_side_view field.
 func ByImageSideView(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldImageSideView, opts...).ToFunc()
+}
+
+// ByInsuranceExpiry orders the results by the insurance_expiry field.
+func ByInsuranceExpiry(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldInsuranceExpiry, opts...).ToFunc()
+}
+
+// ByInsuranceDocument orders the results by the insurance_document field.
+func ByInsuranceDocument(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldInsuranceDocument, opts...).ToFunc()
+}
+
+// ByInspectionExpiry orders the results by the inspection_expiry field.
+func ByInspectionExpiry(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldInspectionExpiry, opts...).ToFunc()
+}
+
+// ByInspectionDocument orders the results by the inspection_document field.
+func ByInspectionDocument(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldInspectionDocument, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.

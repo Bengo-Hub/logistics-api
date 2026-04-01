@@ -195,6 +195,86 @@ func (_u *VehicleUpdate) ClearImageSideView() *VehicleUpdate {
 	return _u
 }
 
+// SetInsuranceExpiry sets the "insurance_expiry" field.
+func (_u *VehicleUpdate) SetInsuranceExpiry(v time.Time) *VehicleUpdate {
+	_u.mutation.SetInsuranceExpiry(v)
+	return _u
+}
+
+// SetNillableInsuranceExpiry sets the "insurance_expiry" field if the given value is not nil.
+func (_u *VehicleUpdate) SetNillableInsuranceExpiry(v *time.Time) *VehicleUpdate {
+	if v != nil {
+		_u.SetInsuranceExpiry(*v)
+	}
+	return _u
+}
+
+// ClearInsuranceExpiry clears the value of the "insurance_expiry" field.
+func (_u *VehicleUpdate) ClearInsuranceExpiry() *VehicleUpdate {
+	_u.mutation.ClearInsuranceExpiry()
+	return _u
+}
+
+// SetInsuranceDocument sets the "insurance_document" field.
+func (_u *VehicleUpdate) SetInsuranceDocument(v string) *VehicleUpdate {
+	_u.mutation.SetInsuranceDocument(v)
+	return _u
+}
+
+// SetNillableInsuranceDocument sets the "insurance_document" field if the given value is not nil.
+func (_u *VehicleUpdate) SetNillableInsuranceDocument(v *string) *VehicleUpdate {
+	if v != nil {
+		_u.SetInsuranceDocument(*v)
+	}
+	return _u
+}
+
+// ClearInsuranceDocument clears the value of the "insurance_document" field.
+func (_u *VehicleUpdate) ClearInsuranceDocument() *VehicleUpdate {
+	_u.mutation.ClearInsuranceDocument()
+	return _u
+}
+
+// SetInspectionExpiry sets the "inspection_expiry" field.
+func (_u *VehicleUpdate) SetInspectionExpiry(v time.Time) *VehicleUpdate {
+	_u.mutation.SetInspectionExpiry(v)
+	return _u
+}
+
+// SetNillableInspectionExpiry sets the "inspection_expiry" field if the given value is not nil.
+func (_u *VehicleUpdate) SetNillableInspectionExpiry(v *time.Time) *VehicleUpdate {
+	if v != nil {
+		_u.SetInspectionExpiry(*v)
+	}
+	return _u
+}
+
+// ClearInspectionExpiry clears the value of the "inspection_expiry" field.
+func (_u *VehicleUpdate) ClearInspectionExpiry() *VehicleUpdate {
+	_u.mutation.ClearInspectionExpiry()
+	return _u
+}
+
+// SetInspectionDocument sets the "inspection_document" field.
+func (_u *VehicleUpdate) SetInspectionDocument(v string) *VehicleUpdate {
+	_u.mutation.SetInspectionDocument(v)
+	return _u
+}
+
+// SetNillableInspectionDocument sets the "inspection_document" field if the given value is not nil.
+func (_u *VehicleUpdate) SetNillableInspectionDocument(v *string) *VehicleUpdate {
+	if v != nil {
+		_u.SetInspectionDocument(*v)
+	}
+	return _u
+}
+
+// ClearInspectionDocument clears the value of the "inspection_document" field.
+func (_u *VehicleUpdate) ClearInspectionDocument() *VehicleUpdate {
+	_u.mutation.ClearInspectionDocument()
+	return _u
+}
+
 // SetMetadata sets the "metadata" field.
 func (_u *VehicleUpdate) SetMetadata(v map[string]interface{}) *VehicleUpdate {
 	_u.mutation.SetMetadata(v)
@@ -373,6 +453,30 @@ func (_u *VehicleUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.ImageSideViewCleared() {
 		_spec.ClearField(vehicle.FieldImageSideView, field.TypeString)
+	}
+	if value, ok := _u.mutation.InsuranceExpiry(); ok {
+		_spec.SetField(vehicle.FieldInsuranceExpiry, field.TypeTime, value)
+	}
+	if _u.mutation.InsuranceExpiryCleared() {
+		_spec.ClearField(vehicle.FieldInsuranceExpiry, field.TypeTime)
+	}
+	if value, ok := _u.mutation.InsuranceDocument(); ok {
+		_spec.SetField(vehicle.FieldInsuranceDocument, field.TypeString, value)
+	}
+	if _u.mutation.InsuranceDocumentCleared() {
+		_spec.ClearField(vehicle.FieldInsuranceDocument, field.TypeString)
+	}
+	if value, ok := _u.mutation.InspectionExpiry(); ok {
+		_spec.SetField(vehicle.FieldInspectionExpiry, field.TypeTime, value)
+	}
+	if _u.mutation.InspectionExpiryCleared() {
+		_spec.ClearField(vehicle.FieldInspectionExpiry, field.TypeTime)
+	}
+	if value, ok := _u.mutation.InspectionDocument(); ok {
+		_spec.SetField(vehicle.FieldInspectionDocument, field.TypeString, value)
+	}
+	if _u.mutation.InspectionDocumentCleared() {
+		_spec.ClearField(vehicle.FieldInspectionDocument, field.TypeString)
 	}
 	if value, ok := _u.mutation.Metadata(); ok {
 		_spec.SetField(vehicle.FieldMetadata, field.TypeJSON, value)
@@ -638,6 +742,86 @@ func (_u *VehicleUpdateOne) ClearImageSideView() *VehicleUpdateOne {
 	return _u
 }
 
+// SetInsuranceExpiry sets the "insurance_expiry" field.
+func (_u *VehicleUpdateOne) SetInsuranceExpiry(v time.Time) *VehicleUpdateOne {
+	_u.mutation.SetInsuranceExpiry(v)
+	return _u
+}
+
+// SetNillableInsuranceExpiry sets the "insurance_expiry" field if the given value is not nil.
+func (_u *VehicleUpdateOne) SetNillableInsuranceExpiry(v *time.Time) *VehicleUpdateOne {
+	if v != nil {
+		_u.SetInsuranceExpiry(*v)
+	}
+	return _u
+}
+
+// ClearInsuranceExpiry clears the value of the "insurance_expiry" field.
+func (_u *VehicleUpdateOne) ClearInsuranceExpiry() *VehicleUpdateOne {
+	_u.mutation.ClearInsuranceExpiry()
+	return _u
+}
+
+// SetInsuranceDocument sets the "insurance_document" field.
+func (_u *VehicleUpdateOne) SetInsuranceDocument(v string) *VehicleUpdateOne {
+	_u.mutation.SetInsuranceDocument(v)
+	return _u
+}
+
+// SetNillableInsuranceDocument sets the "insurance_document" field if the given value is not nil.
+func (_u *VehicleUpdateOne) SetNillableInsuranceDocument(v *string) *VehicleUpdateOne {
+	if v != nil {
+		_u.SetInsuranceDocument(*v)
+	}
+	return _u
+}
+
+// ClearInsuranceDocument clears the value of the "insurance_document" field.
+func (_u *VehicleUpdateOne) ClearInsuranceDocument() *VehicleUpdateOne {
+	_u.mutation.ClearInsuranceDocument()
+	return _u
+}
+
+// SetInspectionExpiry sets the "inspection_expiry" field.
+func (_u *VehicleUpdateOne) SetInspectionExpiry(v time.Time) *VehicleUpdateOne {
+	_u.mutation.SetInspectionExpiry(v)
+	return _u
+}
+
+// SetNillableInspectionExpiry sets the "inspection_expiry" field if the given value is not nil.
+func (_u *VehicleUpdateOne) SetNillableInspectionExpiry(v *time.Time) *VehicleUpdateOne {
+	if v != nil {
+		_u.SetInspectionExpiry(*v)
+	}
+	return _u
+}
+
+// ClearInspectionExpiry clears the value of the "inspection_expiry" field.
+func (_u *VehicleUpdateOne) ClearInspectionExpiry() *VehicleUpdateOne {
+	_u.mutation.ClearInspectionExpiry()
+	return _u
+}
+
+// SetInspectionDocument sets the "inspection_document" field.
+func (_u *VehicleUpdateOne) SetInspectionDocument(v string) *VehicleUpdateOne {
+	_u.mutation.SetInspectionDocument(v)
+	return _u
+}
+
+// SetNillableInspectionDocument sets the "inspection_document" field if the given value is not nil.
+func (_u *VehicleUpdateOne) SetNillableInspectionDocument(v *string) *VehicleUpdateOne {
+	if v != nil {
+		_u.SetInspectionDocument(*v)
+	}
+	return _u
+}
+
+// ClearInspectionDocument clears the value of the "inspection_document" field.
+func (_u *VehicleUpdateOne) ClearInspectionDocument() *VehicleUpdateOne {
+	_u.mutation.ClearInspectionDocument()
+	return _u
+}
+
 // SetMetadata sets the "metadata" field.
 func (_u *VehicleUpdateOne) SetMetadata(v map[string]interface{}) *VehicleUpdateOne {
 	_u.mutation.SetMetadata(v)
@@ -846,6 +1030,30 @@ func (_u *VehicleUpdateOne) sqlSave(ctx context.Context) (_node *Vehicle, err er
 	}
 	if _u.mutation.ImageSideViewCleared() {
 		_spec.ClearField(vehicle.FieldImageSideView, field.TypeString)
+	}
+	if value, ok := _u.mutation.InsuranceExpiry(); ok {
+		_spec.SetField(vehicle.FieldInsuranceExpiry, field.TypeTime, value)
+	}
+	if _u.mutation.InsuranceExpiryCleared() {
+		_spec.ClearField(vehicle.FieldInsuranceExpiry, field.TypeTime)
+	}
+	if value, ok := _u.mutation.InsuranceDocument(); ok {
+		_spec.SetField(vehicle.FieldInsuranceDocument, field.TypeString, value)
+	}
+	if _u.mutation.InsuranceDocumentCleared() {
+		_spec.ClearField(vehicle.FieldInsuranceDocument, field.TypeString)
+	}
+	if value, ok := _u.mutation.InspectionExpiry(); ok {
+		_spec.SetField(vehicle.FieldInspectionExpiry, field.TypeTime, value)
+	}
+	if _u.mutation.InspectionExpiryCleared() {
+		_spec.ClearField(vehicle.FieldInspectionExpiry, field.TypeTime)
+	}
+	if value, ok := _u.mutation.InspectionDocument(); ok {
+		_spec.SetField(vehicle.FieldInspectionDocument, field.TypeString, value)
+	}
+	if _u.mutation.InspectionDocumentCleared() {
+		_spec.ClearField(vehicle.FieldInspectionDocument, field.TypeString)
 	}
 	if value, ok := _u.mutation.Metadata(); ok {
 		_spec.SetField(vehicle.FieldMetadata, field.TypeJSON, value)

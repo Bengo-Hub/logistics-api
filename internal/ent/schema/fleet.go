@@ -28,7 +28,10 @@ func (Fleet) Fields() []ent.Field {
 			NotEmpty(),
 		field.String("type").
 			Default("internal").
-			Comment("internal | third-party"),
+			Comment("Deprecated: use fleet_type instead"),
+		field.String("fleet_type").
+			Default("delivery").
+			Comment("courier = company-managed (DHL/G4S), distribution = warehouse-to-warehouse (KEMSA), delivery = public/invite-based (Uber/Bolt)"),
 		field.String("status").
 			Default("active"),
 		field.JSON("metadata", map[string]any{}).

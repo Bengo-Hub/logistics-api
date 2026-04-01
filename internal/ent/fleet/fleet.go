@@ -23,6 +23,8 @@ const (
 	FieldName = "name"
 	// FieldType holds the string denoting the type field in the database.
 	FieldType = "type"
+	// FieldFleetType holds the string denoting the fleet_type field in the database.
+	FieldFleetType = "fleet_type"
 	// FieldStatus holds the string denoting the status field in the database.
 	FieldStatus = "status"
 	// FieldMetadata holds the string denoting the metadata field in the database.
@@ -60,6 +62,7 @@ var Columns = []string{
 	FieldTenantSlug,
 	FieldName,
 	FieldType,
+	FieldFleetType,
 	FieldStatus,
 	FieldMetadata,
 	FieldCreatedAt,
@@ -83,6 +86,8 @@ var (
 	NameValidator func(string) error
 	// DefaultType holds the default value on creation for the "type" field.
 	DefaultType string
+	// DefaultFleetType holds the default value on creation for the "fleet_type" field.
+	DefaultFleetType string
 	// DefaultStatus holds the default value on creation for the "status" field.
 	DefaultStatus string
 	// DefaultMetadata holds the default value on creation for the "metadata" field.
@@ -123,6 +128,11 @@ func ByName(opts ...sql.OrderTermOption) OrderOption {
 // ByType orders the results by the type field.
 func ByType(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldType, opts...).ToFunc()
+}
+
+// ByFleetType orders the results by the fleet_type field.
+func ByFleetType(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldFleetType, opts...).ToFunc()
 }
 
 // ByStatus orders the results by the status field.
