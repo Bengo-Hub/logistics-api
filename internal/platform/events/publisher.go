@@ -65,20 +65,24 @@ func (p *Publisher) publish(ctx context.Context, tenantID uuid.UUID, aggregateTy
 
 // FleetMemberEventData represents data for fleet member lifecycle events.
 type FleetMemberEventData struct {
-	MemberID  string `json:"member_id"`
-	UserID    string `json:"user_id"`
-	FleetID   string `json:"fleet_id"`
-	UserEmail string `json:"user_email"`
-	UserName  string `json:"user_name"`
+	MemberID   string `json:"member_id"`
+	UserID     string `json:"user_id"`
+	FleetID    string `json:"fleet_id"`
+	UserEmail  string `json:"user_email"`
+	UserName   string `json:"user_name"`
+	TenantSlug string `json:"tenant_slug"`
+	InviteCode string `json:"invite_code,omitempty"`
 }
 
 func (d FleetMemberEventData) toMap() map[string]interface{} {
 	return map[string]interface{}{
-		"member_id":  d.MemberID,
-		"user_id":    d.UserID,
-		"fleet_id":   d.FleetID,
-		"user_email": d.UserEmail,
-		"user_name":  d.UserName,
+		"member_id":   d.MemberID,
+		"user_id":     d.UserID,
+		"fleet_id":    d.FleetID,
+		"user_email":  d.UserEmail,
+		"user_name":   d.UserName,
+		"tenant_slug": d.TenantSlug,
+		"invite_code": d.InviteCode,
 		"notification": map[string]interface{}{
 			"target":          "rider",
 			"recipient_email": d.UserEmail,
@@ -100,6 +104,23 @@ func (p *Publisher) PublishFleetMemberApproved(ctx context.Context, tenantID uui
 // PublishFleetMemberSuspended publishes a fleet.member_suspended event.
 func (p *Publisher) PublishFleetMemberSuspended(ctx context.Context, tenantID uuid.UUID, data FleetMemberEventData) error {
 	return p.publish(ctx, tenantID, "logistics", "fleet.member_suspended", data.toMap())
+}
+
+// PublishFleetMemberKYCSubmitted publishes a fleet.member_kyc_submitted event.
+// This notifies the tenant admin that a rider has uploaded KYC documents for review.
+func (p *Publisher) PublishFleetMemberKYCSubmitted(ctx context.Context, tenantID uuid.UUID, data FleetMemberEventData) error {
+	return p.publish(ctx, tenantID, "logistics", "fleet.member_kyc_submitted", data.toMap())
+}
+
+// PublishFleetMemberRejected publishes a fleet.member_rejected event.
+func (p *Publisher) PublishFleetMemberRejected(ctx context.Context, tenantID uuid.UUID, data FleetMemberEventData) error {
+	return p.publish(ctx, tenantID, "logistics", "fleet.member_rejected", data.toMap())
+}
+
+// PublishFleetMemberExpired publishes a fleet.member_expired event.
+// Sent when a pending rider's application is auto-cleaned after 7 days.
+func (p *Publisher) PublishFleetMemberExpired(ctx context.Context, tenantID uuid.UUID, data FleetMemberEventData) error {
+	return p.publish(ctx, tenantID, "logistics", "fleet.member_expired", data.toMap())
 }
 
 // --- Task Lifecycle Events ---
