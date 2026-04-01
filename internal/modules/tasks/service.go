@@ -102,6 +102,11 @@ func NewService(client *ent.Client, log *zap.Logger) *Service {
 	}
 }
 
+// Client returns the Ent client for direct queries (used by consumers for step creation).
+func (s *Service) Client() *ent.Client {
+	return s.client
+}
+
 // SetEarningsService sets the earnings service for recording delivery earnings.
 func (s *Service) SetEarningsService(svc EarningsRecorder) {
 	s.earningsSvc = svc
