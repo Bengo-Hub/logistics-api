@@ -7,10 +7,13 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"go.uber.org/zap"
+
 	"github.com/bengobox/logistics-service/internal/ent"
 	"github.com/bengobox/logistics-service/internal/ent/user"
 	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
 	"github.com/bengobox/logistics-service/internal/modules/tenant"
+	"github.com/bengobox/logistics-service/internal/platform/events"
 )
 
 // UpdateRiderProfileRequest defines the fields expected for profile updates.
@@ -30,14 +33,26 @@ type UpdateRiderProfileRequest struct {
 type Service struct {
 	client       *ent.Client
 	tenantSyncer *tenant.Syncer
+	publisher    *events.Publisher
+	log          *zap.Logger
 }
 
 // NewService creates a new Identity Service.
-func NewService(client *ent.Client, tenantSyncer *tenant.Syncer) *Service {
+func NewService(client *ent.Client, tenantSyncer *tenant.Syncer, publisher *events.Publisher, log *zap.Logger) *Service {
+	if log == nil {
+		log = zap.NewNop()
+	}
 	return &Service{
 		client:       client,
 		tenantSyncer: tenantSyncer,
+		publisher:    publisher,
+		log:          log.Named("identity"),
 	}
+}
+
+// SetPublisher sets the event publisher (called after NATS initialization).
+func (s *Service) SetPublisher(p *events.Publisher) {
+	s.publisher = p
 }
 
 // ResolveTenantSlug syncs and resolves a tenant slug to its UUID.
@@ -211,13 +226,15 @@ func (s *Service) UpdateRiderProfile(ctx context.Context, authServiceID, tenantI
 		return nil, fmt.Errorf("rider record not found: %w", err)
 	}
 
-	// Update KYC fields
+	// Update KYC fields and transition to pending_review
+	now := time.Now()
 	err = tx.FleetMember.UpdateOne(fm).
 		SetIDNumber(req.IDNumber).
 		SetLicenseNo(req.LicenseNo).
 		SetIDPassportAttachment(req.IDPassportAttachment).
 		SetRiderPhoto(req.RiderPhoto).
-		SetStatus("pending").
+		SetStatus("pending_review").
+		SetKycSubmittedAt(now).
 		Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("update fleet member: %w", err)
@@ -251,6 +268,22 @@ func (s *Service) UpdateRiderProfile(ctx context.Context, authServiceID, tenantI
 
 	if err := tx.Commit(); err != nil {
 		return nil, err
+	}
+
+	// Publish KYC submitted event to notify tenant admin
+	if s.publisher != nil {
+		// Resolve tenant slug from the fleet
+		tenantSlug := ""
+		if fl, flErr := s.client.Fleet.Get(ctx, fm.FleetID); flErr == nil {
+			tenantSlug = fl.TenantSlug
+		}
+		if pubErr := s.publisher.PublishFleetMemberKYCSubmitted(ctx, tenantID, events.FleetMemberEventData{
+			MemberID:   fm.ID.String(), UserID: u.ID.String(),
+			FleetID:    fm.FleetID.String(), UserEmail: u.Email, UserName: u.FullName,
+			TenantSlug: tenantSlug,
+		}); pubErr != nil {
+			s.log.Warn("failed to publish fleet.member_kyc_submitted", zap.Error(pubErr))
+		}
 	}
 
 	return s.GetRiderProfile(ctx, authServiceID, tenantID)

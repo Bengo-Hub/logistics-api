@@ -125,7 +125,9 @@ func New(ctx context.Context) (*App, error) {
 	})
 
 	tenantSyncer := tenant.NewSyncer(entClient, cfg.Auth.ServiceURL)
-	identitySvc := identity.NewService(entClient, tenantSyncer)
+
+	// Publisher will be set after NATS initialization
+	identitySvc := identity.NewService(entClient, tenantSyncer, nil, log)
 
 	// Subscribe to auth-service events for identity sync
 	if natsConn != nil {
@@ -140,6 +142,9 @@ func New(ctx context.Context) (*App, error) {
 	var outboxPub *eventslib.Publisher
 	if natsConn != nil {
 		eventPublisher = events.NewPublisher(sqlDB, log)
+
+		// Inject publisher into identity service (created before NATS init)
+		identitySvc.SetPublisher(eventPublisher)
 
 		// Start background outbox publisher
 		js, jsErr := natsConn.JetStream()

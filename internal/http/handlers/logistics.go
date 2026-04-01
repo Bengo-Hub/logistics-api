@@ -425,6 +425,36 @@ func (h *LogisticsHandler) SuspendMember(w http.ResponseWriter, r *http.Request)
 	respondJSON(w, http.StatusOK, m)
 }
 
+// RejectMember handles POST /api/v1/{tenant}/fleet/members/{memberId}/reject
+func (h *LogisticsHandler) RejectMember(w http.ResponseWriter, r *http.Request) {
+	tenantID := tenantIDFromClaims(r)
+	if tenantID == uuid.Nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	memberID, err := uuid.Parse(chi.URLParam(r, "memberId"))
+	if err != nil {
+		http.Error(w, "invalid member id", http.StatusBadRequest)
+		return
+	}
+
+	var body struct {
+		Reason string `json:"reason"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		body.Reason = ""
+	}
+
+	m, err := h.fleetSvc.RejectMember(r.Context(), tenantID, memberID, body.Reason)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, m)
+}
+
 // DeleteMember handles DELETE /api/v1/{tenant}/fleet/members/{memberId}
 func (h *LogisticsHandler) DeleteMember(w http.ResponseWriter, r *http.Request) {
 	tenantID := tenantIDFromClaims(r)

@@ -3,6 +3,7 @@ package fleet
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -288,6 +289,45 @@ func (s *Service) SuspendMember(ctx context.Context, tenantID, memberID uuid.UUI
 				TenantSlug: s.resolveTenantSlug(ctx, m.FleetID),
 			}); pubErr != nil {
 				s.log.Warn("failed to publish fleet.member_suspended", zap.Error(pubErr))
+			}
+		}
+	}
+
+	return updated, nil
+}
+
+// RejectMember rejects a pending rider application with a reason.
+func (s *Service) RejectMember(ctx context.Context, tenantID, memberID uuid.UUID, reason string) (*ent.FleetMember, error) {
+	m, err := s.client.FleetMember.Query().
+		Where(fleetmember.ID(memberID), fleetmember.TenantID(tenantID)).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, fmt.Errorf("fleet: member not found")
+		}
+		return nil, fmt.Errorf("fleet: get for reject: %w", err)
+	}
+
+	now := time.Now()
+	updated, err := s.client.FleetMember.UpdateOne(m).
+		SetStatus("rejected").
+		SetRejectionReason(reason).
+		SetReviewedAt(now).
+		Save(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("fleet: reject: %w", err)
+	}
+
+	// Publish fleet member rejected event
+	if s.publisher != nil {
+		email, name := s.resolveUserInfo(ctx, m.UserID)
+		if email != "" {
+			if pubErr := s.publisher.PublishFleetMemberRejected(ctx, tenantID, events.FleetMemberEventData{
+				MemberID:   memberID.String(), UserID: m.UserID.String(),
+				FleetID:    m.FleetID.String(), UserEmail: email, UserName: name,
+				TenantSlug: s.resolveTenantSlug(ctx, m.FleetID),
+			}); pubErr != nil {
+				s.log.Warn("failed to publish fleet.member_rejected", zap.Error(pubErr))
 			}
 		}
 	}
