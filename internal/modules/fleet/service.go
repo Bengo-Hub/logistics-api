@@ -439,3 +439,82 @@ func (s *Service) RateRider(ctx context.Context, tenantID, memberID uuid.UUID, r
 
 	return rating, nil
 }
+
+// --- Courier / Batch Operations ---
+
+// BatchInviteResult holds the result for a single invite in a batch operation.
+type BatchInviteResult struct {
+	Email  string          `json:"email"`
+	Member *ent.FleetMember `json:"member,omitempty"`
+	Error  string          `json:"error,omitempty"`
+}
+
+// BatchInviteByEmail invites multiple riders in a single operation.
+// Returns results for each email (success or error).
+func (s *Service) BatchInviteByEmail(ctx context.Context, tenantID uuid.UUID, tenantSlug string, requests []InviteByEmailRequest) []BatchInviteResult {
+	results := make([]BatchInviteResult, 0, len(requests))
+	for _, req := range requests {
+		m, err := s.InviteMemberByEmail(ctx, tenantID, tenantSlug, req)
+		result := BatchInviteResult{Email: req.Email}
+		if err != nil {
+			result.Error = err.Error()
+		} else {
+			result.Member = m
+		}
+		results = append(results, result)
+	}
+	return results
+}
+
+// CreateVehicleRequest defines fields for creating a new vehicle.
+type CreateVehicleRequest struct {
+	VehicleType  string `json:"vehicle_type"`
+	Make         string `json:"make"`
+	Model        string `json:"model"`
+	LicensePlate string `json:"license_plate"`
+}
+
+// CreateVehicle adds a new vehicle to the fleet.
+func (s *Service) CreateVehicle(ctx context.Context, tenantID, fleetID uuid.UUID, req CreateVehicleRequest) (*ent.Vehicle, error) {
+	if fleetID == uuid.Nil {
+		fl, err := s.client.Fleet.Query().
+			Where(entfleet.TenantID(tenantID), entfleet.Status("active")).
+			First(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("fleet: no active fleet found")
+		}
+		fleetID = fl.ID
+	}
+
+	v, err := s.client.Vehicle.Create().
+		SetTenantID(tenantID).
+		SetFleetID(fleetID).
+		SetVehicleType(req.VehicleType).
+		SetMake(req.Make).
+		SetModel(req.Model).
+		SetLicensePlate(req.LicensePlate).
+		SetStatus("active").
+		SetComplianceStatus("pending").
+		Save(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("fleet: create vehicle: %w", err)
+	}
+
+	s.log.Info("vehicle created",
+		zap.String("vehicle_id", v.ID.String()),
+		zap.String("type", req.VehicleType),
+		zap.String("plate", req.LicensePlate),
+	)
+	return v, nil
+}
+
+// AssignVehicle assigns a vehicle to a fleet member.
+func (s *Service) AssignVehicle(ctx context.Context, tenantID, memberID, vehicleID uuid.UUID) error {
+	_, err := s.client.FleetMember.UpdateOneID(memberID).
+		SetVehicleID(vehicleID).
+		Save(ctx)
+	if err != nil {
+		return fmt.Errorf("fleet: assign vehicle: %w", err)
+	}
+	return nil
+}
