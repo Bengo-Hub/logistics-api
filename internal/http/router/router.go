@@ -3,6 +3,7 @@ package router
 import (
 	"context"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -62,12 +63,21 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 
 	r.Route("/api/v1", func(api chi.Router) {
 		// Apply auth + subscription enforcement with granular control:
-		// GET requests: auth required, subscription check skipped (read-only)
-		// Mutation requests: both auth and subscription enforcement required
+		// Public GET endpoints (zones, routing, ETA) skip auth for guest checkout support.
+		// Other GET requests: auth required, subscription check skipped (read-only).
+		// Mutation requests: both auth and subscription enforcement required.
 		if authMiddleware != nil {
 			api.Use(func(next http.Handler) http.Handler {
 				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					// Always require authentication
+					path := r.URL.Path
+					// Public read-only endpoints — skip auth entirely for guest checkout
+					if r.Method == http.MethodGet && (strings.Contains(path, "/zones") ||
+						strings.Contains(path, "/routing/") ||
+						strings.Contains(path, "/track/")) {
+						next.ServeHTTP(w, r)
+						return
+					}
+					// All other requests require authentication
 					authMiddleware.RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 						// Skip subscription check for GET requests (read-only)
 						if r.Method == http.MethodGet {
