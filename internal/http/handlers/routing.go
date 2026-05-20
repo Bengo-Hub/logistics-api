@@ -159,8 +159,3 @@ func parseRouteParams(r *http.Request) (routing.LatLng, routing.LatLng, error) {
 	return routing.LatLng{Lat: fromLat, Lng: fromLng}, routing.LatLng{Lat: toLat, Lng: toLng}, nil
 }
 
-func writeJSON(w http.ResponseWriter, status int, data any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
-}
