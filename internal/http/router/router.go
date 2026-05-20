@@ -23,7 +23,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/config"
 )
 
-func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authclient.AuthMiddleware, idSvc *identity.Service, lh *handlers.LogisticsHandler, rh *handlers.RoutingHandler, th *handlers.TrackingHandler, zh *handlers.ZonesHandler, rbacH *handlers.RBACHandler, rdb *redis.Client, cfg *config.Config, allowedOrigins []string) http.Handler {
+func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authclient.AuthMiddleware, idSvc *identity.Service, lh *handlers.LogisticsHandler, rh *handlers.RoutingHandler, th *handlers.TrackingHandler, zh *handlers.ZonesHandler, rbacH *handlers.RBACHandler, rdb *redis.Client, cfg *config.Config, allowedOrigins []string, serviceConfigH *handlers.ServiceConfigHandler) http.Handler {
 	rl := appmw.NewRateLimiter(rdb)
 	r := chi.NewRouter()
 
@@ -60,6 +60,17 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 	if th != nil {
 		r.Get("/api/v1/track/{trackingCode}", th.TrackByCode)
 	}
+
+	// Platform admin config routes (platform owner only, outside tenant scope)
+	r.Route("/api/v1/admin", func(admin chi.Router) {
+		if authMiddleware != nil {
+			admin.Use(authMiddleware.RequireAuth)
+		}
+		admin.Use(authclient.RequirePlatformOwner())
+		if serviceConfigH != nil {
+			serviceConfigH.RegisterPlatformRoutes(admin)
+		}
+	})
 
 	r.Route("/api/v1", func(api chi.Router) {
 		// Apply auth + subscription enforcement with granular control:
@@ -197,6 +208,10 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 
 			if rbacH != nil {
 				rbacH.RegisterRoutes(tenant)
+			}
+
+			if serviceConfigH != nil {
+				serviceConfigH.RegisterTenantRoutes(tenant)
 			}
 
 			if lh != nil {
