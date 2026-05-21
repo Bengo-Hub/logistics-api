@@ -36,7 +36,7 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   allowedOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "Origin", "X-Request-ID", "X-Tenant-ID", "X-Tenant-Slug"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "Origin", "X-Request-ID", "X-Tenant-ID", "X-Tenant-Slug", "X-Outlet-ID"},
 		ExposedHeaders:   []string{"Link", "X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset", "Retry-After"},
 		AllowCredentials: true,
 		MaxAge:           300,
@@ -150,6 +150,9 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 				URLParamFunc: chi.URLParam,
 				Required:     true,
 			}))
+
+			// Optional outlet context — extracts X-Outlet-ID if present
+			tenant.Use(appmw.OutletContext)
 
 			// Resolve tenant slug → UUID after TenantV2 when only slug is available (fresh DB).
 			if idSvc != nil {

@@ -76,6 +76,10 @@ func (Task) Fields() []ent.Field {
 		field.Bool("cash_collected").
 			Default(false).
 			Comment("Whether COD cash has been collected by the rider"),
+		field.UUID("outlet_id", uuid.UUID{}).
+			Optional().
+			Nillable().
+			Comment("Dispatch outlet for this task"),
 		field.String("carrier_id").
 			Optional().
 			Comment("External carrier reference if outsourced to 3rd party"),

@@ -1,4 +1,4 @@
-h1:hLYWB5cjYll0DAJyI9zWgvlLoH533v5XRYNSayPYUDE=
+h1:NoYli1OqJuJ3y9lD+FweQgyNBuJDqvx1n33eZ33XLAo=
 20260314184847_initial_schema.sql h1:L0wAADcTDNVU6BeR2ScWX5poErpcRylCO9xWQakqX+M=
 20260320140940_add_tracking_code_and_routing.sql h1:kfFLd/S6aqmD3l6l5aHN+44M18ct8inCdUO/ebQVzPs=
 20260320144356_add_geo_fence_zones.sql h1:DIWWryUDFzragzPYE4N/Qag94zVyu/XejorTCXB5eUc=
@@ -9,3 +9,4 @@ h1:hLYWB5cjYll0DAJyI9zWgvlLoH533v5XRYNSayPYUDE=
 20260330120000_add_cod_rating_earnings_fields.sql h1:lDDWiTVxdJWVsiLyy1Lw0Rhtc01P8/jMl8tuMns8DJE=
 20260330200000_add_outbox_published_at.sql h1:110/DUqRVBLFjZsUW195ZPrfMr5lCP7jqWjaTFcfub8=
 20260401110505_add_onboarding_fields.sql h1:dLNGG2lna3CiB/vmuTbN3ey5HjmTKLz+BstfsyAc75c=
+20260521165641_add_outlet_id_to_tasks.sql h1:M4a5Mt2zudUvc3gSU8EE1rjEG8VSVsBknxsHbQ8tgAc=
