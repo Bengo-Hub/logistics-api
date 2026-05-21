@@ -40,6 +40,7 @@ type RoutingConfig struct {
 type SubscriptionsConfig struct {
 	ServiceURL     string        `envconfig:"SUBSCRIPTIONS_SERVICE_URL" default:"https://pricingapi.codevertexitsolutions.com"`
 	RequestTimeout time.Duration `envconfig:"SUBSCRIPTIONS_REQUEST_TIMEOUT" default:"10s"`
+	APIKey         string        `envconfig:"INTERNAL_SERVICE_KEY"`
 }
 
 type AppConfig struct {
