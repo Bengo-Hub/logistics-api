@@ -38,6 +38,20 @@ type CreateTaskRequest struct {
 	Priority          int            `json:"priority"`
 	SLADueAt          *time.Time     `json:"sla_due_at,omitempty"`
 	Metadata          map[string]any `json:"metadata,omitempty"`
+
+	// Delivery-specific fields (optional). When provided, pickup and dropoff
+	// TaskStep records are created automatically.
+	PickupAddress  string  `json:"pickup_address,omitempty"`
+	PickupLat      float64 `json:"pickup_lat,omitempty"`
+	PickupLng      float64 `json:"pickup_lng,omitempty"`
+	PickupContact  string  `json:"pickup_contact,omitempty"`
+	DropoffAddress string  `json:"dropoff_address,omitempty"`
+	DropoffLat     float64 `json:"dropoff_lat,omitempty"`
+	DropoffLng     float64 `json:"dropoff_lng,omitempty"`
+	DropoffContact string  `json:"dropoff_contact,omitempty"`
+	CustomerName   string  `json:"customer_name,omitempty"`
+	CustomerPhone  string  `json:"customer_phone,omitempty"`
+	Instructions   string  `json:"instructions,omitempty"`
 }
 
 // CreateTaskFromOrderRequest carries delivery context from the ordering event.
@@ -117,7 +131,7 @@ func (s *Service) SetPublisher(p *events.Publisher) {
 	s.publisher = p
 }
 
-// CreateTask creates a new delivery task.
+// CreateTask creates a new delivery task, optionally with pickup and dropoff steps.
 func (s *Service) CreateTask(ctx context.Context, tenantID uuid.UUID, req CreateTaskRequest) (*ent.Task, error) {
 	taskType := req.TaskType
 	if taskType == "" {
@@ -142,13 +156,70 @@ func (s *Service) CreateTask(ctx context.Context, tenantID uuid.UUID, req Create
 	if req.SLADueAt != nil {
 		builder.SetSLADueAt(*req.SLADueAt)
 	}
-	if req.Metadata != nil {
+	if req.Instructions != "" {
+		meta := req.Metadata
+		if meta == nil {
+			meta = map[string]any{}
+		}
+		meta["instructions"] = req.Instructions
+		builder.SetMetadata(meta)
+	} else if req.Metadata != nil {
 		builder.SetMetadata(req.Metadata)
 	}
 
 	t, err := builder.Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("tasks: create: %w", err)
+	}
+
+	// Create pickup step if location is provided.
+	if req.PickupAddress != "" || req.PickupLat != 0 {
+		_, err = s.client.TaskStep.Create().
+			SetTaskID(t.ID).
+			SetStepType("pickup").
+			SetSequence(1).
+			SetLocationName(req.PickupAddress).
+			SetAddressJSON(map[string]any{
+				"address":   req.PickupAddress,
+				"latitude":  req.PickupLat,
+				"longitude": req.PickupLng,
+			}).
+			SetContactName(req.PickupContact).
+			SetContactPhone("").
+			SetRequiresSignature(false).
+			SetRequiresPhoto(false).
+			SetMetadata(map[string]any{}).
+			Save(ctx)
+		if err != nil {
+			s.log.Warn("task step (pickup) create failed", zap.Error(err))
+		}
+	}
+
+	// Create dropoff step if location is provided.
+	if req.DropoffAddress != "" || req.DropoffLat != 0 {
+		customerName := req.CustomerName
+		if customerName == "" {
+			customerName = req.DropoffContact
+		}
+		_, err = s.client.TaskStep.Create().
+			SetTaskID(t.ID).
+			SetStepType("dropoff").
+			SetSequence(2).
+			SetLocationName(req.DropoffAddress).
+			SetAddressJSON(map[string]any{
+				"address":   req.DropoffAddress,
+				"latitude":  req.DropoffLat,
+				"longitude": req.DropoffLng,
+			}).
+			SetContactName(customerName).
+			SetContactPhone(req.CustomerPhone).
+			SetRequiresSignature(true).
+			SetRequiresPhoto(true).
+			SetMetadata(map[string]any{}).
+			Save(ctx)
+		if err != nil {
+			s.log.Warn("task step (dropoff) create failed", zap.Error(err))
+		}
 	}
 
 	s.log.Info("task created",
