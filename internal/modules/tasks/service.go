@@ -344,6 +344,10 @@ func (s *Service) AssignTask(ctx context.Context, tenantID, taskID uuid.UUID, re
 		).
 		First(ctx)
 	if existing != nil {
+		// Idempotent: if already assigned to the same member, return the existing assignment.
+		if existing.FleetMemberID == req.FleetMemberID {
+			return existing, nil
+		}
 		return nil, fmt.Errorf("tasks: task already assigned to an active member")
 	}
 
