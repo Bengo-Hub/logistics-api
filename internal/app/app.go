@@ -146,6 +146,11 @@ func New(ctx context.Context) (*App, error) {
 		if err := identityEventHandler.SubscribeToAuthEvents(natsConn); err != nil {
 			log.Warn("app: failed to subscribe to auth events", zap.Error(err))
 		}
+
+		subCacheSub := subscriptions.NewCacheSubscriber(redisClient, log)
+		if err := subCacheSub.Start(natsConn); err != nil {
+			log.Warn("app: failed to start subscription cache subscriber", zap.Error(err))
+		}
 	}
 
 	// Create event publisher using shared-events outbox pattern
