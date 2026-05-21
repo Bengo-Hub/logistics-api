@@ -132,6 +132,7 @@ func New(ctx context.Context) (*App, error) {
 	_ = subscriptions.NewClient(subscriptions.Config{
 		ServiceURL:     cfg.Subscriptions.ServiceURL,
 		RequestTimeout: cfg.Subscriptions.RequestTimeout,
+		APIKey:         cfg.Subscriptions.APIKey,
 	})
 
 	tenantSyncer := tenant.NewSyncer(entClient, cfg.Auth.ServiceURL)
