@@ -24,7 +24,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/config"
 )
 
-func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authclient.AuthMiddleware, idSvc *identity.Service, lh *handlers.LogisticsHandler, rh *handlers.RoutingHandler, th *handlers.TrackingHandler, zh *handlers.ZonesHandler, rbacH *handlers.RBACHandler, rdb *redis.Client, cfg *config.Config, allowedOrigins []string, serviceConfigH *handlers.ServiceConfigHandler, earningsH *handlers.EarningsHandler, sseH *handlers.SSEHandler, rbacSvc *rbac.Service) http.Handler {
+func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authclient.AuthMiddleware, idSvc *identity.Service, lh *handlers.LogisticsHandler, rh *handlers.RoutingHandler, th *handlers.TrackingHandler, zh *handlers.ZonesHandler, rbacH *handlers.RBACHandler, rdb *redis.Client, cfg *config.Config, allowedOrigins []string, serviceConfigH *handlers.ServiceConfigHandler, earningsH *handlers.EarningsHandler, sseH *handlers.SSEHandler, rbacSvc *rbac.Service, telH *handlers.TelemetryHandler) http.Handler {
 	rl := appmw.NewRateLimiter(rdb)
 	r := chi.NewRouter()
 
@@ -225,6 +225,10 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 
 			if earningsH != nil {
 				earningsH.RegisterRoutes(tenant)
+			}
+
+			if telH != nil {
+				telH.RegisterRoutes(tenant)
 			}
 
 			if lh != nil {

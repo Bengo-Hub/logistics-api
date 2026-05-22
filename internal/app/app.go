@@ -34,6 +34,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/modules/routing"
 	"github.com/bengobox/logistics-service/internal/modules/tasks"
 	"github.com/bengobox/logistics-service/internal/modules/tenant"
+	telemetrymod "github.com/bengobox/logistics-service/internal/modules/telemetry"
 	zonesmod "github.com/bengobox/logistics-service/internal/modules/zones"
 	"github.com/bengobox/logistics-service/internal/platform/cache"
 	"github.com/bengobox/logistics-service/internal/platform/database"
@@ -197,6 +198,10 @@ func New(ctx context.Context) (*App, error) {
 	routingSvc := routing.NewService(valhallaProvider, nil, redisClient, cfg.Routing.CacheTTL, log)
 	routingHandler := handlers.NewRoutingHandler(routingSvc, log)
 
+	// Telemetry: GPS ingestion, stream management, Redis GEO update
+	telemetrySvc := telemetrymod.NewService(log, entClient, autoDispatcher)
+	telemetryHandler := handlers.NewTelemetryHandler(log, telemetrySvc, entClient)
+
 	// SSE hub: in-process real-time task event bus for logistics-ui / public tracker
 	sseHub := handlers.NewSSEHub(log)
 	sseHandler := handlers.NewSSEHandler(sseHub, log)
@@ -234,7 +239,7 @@ func New(ctx context.Context) (*App, error) {
 
 	earningsHandler := handlers.NewEarningsHandler(log, entClient, earningsSvc)
 
-	chiRouter := router.New(log, healthHandler, authMiddleware, identitySvc, logisticsHandler, routingHandler, trackingHandler, zonesHandler, rbacHandler, redisClient, cfg, cfg.HTTP.AllowedOrigins, serviceConfigHandler, earningsHandler, sseHandler, rbacSvc)
+	chiRouter := router.New(log, healthHandler, authMiddleware, identitySvc, logisticsHandler, routingHandler, trackingHandler, zonesHandler, rbacHandler, redisClient, cfg, cfg.HTTP.AllowedOrigins, serviceConfigHandler, earningsHandler, sseHandler, rbacSvc, telemetryHandler)
 
 	httpServer := &http.Server{
 		Addr:              fmt.Sprintf("%s:%d", cfg.HTTP.Host, cfg.HTTP.Port),
