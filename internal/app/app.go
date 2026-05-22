@@ -183,10 +183,11 @@ func New(ctx context.Context) (*App, error) {
 
 	fleetSvc := fleetmod.NewService(entClient, log, eventPublisher)
 	go fleetSvc.StartStaleRiderCleanup(ctx)
-	logisticsHandler := handlers.NewLogisticsHandler(log, taskSvc, fleetSvc)
 
 	// Auto-dispatch: find nearest rider and assign tasks automatically
 	autoDispatcher := dispatch.NewAutoDispatcher(log, fleetSvc, taskSvc, redisClient)
+
+	logisticsHandler := handlers.NewLogisticsHandler(log, taskSvc, fleetSvc, autoDispatcher)
 
 	orderConsumer := consumers.NewOrderReadyConsumer(log, taskSvc, autoDispatcher)
 	transferConsumer := consumers.NewTransferReadyConsumer(log, taskSvc, autoDispatcher)
@@ -196,8 +197,14 @@ func New(ctx context.Context) (*App, error) {
 	routingSvc := routing.NewService(valhallaProvider, nil, redisClient, cfg.Routing.CacheTTL, log)
 	routingHandler := handlers.NewRoutingHandler(routingSvc, log)
 
+	// SSE hub: in-process real-time task event bus for logistics-ui / public tracker
+	sseHub := handlers.NewSSEHub(log)
+	sseHandler := handlers.NewSSEHandler(sseHub, log)
+	taskSvc.SetSSEBroadcaster(sseHub)
+
 	// ETA updater: periodically recalculates ETA for in-progress deliveries
 	etaUpdater := dispatch.NewETAUpdater(log, entClient, routingSvc, autoDispatcher, eventPublisher, 30*time.Second)
+	taskSvc.SetETATrigger(etaUpdater)
 
 	// Batch scheduler: groups nearby pending tasks for the same rider every 2 min
 	batchScheduler := dispatch.NewBatchScheduler(log, entClient, autoDispatcher, 2*time.Minute)
@@ -223,7 +230,7 @@ func New(ctx context.Context) (*App, error) {
 
 	earningsHandler := handlers.NewEarningsHandler(log, entClient, earningsSvc)
 
-	chiRouter := router.New(log, healthHandler, authMiddleware, identitySvc, logisticsHandler, routingHandler, trackingHandler, zonesHandler, rbacHandler, redisClient, cfg, cfg.HTTP.AllowedOrigins, serviceConfigHandler, earningsHandler)
+	chiRouter := router.New(log, healthHandler, authMiddleware, identitySvc, logisticsHandler, routingHandler, trackingHandler, zonesHandler, rbacHandler, redisClient, cfg, cfg.HTTP.AllowedOrigins, serviceConfigHandler, earningsHandler, sseHandler)
 
 	httpServer := &http.Server{
 		Addr:              fmt.Sprintf("%s:%d", cfg.HTTP.Host, cfg.HTTP.Port),
