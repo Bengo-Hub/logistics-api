@@ -184,6 +184,11 @@ func (p *Publisher) PublishTaskCompleted(ctx context.Context, tenantID uuid.UUID
 	return p.publish(ctx, tenantID, "logistics", "task.completed", data.toMap())
 }
 
+// PublishTaskSLABreached publishes a logistics.task.sla_breached event.
+func (p *Publisher) PublishTaskSLABreached(ctx context.Context, tenantID uuid.UUID, data TaskEventData) error {
+	return p.publish(ctx, tenantID, "logistics", "task.sla_breached", data.toMap())
+}
+
 // --- Task ETA Events ---
 
 // TaskETAEventData represents data for ETA update events.
