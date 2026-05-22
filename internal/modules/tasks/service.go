@@ -89,10 +89,11 @@ type SubmitPoDRequest struct {
 
 // ListTasksFilter holds optional filters for listing tasks.
 type ListTasksFilter struct {
-	Status    string
-	MemberID  uuid.UUID
-	Limit     int
-	Offset    int
+	Status   string
+	MemberID uuid.UUID
+	OutletID *uuid.UUID
+	Limit    int
+	Offset   int
 }
 
 // EarningsRecorder is the interface for recording delivery earnings.
@@ -255,6 +256,10 @@ func (s *Service) ListTasks(ctx context.Context, tenantID uuid.UUID, f ListTasks
 
 	if f.Status != "" {
 		q = q.Where(task.Status(f.Status))
+	}
+
+	if f.OutletID != nil {
+		q = q.Where(task.OutletIDEQ(*f.OutletID))
 	}
 
 	limit := f.Limit

@@ -270,6 +270,20 @@ func (_c *TaskCreate) SetNillableCashCollected(v *bool) *TaskCreate {
 	return _c
 }
 
+// SetOutletID sets the "outlet_id" field.
+func (_c *TaskCreate) SetOutletID(v uuid.UUID) *TaskCreate {
+	_c.mutation.SetOutletID(v)
+	return _c
+}
+
+// SetNillableOutletID sets the "outlet_id" field if the given value is not nil.
+func (_c *TaskCreate) SetNillableOutletID(v *uuid.UUID) *TaskCreate {
+	if v != nil {
+		_c.SetOutletID(*v)
+	}
+	return _c
+}
+
 // SetCarrierID sets the "carrier_id" field.
 func (_c *TaskCreate) SetCarrierID(v string) *TaskCreate {
 	_c.mutation.SetCarrierID(v)
@@ -629,6 +643,10 @@ func (_c *TaskCreate) createSpec() (*Task, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.CashCollected(); ok {
 		_spec.SetField(task.FieldCashCollected, field.TypeBool, value)
 		_node.CashCollected = value
+	}
+	if value, ok := _c.mutation.OutletID(); ok {
+		_spec.SetField(task.FieldOutletID, field.TypeUUID, value)
+		_node.OutletID = &value
 	}
 	if value, ok := _c.mutation.CarrierID(); ok {
 		_spec.SetField(task.FieldCarrierID, field.TypeString, value)
@@ -1055,6 +1073,24 @@ func (u *TaskUpsert) SetCashCollected(v bool) *TaskUpsert {
 // UpdateCashCollected sets the "cash_collected" field to the value that was provided on create.
 func (u *TaskUpsert) UpdateCashCollected() *TaskUpsert {
 	u.SetExcluded(task.FieldCashCollected)
+	return u
+}
+
+// SetOutletID sets the "outlet_id" field.
+func (u *TaskUpsert) SetOutletID(v uuid.UUID) *TaskUpsert {
+	u.Set(task.FieldOutletID, v)
+	return u
+}
+
+// UpdateOutletID sets the "outlet_id" field to the value that was provided on create.
+func (u *TaskUpsert) UpdateOutletID() *TaskUpsert {
+	u.SetExcluded(task.FieldOutletID)
+	return u
+}
+
+// ClearOutletID clears the value of the "outlet_id" field.
+func (u *TaskUpsert) ClearOutletID() *TaskUpsert {
+	u.SetNull(task.FieldOutletID)
 	return u
 }
 
@@ -1486,6 +1522,27 @@ func (u *TaskUpsertOne) SetCashCollected(v bool) *TaskUpsertOne {
 func (u *TaskUpsertOne) UpdateCashCollected() *TaskUpsertOne {
 	return u.Update(func(s *TaskUpsert) {
 		s.UpdateCashCollected()
+	})
+}
+
+// SetOutletID sets the "outlet_id" field.
+func (u *TaskUpsertOne) SetOutletID(v uuid.UUID) *TaskUpsertOne {
+	return u.Update(func(s *TaskUpsert) {
+		s.SetOutletID(v)
+	})
+}
+
+// UpdateOutletID sets the "outlet_id" field to the value that was provided on create.
+func (u *TaskUpsertOne) UpdateOutletID() *TaskUpsertOne {
+	return u.Update(func(s *TaskUpsert) {
+		s.UpdateOutletID()
+	})
+}
+
+// ClearOutletID clears the value of the "outlet_id" field.
+func (u *TaskUpsertOne) ClearOutletID() *TaskUpsertOne {
+	return u.Update(func(s *TaskUpsert) {
+		s.ClearOutletID()
 	})
 }
 
@@ -2089,6 +2146,27 @@ func (u *TaskUpsertBulk) SetCashCollected(v bool) *TaskUpsertBulk {
 func (u *TaskUpsertBulk) UpdateCashCollected() *TaskUpsertBulk {
 	return u.Update(func(s *TaskUpsert) {
 		s.UpdateCashCollected()
+	})
+}
+
+// SetOutletID sets the "outlet_id" field.
+func (u *TaskUpsertBulk) SetOutletID(v uuid.UUID) *TaskUpsertBulk {
+	return u.Update(func(s *TaskUpsert) {
+		s.SetOutletID(v)
+	})
+}
+
+// UpdateOutletID sets the "outlet_id" field to the value that was provided on create.
+func (u *TaskUpsertBulk) UpdateOutletID() *TaskUpsertBulk {
+	return u.Update(func(s *TaskUpsert) {
+		s.UpdateOutletID()
+	})
+}
+
+// ClearOutletID clears the value of the "outlet_id" field.
+func (u *TaskUpsertBulk) ClearOutletID() *TaskUpsertBulk {
+	return u.Update(func(s *TaskUpsert) {
+		s.ClearOutletID()
 	})
 }
 

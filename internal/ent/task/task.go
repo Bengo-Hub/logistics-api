@@ -53,6 +53,8 @@ const (
 	FieldCashOnDelivery = "cash_on_delivery"
 	// FieldCashCollected holds the string denoting the cash_collected field in the database.
 	FieldCashCollected = "cash_collected"
+	// FieldOutletID holds the string denoting the outlet_id field in the database.
+	FieldOutletID = "outlet_id"
 	// FieldCarrierID holds the string denoting the carrier_id field in the database.
 	FieldCarrierID = "carrier_id"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
@@ -121,6 +123,7 @@ var Columns = []string{
 	FieldRequiresHeavyDuty,
 	FieldCashOnDelivery,
 	FieldCashCollected,
+	FieldOutletID,
 	FieldCarrierID,
 	FieldCreatedAt,
 	FieldUpdatedAt,
@@ -269,6 +272,11 @@ func ByCashOnDelivery(opts ...sql.OrderTermOption) OrderOption {
 // ByCashCollected orders the results by the cash_collected field.
 func ByCashCollected(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCashCollected, opts...).ToFunc()
+}
+
+// ByOutletID orders the results by the outlet_id field.
+func ByOutletID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldOutletID, opts...).ToFunc()
 }
 
 // ByCarrierID orders the results by the carrier_id field.
