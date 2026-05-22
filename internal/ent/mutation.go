@@ -17260,6 +17260,7 @@ type TaskMutation struct {
 	cash_on_delivery             *float64
 	addcash_on_delivery          *float64
 	cash_collected               *bool
+	outlet_id                    *uuid.UUID
 	carrier_id                   *string
 	created_at                   *time.Time
 	updated_at                   *time.Time
@@ -18246,6 +18247,55 @@ func (m *TaskMutation) ResetCashCollected() {
 	m.cash_collected = nil
 }
 
+// SetOutletID sets the "outlet_id" field.
+func (m *TaskMutation) SetOutletID(u uuid.UUID) {
+	m.outlet_id = &u
+}
+
+// OutletID returns the value of the "outlet_id" field in the mutation.
+func (m *TaskMutation) OutletID() (r uuid.UUID, exists bool) {
+	v := m.outlet_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOutletID returns the old "outlet_id" field's value of the Task entity.
+// If the Task object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TaskMutation) OldOutletID(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOutletID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOutletID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOutletID: %w", err)
+	}
+	return oldValue.OutletID, nil
+}
+
+// ClearOutletID clears the value of the "outlet_id" field.
+func (m *TaskMutation) ClearOutletID() {
+	m.outlet_id = nil
+	m.clearedFields[task.FieldOutletID] = struct{}{}
+}
+
+// OutletIDCleared returns if the "outlet_id" field was cleared in this mutation.
+func (m *TaskMutation) OutletIDCleared() bool {
+	_, ok := m.clearedFields[task.FieldOutletID]
+	return ok
+}
+
+// ResetOutletID resets all changes to the "outlet_id" field.
+func (m *TaskMutation) ResetOutletID() {
+	m.outlet_id = nil
+	delete(m.clearedFields, task.FieldOutletID)
+}
+
 // SetCarrierID sets the "carrier_id" field.
 func (m *TaskMutation) SetCarrierID(s string) {
 	m.carrier_id = &s
@@ -18602,7 +18652,7 @@ func (m *TaskMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TaskMutation) Fields() []string {
-	fields := make([]string, 0, 22)
+	fields := make([]string, 0, 23)
 	if m.tenant_id != nil {
 		fields = append(fields, task.FieldTenantID)
 	}
@@ -18660,6 +18710,9 @@ func (m *TaskMutation) Fields() []string {
 	if m.cash_collected != nil {
 		fields = append(fields, task.FieldCashCollected)
 	}
+	if m.outlet_id != nil {
+		fields = append(fields, task.FieldOutletID)
+	}
 	if m.carrier_id != nil {
 		fields = append(fields, task.FieldCarrierID)
 	}
@@ -18715,6 +18768,8 @@ func (m *TaskMutation) Field(name string) (ent.Value, bool) {
 		return m.CashOnDelivery()
 	case task.FieldCashCollected:
 		return m.CashCollected()
+	case task.FieldOutletID:
+		return m.OutletID()
 	case task.FieldCarrierID:
 		return m.CarrierID()
 	case task.FieldCreatedAt:
@@ -18768,6 +18823,8 @@ func (m *TaskMutation) OldField(ctx context.Context, name string) (ent.Value, er
 		return m.OldCashOnDelivery(ctx)
 	case task.FieldCashCollected:
 		return m.OldCashCollected(ctx)
+	case task.FieldOutletID:
+		return m.OldOutletID(ctx)
 	case task.FieldCarrierID:
 		return m.OldCarrierID(ctx)
 	case task.FieldCreatedAt:
@@ -18916,6 +18973,13 @@ func (m *TaskMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetCashCollected(v)
 		return nil
+	case task.FieldOutletID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOutletID(v)
+		return nil
 	case task.FieldCarrierID:
 		v, ok := value.(string)
 		if !ok {
@@ -19033,6 +19097,9 @@ func (m *TaskMutation) ClearedFields() []string {
 	if m.FieldCleared(task.FieldTemperatureRange) {
 		fields = append(fields, task.FieldTemperatureRange)
 	}
+	if m.FieldCleared(task.FieldOutletID) {
+		fields = append(fields, task.FieldOutletID)
+	}
 	if m.FieldCleared(task.FieldCarrierID) {
 		fields = append(fields, task.FieldCarrierID)
 	}
@@ -19076,6 +19143,9 @@ func (m *TaskMutation) ClearField(name string) error {
 		return nil
 	case task.FieldTemperatureRange:
 		m.ClearTemperatureRange()
+		return nil
+	case task.FieldOutletID:
+		m.ClearOutletID()
 		return nil
 	case task.FieldCarrierID:
 		m.ClearCarrierID()
@@ -19144,6 +19214,9 @@ func (m *TaskMutation) ResetField(name string) error {
 		return nil
 	case task.FieldCashCollected:
 		m.ResetCashCollected()
+		return nil
+	case task.FieldOutletID:
+		m.ResetOutletID()
 		return nil
 	case task.FieldCarrierID:
 		m.ResetCarrierID()

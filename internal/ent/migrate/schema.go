@@ -636,6 +636,7 @@ var (
 		{Name: "requires_heavy_duty", Type: field.TypeBool, Default: false},
 		{Name: "cash_on_delivery", Type: field.TypeFloat64, Default: 0},
 		{Name: "cash_collected", Type: field.TypeBool, Default: false},
+		{Name: "outlet_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "carrier_id", Type: field.TypeString, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
@@ -649,7 +650,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "tasks_users_tasks",
-				Columns:    []*schema.Column{TasksColumns[23]},
+				Columns:    []*schema.Column{TasksColumns[24]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.SetNull,
 			},

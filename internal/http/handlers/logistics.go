@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	authclient "github.com/Bengo-Hub/shared-auth-client"
+	httpware "github.com/Bengo-Hub/httpware"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -67,6 +68,13 @@ func (h *LogisticsHandler) ListTasks(w http.ResponseWriter, r *http.Request) {
 	filter := tasks.ListTasksFilter{
 		Status: r.URL.Query().Get("status"),
 		Limit:  50,
+	}
+
+	// Apply outlet context filter if X-Outlet-ID was sent
+	if outletIDStr := httpware.GetOutletID(r.Context()); outletIDStr != "" {
+		if outletUID, err := uuid.Parse(outletIDStr); err == nil {
+			filter.OutletID = &outletUID
+		}
 	}
 
 	list, err := h.taskSvc.ListTasks(r.Context(), tenantID, filter)

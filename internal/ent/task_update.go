@@ -358,6 +358,26 @@ func (_u *TaskUpdate) SetNillableCashCollected(v *bool) *TaskUpdate {
 	return _u
 }
 
+// SetOutletID sets the "outlet_id" field.
+func (_u *TaskUpdate) SetOutletID(v uuid.UUID) *TaskUpdate {
+	_u.mutation.SetOutletID(v)
+	return _u
+}
+
+// SetNillableOutletID sets the "outlet_id" field if the given value is not nil.
+func (_u *TaskUpdate) SetNillableOutletID(v *uuid.UUID) *TaskUpdate {
+	if v != nil {
+		_u.SetOutletID(*v)
+	}
+	return _u
+}
+
+// ClearOutletID clears the value of the "outlet_id" field.
+func (_u *TaskUpdate) ClearOutletID() *TaskUpdate {
+	_u.mutation.ClearOutletID()
+	return _u
+}
+
 // SetCarrierID sets the "carrier_id" field.
 func (_u *TaskUpdate) SetCarrierID(v string) *TaskUpdate {
 	_u.mutation.SetCarrierID(v)
@@ -672,6 +692,12 @@ func (_u *TaskUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.CashCollected(); ok {
 		_spec.SetField(task.FieldCashCollected, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.OutletID(); ok {
+		_spec.SetField(task.FieldOutletID, field.TypeUUID, value)
+	}
+	if _u.mutation.OutletIDCleared() {
+		_spec.ClearField(task.FieldOutletID, field.TypeUUID)
 	}
 	if value, ok := _u.mutation.CarrierID(); ok {
 		_spec.SetField(task.FieldCarrierID, field.TypeString, value)
@@ -1191,6 +1217,26 @@ func (_u *TaskUpdateOne) SetNillableCashCollected(v *bool) *TaskUpdateOne {
 	return _u
 }
 
+// SetOutletID sets the "outlet_id" field.
+func (_u *TaskUpdateOne) SetOutletID(v uuid.UUID) *TaskUpdateOne {
+	_u.mutation.SetOutletID(v)
+	return _u
+}
+
+// SetNillableOutletID sets the "outlet_id" field if the given value is not nil.
+func (_u *TaskUpdateOne) SetNillableOutletID(v *uuid.UUID) *TaskUpdateOne {
+	if v != nil {
+		_u.SetOutletID(*v)
+	}
+	return _u
+}
+
+// ClearOutletID clears the value of the "outlet_id" field.
+func (_u *TaskUpdateOne) ClearOutletID() *TaskUpdateOne {
+	_u.mutation.ClearOutletID()
+	return _u
+}
+
 // SetCarrierID sets the "carrier_id" field.
 func (_u *TaskUpdateOne) SetCarrierID(v string) *TaskUpdateOne {
 	_u.mutation.SetCarrierID(v)
@@ -1535,6 +1581,12 @@ func (_u *TaskUpdateOne) sqlSave(ctx context.Context) (_node *Task, err error) {
 	}
 	if value, ok := _u.mutation.CashCollected(); ok {
 		_spec.SetField(task.FieldCashCollected, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.OutletID(); ok {
+		_spec.SetField(task.FieldOutletID, field.TypeUUID, value)
+	}
+	if _u.mutation.OutletIDCleared() {
+		_spec.ClearField(task.FieldOutletID, field.TypeUUID)
 	}
 	if value, ok := _u.mutation.CarrierID(); ok {
 		_spec.SetField(task.FieldCarrierID, field.TypeString, value)

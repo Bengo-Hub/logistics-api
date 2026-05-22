@@ -58,6 +58,8 @@ type Task struct {
 	CashOnDelivery float64 `json:"cash_on_delivery,omitempty"`
 	// Whether COD cash has been collected by the rider
 	CashCollected bool `json:"cash_collected,omitempty"`
+	// Dispatch outlet for this task
+	OutletID *uuid.UUID `json:"outlet_id,omitempty"`
 	// External carrier reference if outsourced to 3rd party
 	CarrierID string `json:"carrier_id,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
@@ -129,6 +131,8 @@ func (*Task) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case task.FieldOutletID:
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case task.FieldMetadata, task.FieldPackageDimensionsCm:
 			values[i] = new([]byte)
 		case task.FieldRequiresTemperatureControl, task.FieldRequiresFragileHandling, task.FieldRequiresHeavyDuty, task.FieldCashCollected:
@@ -288,6 +292,13 @@ func (_m *Task) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.CashCollected = value.Bool
 			}
+		case task.FieldOutletID:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field outlet_id", values[i])
+			} else if value.Valid {
+				_m.OutletID = new(uuid.UUID)
+				*_m.OutletID = *value.S.(*uuid.UUID)
+			}
 		case task.FieldCarrierID:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field carrier_id", values[i])
@@ -433,6 +444,11 @@ func (_m *Task) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("cash_collected=")
 	builder.WriteString(fmt.Sprintf("%v", _m.CashCollected))
+	builder.WriteString(", ")
+	if v := _m.OutletID; v != nil {
+		builder.WriteString("outlet_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("carrier_id=")
 	builder.WriteString(_m.CarrierID)
