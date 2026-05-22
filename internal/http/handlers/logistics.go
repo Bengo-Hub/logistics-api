@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
@@ -11,23 +12,31 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/bengobox/logistics-service/internal/ent"
+	"github.com/bengobox/logistics-service/internal/ent/proofofdelivery"
 	"github.com/bengobox/logistics-service/internal/modules/fleet"
 	"github.com/bengobox/logistics-service/internal/modules/tasks"
 )
 
+// TaskDispatcher is the subset of dispatch.AutoDispatcher used by the handler.
+type TaskDispatcher interface {
+	DispatchTask(ctx context.Context, tenantID, taskID uuid.UUID) error
+}
+
 // LogisticsHandler handles task and fleet HTTP endpoints.
 type LogisticsHandler struct {
-	log      *zap.Logger
-	taskSvc  *tasks.Service
-	fleetSvc *fleet.Service
+	log        *zap.Logger
+	taskSvc    *tasks.Service
+	fleetSvc   *fleet.Service
+	dispatcher TaskDispatcher
 }
 
 // NewLogisticsHandler creates a new logistics handler.
-func NewLogisticsHandler(log *zap.Logger, taskSvc *tasks.Service, fleetSvc *fleet.Service) *LogisticsHandler {
+func NewLogisticsHandler(log *zap.Logger, taskSvc *tasks.Service, fleetSvc *fleet.Service, dispatcher TaskDispatcher) *LogisticsHandler {
 	return &LogisticsHandler{
-		log:      log.Named("logistics.handler"),
-		taskSvc:  taskSvc,
-		fleetSvc: fleetSvc,
+		log:        log.Named("logistics.handler"),
+		taskSvc:    taskSvc,
+		fleetSvc:   fleetSvc,
+		dispatcher: dispatcher,
 	}
 }
 
@@ -561,6 +570,64 @@ func (h *LogisticsHandler) AssignVehicle(w http.ResponseWriter, r *http.Request)
 	}
 
 	respondJSON(w, http.StatusOK, map[string]string{"status": "assigned"})
+}
+
+// DispatchTask handles POST /api/v1/{tenant}/tasks/{taskId}/dispatch
+// Manually triggers the auto-dispatch algorithm for an unassigned task.
+func (h *LogisticsHandler) DispatchTask(w http.ResponseWriter, r *http.Request) {
+	tenantID := tenantIDFromClaims(r)
+	if tenantID == uuid.Nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	taskID, err := uuid.Parse(chi.URLParam(r, "taskId"))
+	if err != nil {
+		http.Error(w, "invalid task id", http.StatusBadRequest)
+		return
+	}
+
+	if h.dispatcher == nil {
+		http.Error(w, "dispatch not available", http.StatusServiceUnavailable)
+		return
+	}
+
+	if err := h.dispatcher.DispatchTask(r.Context(), tenantID, taskID); err != nil {
+		h.log.Warn("dispatch task", zap.String("task_id", taskID.String()), zap.Error(err))
+		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]string{"status": "dispatched"})
+}
+
+// GetPoD handles GET /api/v1/{tenant}/tasks/{taskId}/pod
+// Returns the proof of delivery for a completed task.
+func (h *LogisticsHandler) GetPoD(w http.ResponseWriter, r *http.Request) {
+	tenantID := tenantIDFromClaims(r)
+	if tenantID == uuid.Nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	taskID, err := uuid.Parse(chi.URLParam(r, "taskId"))
+	if err != nil {
+		http.Error(w, "invalid task id", http.StatusBadRequest)
+		return
+	}
+
+	pod, err := h.taskSvc.Client().ProofOfDelivery.Query().
+		Where(
+			proofofdelivery.TaskID(taskID),
+			proofofdelivery.TenantID(tenantID),
+		).Only(r.Context())
+	if err != nil {
+		if ent.IsNotFound(err) {
+			http.Error(w, "proof of delivery not found", http.StatusNotFound)
+			return
+		}
+		h.log.Error("get pod", zap.Error(err))
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, pod)
 }
 
 // --- helpers ---

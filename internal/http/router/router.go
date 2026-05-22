@@ -23,7 +23,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/config"
 )
 
-func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authclient.AuthMiddleware, idSvc *identity.Service, lh *handlers.LogisticsHandler, rh *handlers.RoutingHandler, th *handlers.TrackingHandler, zh *handlers.ZonesHandler, rbacH *handlers.RBACHandler, rdb *redis.Client, cfg *config.Config, allowedOrigins []string, serviceConfigH *handlers.ServiceConfigHandler, earningsH *handlers.EarningsHandler) http.Handler {
+func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authclient.AuthMiddleware, idSvc *identity.Service, lh *handlers.LogisticsHandler, rh *handlers.RoutingHandler, th *handlers.TrackingHandler, zh *handlers.ZonesHandler, rbacH *handlers.RBACHandler, rdb *redis.Client, cfg *config.Config, allowedOrigins []string, serviceConfigH *handlers.ServiceConfigHandler, earningsH *handlers.EarningsHandler, sseH *handlers.SSEHandler) http.Handler {
 	rl := appmw.NewRateLimiter(rdb)
 	r := chi.NewRouter()
 
@@ -228,8 +228,13 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 					taskR.Get("/{taskId}", lh.GetTask)
 					taskR.Patch("/{taskId}/status", lh.UpdateTaskStatus)
 					taskR.Post("/{taskId}/assign", lh.AssignTask)
+					taskR.Post("/{taskId}/dispatch", lh.DispatchTask)
+					taskR.Get("/{taskId}/pod", lh.GetPoD)
 					taskR.Post("/{taskId}/pod", lh.SubmitPoD)
 					taskR.Post("/{taskId}/rate", lh.RateRider)
+					if sseH != nil {
+						taskR.Get("/{taskId}/stream", sseH.StreamTask)
+					}
 				})
 
 				tenant.Route("/fleet", func(fleetR chi.Router) {

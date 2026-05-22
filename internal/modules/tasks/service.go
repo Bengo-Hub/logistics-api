@@ -101,12 +101,24 @@ type EarningsRecorder interface {
 	RecordEarning(ctx context.Context, tenantID, taskID, memberID uuid.UUID, distanceKm float64) error
 }
 
+// ETATrigger is the interface for triggering an ETA recalculation on a task.
+type ETATrigger interface {
+	ComputeAndPublishETA(ctx context.Context, tenantID, taskID uuid.UUID)
+}
+
+// StatusBroadcaster is the interface for pushing real-time task status events to SSE clients.
+type StatusBroadcaster interface {
+	Publish(tenantID, taskID uuid.UUID, event string, data any)
+}
+
 // Service handles task business logic.
 type Service struct {
 	client      *ent.Client
 	log         *zap.Logger
 	publisher   *events.Publisher
 	earningsSvc EarningsRecorder
+	etaTrigger  ETATrigger
+	sseBroadcaster StatusBroadcaster
 }
 
 // NewService creates a new task service.
@@ -130,6 +142,16 @@ func (s *Service) SetEarningsService(svc EarningsRecorder) {
 // SetPublisher sets the event publisher for task lifecycle events.
 func (s *Service) SetPublisher(p *events.Publisher) {
 	s.publisher = p
+}
+
+// SetETATrigger sets the ETA trigger for on-demand ETA recalculation on status changes.
+func (s *Service) SetETATrigger(t ETATrigger) {
+	s.etaTrigger = t
+}
+
+// SetSSEBroadcaster sets the SSE broadcaster for real-time task status streaming.
+func (s *Service) SetSSEBroadcaster(b StatusBroadcaster) {
+	s.sseBroadcaster = b
 }
 
 // CreateTask creates a new delivery task, optionally with pickup and dropoff steps.
@@ -322,6 +344,21 @@ func (s *Service) UpdateStatus(ctx context.Context, tenantID, taskID uuid.UUID, 
 			Status:            newStatus,
 			PreviousStatus:    t.Status,
 			SourceService:     updated.SourceService,
+		})
+	}
+
+	// Trigger ETA recalculation when rider accepts or goes en-route — these are
+	// the transitions where location/route data becomes meaningful for the first time.
+	if s.etaTrigger != nil && (newStatus == "accepted" || newStatus == "en_route") {
+		go s.etaTrigger.ComputeAndPublishETA(ctx, tenantID, taskID)
+	}
+
+	// Broadcast status change to SSE subscribers (logistics-ui, public tracker).
+	if s.sseBroadcaster != nil {
+		s.sseBroadcaster.Publish(tenantID, taskID, "status_changed", map[string]any{
+			"task_id":         taskID,
+			"status":          newStatus,
+			"previous_status": t.Status,
 		})
 	}
 
