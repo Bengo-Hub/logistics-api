@@ -1,91 +1,62 @@
-# Sprint 2 – Task Lifecycle (Weeks 4-5)
+# Sprint 2 – Task Lifecycle
 
-**Status**: ✅ DONE
-**Start Date**: TBD
-**Target Completion**: TBD
+**Status**: ✅ DONE (core complete; SLA monitor added post-sprint)
+**Completed**: 2026-03-30
 
 ## Goals
 
-- Implement task lifecycle entities (tasks, steps, events, assignments) with finite state machine. ✅ DONE
-- Build create/assign/complete flows with auditing and idempotency. ✅ DONE (Task CRUD, assignment, status flow)
-- Add SLA timers, escalation rules, and exception taxonomy.
-- ordering.order.ready consumer → create task ✅ DONE
+- Task entities with finite state machine (FSM)
+- Create/assign/accept/complete flows with auditing
+- ordering.order.ready NATS consumer → auto-create task
+- SLA timers, breach events, escalation levels
 
-## Detailed Tasks
+## Completed
 
-### 3.1 Task Entities & FSM
-- [x] Ent schemas: ✅ DONE
-  - `task.go` → `id`, `tenant_id`, `external_reference` (order ID from ordering-backend/POS), `source_service`, `task_type` (delivery/pickup/transfer/return), `priority`, `status` (created/assigned/in_progress/completed/failed), `sla_due_at`, `requested_pickup_at`, `requested_dropoff_at`, `metadata` (JSON: SKUs, quantities, special instructions)
-  - `task_step.go` → `id`, `task_id`, `step_type` (pickup/dropoff), `sequence`, `location_name`, `address_json`, `geo_point` (PostGIS), `contact_name`, `contact_phone`, `requires_signature`, `requires_photo`, `metadata`
-  - `task_event.go` → `id`, `task_id`, `event_type`, `actor_id`, `actor_type` (user/system), `payload` (JSON), `occurred_at`
-  - `task_assignment.go` → `id`, `task_id`, `fleet_member_id`, `assignment_status` (pending/accepted/declined/completed), `assigned_at`, `accepted_at`, `declined_at`, `completed_at`, `reason_code`, `metadata`
-- [x] Finite State Machine (`internal/modules/tasks/fsm.go`): ✅ DONE
-  - State transitions: `created` → `assigned` → `in_progress` → `completed` / `failed`
-  - Validation: ensure valid transitions (e.g., can't complete from `created`)
-  - Emit `task_events` on each transition
-- [x] Task service (`internal/modules/tasks/service.go`): ✅ DONE
-  - `CreateTask(ctx, tenantID, task)` → validate tenant, create task + initial event
-  - `AssignTask(ctx, tenantID, taskID, fleetMemberID)` → create assignment, transition to `assigned`, emit event
-  - `AcceptTask(ctx, tenantID, taskID, fleetMemberID)` → update assignment, transition to `in_progress`
-  - `CompleteTask(ctx, tenantID, taskID, proofOfDelivery)` → transition to `completed`, emit event, trigger billing (Sprint 7)
-  - `FailTask(ctx, tenantID, taskID, reason)` → transition to `failed`, emit event, trigger escalation if SLA breached
+### Task Entities & FSM ✅
+- Ent schemas: `task.go`, `task_step.go`, `task_assignment.go`, `proof_of_delivery.go`
+- FSM via `validTransitions` map in `tasks/service.go`; invalid transitions return 422
+- All state changes publish NATS events via outbox pattern
 
-### 3.2 Create/Assign/Complete Flows
-- [x] Task creation API: ✅ DONE
-  - `POST /v1/{tenant}/tasks` → create task from external order (ordering-backend/POS/inventory)
-  - Request body: `external_reference`, `source_service`, `task_type`, `steps[]`, `metadata`
-  - Validate: tenant exists, steps have valid addresses (geocode if needed, Sprint 3)
-  - Idempotency: use `external_reference` + `source_service` as idempotency key (return existing task if duplicate)
-  - ordering.order.ready consumer → create task ✅ DONE
-- [x] Assignment flow: ✅ DONE
-  - `POST /v1/{tenant}/tasks/{id}/assign` → assign to fleet member (dispatcher action)
-  - `POST /v1/{tenant}/tasks/{id}/accept` → rider accepts task (mobile app)
-  - `POST /v1/{tenant}/tasks/{id}/decline` → rider declines (with reason)
-- [x] Completion flow: ✅ DONE
-  - `POST /v1/{tenant}/tasks/{id}/complete` → mark complete with PoD (signature/photo/OTP)
-  - Validate: task is `in_progress`, PoD provided if required
-  - Emit `logistics.task.completed` event to outbox (consumed by ordering-backend/POS)
-- [x] Auditing: ✅ DONE
-  - All state changes logged in `task_events` with actor (user ID from JWT)
-  - Append-only: events are immutable
-  - Query: `GET /v1/{tenant}/tasks/{id}/events` → audit trail
-- [x] Idempotency: ✅ DONE
-  - Use idempotency keys in request headers: `Idempotency-Key: <uuid>`
-  - Store in Redis with TTL (24h)
-  - Return cached response if key exists
+### Task API ✅
+- `POST /tasks` — create task (external_reference + source_service idempotency)
+- `GET /tasks` — list (status filter, outlet_id filter via X-Outlet-ID header)
+- `GET /tasks/{id}` — detail with steps, assignment, PoD
+- `PATCH /tasks/{id}/status` — status progression (FSM enforced)
+- `POST /tasks/{id}/assign` — assign to fleet member
+- `POST /tasks/{id}/dispatch` — manually trigger auto-dispatcher
+- `GET /tasks/{id}/pod` — retrieve proof of delivery
+- `POST /tasks/{id}/pod` — submit PoD (photo URL, signature, OTP, notes)
+- `POST /tasks/{id}/rate` — customer rates rider
+- `GET /tasks/{id}/stream` — SSE stream for real-time status updates
 
-### 3.3 SLA Timers & Escalation
-- [ ] SLA calculation:
-  - `sla_due_at` = `requested_dropoff_at` (from task) or `requested_pickup_at` + estimated duration (from routing, Sprint 3)
-  - Background job: check tasks approaching SLA (e.g., 15min before due)
-- [ ] Escalation rules (`internal/ent/schema/escalation.go`):
-  - `escalation_rules` table: `tenant_id`, `rule_type` (sla_breach/long_delay), `threshold_minutes`, `action` (notify/reassign/alert), `metadata`
-- [ ] Escalation service:
-  - Monitor tasks: if `sla_due_at` < now + threshold, trigger escalation
-  - Actions: send notification to dispatcher, reassign to different rider, alert operations team
-  - Emit `logistics.sla.breach` event to notifications service
-- [ ] Exception taxonomy:
-  - `delivery_incidents` table: `task_id`, `incident_type` (damage/late/customer_unavailable), `description`, `reported_by`, `reported_at`, `resolution_status`, `resolved_at`
-  - API: `POST /v1/{tenant}/tasks/{id}/incidents` → report exception
-- [ ] SLA reporting:
-  - `GET /v1/{tenant}/tasks/sla-stats` → on-time %, average delay, breach count
+### NATS Consumers ✅
+- `OrderReadyConsumer`: subscribes `ordering.order.ready` → creates + auto-dispatches task
+- `TransferReadyConsumer`: subscribes `inventory.transfer.created` → creates outlet_transfer task
 
-## Dependencies
+### Outbox Events ✅
+- `logistics.task.assigned`, `logistics.task.accepted`, `logistics.task.en_route`,
+  `logistics.task.completed`, `logistics.task.status_changed`
+- `published_at` field on outbox rows; reliable delivery via NATS JetStream
 
-- Sprint 1 complete (fleet members exist for assignment)
-- Auth-service for user/actor identification
-- Notifications service (optional) for escalation alerts
+### Proof of Delivery ✅
+- `proof_of_delivery` schema: photo_url, signature_url, notes, otp_verified,
+  cod_collected, amount_collected, tenant_id
 
-## Acceptance Criteria
+### COD & Customer Rating ✅
+- Cash-on-delivery fields in PoD; `customer_rating`, `customer_feedback` on task
 
-- [ ] Tasks can be created with multi-step pickups/dropoffs
-- [ ] State machine enforces valid transitions
-- [ ] Assignments work with rider acceptance/decline
-- [ ] SLA timers calculate correctly and trigger escalations
-- [ ] All state changes are audited in `task_events`
-- [ ] Idempotency prevents duplicate task creation
+### SLA Monitor ✅
+- `SLAMonitor` goroutine checks non-terminal tasks past `sla_due_at` every 5 minutes
+- Publishes `logistics.task.sla_breached` NATS event per overdue task
+- `EscalationLevel()`: classifies breach as warning (15m) / critical (30m) / escalated (60m)
+- `GetOverdueTasks()` tenant-scoped query for admin dashboard
 
-## Next Sprint Preview
+### ETA Recalculation ✅
+- `ETAUpdater` polls active tasks every 30 seconds
+- Also triggered immediately on `accepted` and `en_route` status transitions
 
-Sprint 3 will add routing and dispatch capabilities (nearest-driver, geocoding, ETA calculation, route optimization).
+## Backlog
 
+- Escalation rule table (`escalation_rules`) for tenant-configurable thresholds — deferred
+- Incident/exception reporting (`delivery_incidents` table) — deferred to Sprint 5
+- SLA stats endpoint (`GET /tasks/sla-stats`) — deferred to Sprint 3 analytics

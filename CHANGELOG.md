@@ -5,29 +5,40 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 
 ## [Unreleased]
 
+### Added (2026-05-22)
+- **Telemetry service**: GPS location ingestion (`POST /telemetry/location`), stream
+  management (`POST /telemetry/stream/end`), and query endpoints. Auto-creates
+  TelemetryStream per rider; updates Redis GEO for dispatch nearest-rider queries.
+- **Earnings REST API**: `GET/POST /earnings/pricing-rules`, `GET /earnings/statements`,
+  `POST /earnings/statements/generate`, `GET /earnings/events` (audit trail),
+  `GET /riders/me/earnings` and `GET /riders/me/earnings/statements` for rider self-service.
+- **Dispatch endpoint**: `POST /tasks/{id}/dispatch` — manually trigger auto-dispatcher
+  for an unassigned task.
+- **Proof of Delivery GET**: `GET /tasks/{id}/pod` — retrieve existing PoD record.
+- **SSE task streaming**: `GET /tasks/{id}/stream` — Server-Sent Events endpoint;
+  broadcasts `status_changed` events to logistics-ui and public tracker in real time.
+- **ETA on status change**: `UpdateStatus` now triggers `ETAUpdater.ComputeAndPublishETA`
+  on `accepted` and `en_route` transitions (goroutine, non-blocking).
+- **SLA monitor**: `SLAMonitor` goroutine scans overdue tasks every 5 minutes, publishes
+  `logistics.task.sla_breached` NATS events. `EscalationLevel()` classifies breach severity.
+- **RBAC enforcement middleware**: `RequirePermission` middleware applied to all task,
+  fleet, and zone mutation routes. Permission code constants in `rbac/models.go`.
+- **outlet_id on tasks**: new `outlet_id` field supports multi-outlet filtering via
+  `X-Outlet-ID` header (Atlas migration `20260521165641`).
+- **Atlas baseline**: `baselineAtlasIfNeeded` in `cmd/migrate/main.go` transitions
+  existing auto-migrated DBs to Atlas versioned migrations on first deploy without
+  re-applying already-applied SQL.
+
+### Fixed (2026-05-22)
+- **Migration crash (BUG-001)**: `migrations.go` now tries LocalDir first then falls back
+  to embedded FS, fixing the Docker container path issue that caused 145 crash-loop
+  restarts on rev 29.
+
 ### Changed
-- Standardized API base path to `/api/v1` (previously `/v1`)
-- Standardized Swagger documentation path to `/v1/docs` (previously `/swagger/*`)
-- Updated OpenAPI specification servers to use HTTPS URLs for local development
-- Updated Swagger specifications to support both HTTP and HTTPS schemes
-- Replaced `http-swagger` with custom Swagger handler that embeds OpenAPI spec and provides protocol-aware URL detection for HTTPS compatibility
-- Swagger UI now displays standard header with Explore button and URL input field
-
-### Added
-- Authored service delivery plan (`plan.md`) covering scope, architecture, and roadmap.
-- Produced ERD (`docs/erd.md`) detailing fleet, task, routing, telemetry, and integration entities with comprehensive cross-service entity alignment.
-- Added repository scaffolding: README, contributing guide, code of conduct, security and support docs.
-- **Service Bootstrap:** Complete Go service scaffolding with HTTP server, configuration, logging, health endpoints, and Swagger documentation.
-- **Auth-Service SSO Integration:** Integrated `shared/auth-client` v0.1.0 library for production-ready JWT validation using JWKS from auth-service. All protected `/v1/{tenant}` routes require valid Bearer tokens. Swagger documentation updated with BearerAuth security definition. Uses monorepo `replace` directives with versioned dependency. See `shared/auth-client/DEPLOYMENT.md` and `shared/auth-client/TAGGING.md` for details.
-- **Infrastructure:** PostgreSQL connection pool, Redis caching, NATS event bus integration, Prometheus metrics, structured logging with zap.
-
-### Changed
-- Service now uses Go workspace (`go.work`) for local development; production deployments consume `shared/auth-client` as a private Go module.
-
-### Pending
-- Ent schema implementation
-- CI/CD automation
-- Domain-specific handlers and business logic (fleet management, task assignment, routing)
+- Standardized API base path to `/api/v1`
+- Auth-service SSO integrated via `shared-auth-client` (JWKS validation)
+- All protected routes require valid Bearer JWT tokens
+- Swagger UI at `/v1/docs`
 
 ## [2025-01-17] Sprint 0 Documentation & Organization
 - Reorganized `plan.md` with numbered sections, full requirements, system analysis, and integration points.
