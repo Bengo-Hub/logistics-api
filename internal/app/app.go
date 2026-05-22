@@ -206,6 +206,10 @@ func New(ctx context.Context) (*App, error) {
 	etaUpdater := dispatch.NewETAUpdater(log, entClient, routingSvc, autoDispatcher, eventPublisher, 30*time.Second)
 	taskSvc.SetETATrigger(etaUpdater)
 
+	// SLA monitor: scans for overdue tasks and publishes breach events every 5 min
+	slaMonitor := tasks.NewSLAMonitor(log, entClient, eventPublisher, 5*time.Minute)
+	go slaMonitor.Start(ctx)
+
 	// Batch scheduler: groups nearby pending tasks for the same rider every 2 min
 	batchScheduler := dispatch.NewBatchScheduler(log, entClient, autoDispatcher, 2*time.Minute)
 
