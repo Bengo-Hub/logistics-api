@@ -20,10 +20,11 @@ import (
 	"github.com/bengobox/logistics-service/internal/http/handlers"
 	appmw "github.com/bengobox/logistics-service/internal/middleware"
 	"github.com/bengobox/logistics-service/internal/modules/identity"
+	"github.com/bengobox/logistics-service/internal/modules/rbac"
 	"github.com/bengobox/logistics-service/internal/config"
 )
 
-func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authclient.AuthMiddleware, idSvc *identity.Service, lh *handlers.LogisticsHandler, rh *handlers.RoutingHandler, th *handlers.TrackingHandler, zh *handlers.ZonesHandler, rbacH *handlers.RBACHandler, rdb *redis.Client, cfg *config.Config, allowedOrigins []string, serviceConfigH *handlers.ServiceConfigHandler, earningsH *handlers.EarningsHandler, sseH *handlers.SSEHandler) http.Handler {
+func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authclient.AuthMiddleware, idSvc *identity.Service, lh *handlers.LogisticsHandler, rh *handlers.RoutingHandler, th *handlers.TrackingHandler, zh *handlers.ZonesHandler, rbacH *handlers.RBACHandler, rdb *redis.Client, cfg *config.Config, allowedOrigins []string, serviceConfigH *handlers.ServiceConfigHandler, earningsH *handlers.EarningsHandler, sseH *handlers.SSEHandler, rbacSvc *rbac.Service) http.Handler {
 	rl := appmw.NewRateLimiter(rdb)
 	r := chi.NewRouter()
 
@@ -181,10 +182,15 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 			if zh != nil {
 				tenant.Route("/zones", func(zoneR chi.Router) {
 					zoneR.Get("/", zh.ListZones)
-					zoneR.Post("/", zh.CreateZone)
 					zoneR.Get("/{zoneId}", zh.GetZone)
-					zoneR.Patch("/{zoneId}", zh.UpdateZone)
-					zoneR.Delete("/{zoneId}", zh.DeleteZone)
+					zoneR.Group(func(mut chi.Router) {
+						if rbacSvc != nil {
+							mut.Use(appmw.RequirePermission(rbacSvc, rbac.PermZoneManage))
+						}
+						mut.Post("/", zh.CreateZone)
+						mut.Patch("/{zoneId}", zh.UpdateZone)
+						mut.Delete("/{zoneId}", zh.DeleteZone)
+					})
 				})
 			}
 
@@ -223,32 +229,48 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 
 			if lh != nil {
 				tenant.Route("/tasks", func(taskR chi.Router) {
+					// Read-only task access
 					taskR.Get("/", lh.ListTasks)
-					taskR.Post("/", lh.CreateTask)
 					taskR.Get("/{taskId}", lh.GetTask)
-					taskR.Patch("/{taskId}/status", lh.UpdateTaskStatus)
-					taskR.Post("/{taskId}/assign", lh.AssignTask)
-					taskR.Post("/{taskId}/dispatch", lh.DispatchTask)
 					taskR.Get("/{taskId}/pod", lh.GetPoD)
-					taskR.Post("/{taskId}/pod", lh.SubmitPoD)
-					taskR.Post("/{taskId}/rate", lh.RateRider)
 					if sseH != nil {
 						taskR.Get("/{taskId}/stream", sseH.StreamTask)
 					}
+
+					// Mutations: require task management permission
+					taskR.Group(func(mut chi.Router) {
+						if rbacSvc != nil {
+							mut.Use(appmw.RequirePermission(rbacSvc, rbac.PermTaskManage))
+						}
+						mut.Post("/", lh.CreateTask)
+						mut.Patch("/{taskId}/status", lh.UpdateTaskStatus)
+						mut.Post("/{taskId}/assign", lh.AssignTask)
+						mut.Post("/{taskId}/dispatch", lh.DispatchTask)
+						mut.Post("/{taskId}/pod", lh.SubmitPoD)
+						mut.Post("/{taskId}/rate", lh.RateRider)
+					})
 				})
 
 				tenant.Route("/fleet", func(fleetR chi.Router) {
+					// Read-only fleet access
 					fleetR.Get("/", lh.GetFleet)
 					fleetR.Get("/members", lh.ListMembers)
-					fleetR.Post("/members", lh.InviteMember)
 					fleetR.Get("/members/{memberId}", lh.GetMember)
-					fleetR.Post("/members/{memberId}/approve", lh.ApproveMember)
-					fleetR.Post("/members/{memberId}/suspend", lh.SuspendMember)
-					fleetR.Post("/members/{memberId}/reject", lh.RejectMember)
-					fleetR.Post("/members/{memberId}/vehicle", lh.AssignVehicle)
-					fleetR.Delete("/members/{memberId}", lh.DeleteMember)
-					fleetR.Post("/members/batch", lh.BatchInviteMembers)
-					fleetR.Post("/vehicles", lh.CreateVehicle)
+
+					// Mutations: require fleet management permission
+					fleetR.Group(func(mut chi.Router) {
+						if rbacSvc != nil {
+							mut.Use(appmw.RequirePermission(rbacSvc, rbac.PermFleetManage))
+						}
+						mut.Post("/members", lh.InviteMember)
+						mut.Post("/members/{memberId}/approve", lh.ApproveMember)
+						mut.Post("/members/{memberId}/suspend", lh.SuspendMember)
+						mut.Post("/members/{memberId}/reject", lh.RejectMember)
+						mut.Post("/members/{memberId}/vehicle", lh.AssignVehicle)
+						mut.Delete("/members/{memberId}", lh.DeleteMember)
+						mut.Post("/members/batch", lh.BatchInviteMembers)
+						mut.Post("/vehicles", lh.CreateVehicle)
+					})
 				})
 			}
 		})
