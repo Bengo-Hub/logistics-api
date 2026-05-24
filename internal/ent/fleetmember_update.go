@@ -472,6 +472,140 @@ func (_u *FleetMemberUpdate) SetUpdatedAt(v time.Time) *FleetMemberUpdate {
 	return _u
 }
 
+// SetPayoutMethod sets the "payout_method" field.
+func (_u *FleetMemberUpdate) SetPayoutMethod(v fleetmember.PayoutMethod) *FleetMemberUpdate {
+	_u.mutation.SetPayoutMethod(v)
+	return _u
+}
+
+// SetNillablePayoutMethod sets the "payout_method" field if the given value is not nil.
+func (_u *FleetMemberUpdate) SetNillablePayoutMethod(v *fleetmember.PayoutMethod) *FleetMemberUpdate {
+	if v != nil {
+		_u.SetPayoutMethod(*v)
+	}
+	return _u
+}
+
+// ClearPayoutMethod clears the value of the "payout_method" field.
+func (_u *FleetMemberUpdate) ClearPayoutMethod() *FleetMemberUpdate {
+	_u.mutation.ClearPayoutMethod()
+	return _u
+}
+
+// SetPayoutPhone sets the "payout_phone" field.
+func (_u *FleetMemberUpdate) SetPayoutPhone(v string) *FleetMemberUpdate {
+	_u.mutation.SetPayoutPhone(v)
+	return _u
+}
+
+// SetNillablePayoutPhone sets the "payout_phone" field if the given value is not nil.
+func (_u *FleetMemberUpdate) SetNillablePayoutPhone(v *string) *FleetMemberUpdate {
+	if v != nil {
+		_u.SetPayoutPhone(*v)
+	}
+	return _u
+}
+
+// ClearPayoutPhone clears the value of the "payout_phone" field.
+func (_u *FleetMemberUpdate) ClearPayoutPhone() *FleetMemberUpdate {
+	_u.mutation.ClearPayoutPhone()
+	return _u
+}
+
+// SetPayoutBankCode sets the "payout_bank_code" field.
+func (_u *FleetMemberUpdate) SetPayoutBankCode(v string) *FleetMemberUpdate {
+	_u.mutation.SetPayoutBankCode(v)
+	return _u
+}
+
+// SetNillablePayoutBankCode sets the "payout_bank_code" field if the given value is not nil.
+func (_u *FleetMemberUpdate) SetNillablePayoutBankCode(v *string) *FleetMemberUpdate {
+	if v != nil {
+		_u.SetPayoutBankCode(*v)
+	}
+	return _u
+}
+
+// ClearPayoutBankCode clears the value of the "payout_bank_code" field.
+func (_u *FleetMemberUpdate) ClearPayoutBankCode() *FleetMemberUpdate {
+	_u.mutation.ClearPayoutBankCode()
+	return _u
+}
+
+// SetPayoutAccountNumber sets the "payout_account_number" field.
+func (_u *FleetMemberUpdate) SetPayoutAccountNumber(v string) *FleetMemberUpdate {
+	_u.mutation.SetPayoutAccountNumber(v)
+	return _u
+}
+
+// SetNillablePayoutAccountNumber sets the "payout_account_number" field if the given value is not nil.
+func (_u *FleetMemberUpdate) SetNillablePayoutAccountNumber(v *string) *FleetMemberUpdate {
+	if v != nil {
+		_u.SetPayoutAccountNumber(*v)
+	}
+	return _u
+}
+
+// ClearPayoutAccountNumber clears the value of the "payout_account_number" field.
+func (_u *FleetMemberUpdate) ClearPayoutAccountNumber() *FleetMemberUpdate {
+	_u.mutation.ClearPayoutAccountNumber()
+	return _u
+}
+
+// SetPayoutAccountName sets the "payout_account_name" field.
+func (_u *FleetMemberUpdate) SetPayoutAccountName(v string) *FleetMemberUpdate {
+	_u.mutation.SetPayoutAccountName(v)
+	return _u
+}
+
+// SetNillablePayoutAccountName sets the "payout_account_name" field if the given value is not nil.
+func (_u *FleetMemberUpdate) SetNillablePayoutAccountName(v *string) *FleetMemberUpdate {
+	if v != nil {
+		_u.SetPayoutAccountName(*v)
+	}
+	return _u
+}
+
+// ClearPayoutAccountName clears the value of the "payout_account_name" field.
+func (_u *FleetMemberUpdate) ClearPayoutAccountName() *FleetMemberUpdate {
+	_u.mutation.ClearPayoutAccountName()
+	return _u
+}
+
+// SetPayoutRecipientCode sets the "payout_recipient_code" field.
+func (_u *FleetMemberUpdate) SetPayoutRecipientCode(v string) *FleetMemberUpdate {
+	_u.mutation.SetPayoutRecipientCode(v)
+	return _u
+}
+
+// SetNillablePayoutRecipientCode sets the "payout_recipient_code" field if the given value is not nil.
+func (_u *FleetMemberUpdate) SetNillablePayoutRecipientCode(v *string) *FleetMemberUpdate {
+	if v != nil {
+		_u.SetPayoutRecipientCode(*v)
+	}
+	return _u
+}
+
+// ClearPayoutRecipientCode clears the value of the "payout_recipient_code" field.
+func (_u *FleetMemberUpdate) ClearPayoutRecipientCode() *FleetMemberUpdate {
+	_u.mutation.ClearPayoutRecipientCode()
+	return _u
+}
+
+// SetPayoutStatus sets the "payout_status" field.
+func (_u *FleetMemberUpdate) SetPayoutStatus(v fleetmember.PayoutStatus) *FleetMemberUpdate {
+	_u.mutation.SetPayoutStatus(v)
+	return _u
+}
+
+// SetNillablePayoutStatus sets the "payout_status" field if the given value is not nil.
+func (_u *FleetMemberUpdate) SetNillablePayoutStatus(v *fleetmember.PayoutStatus) *FleetMemberUpdate {
+	if v != nil {
+		_u.SetPayoutStatus(*v)
+	}
+	return _u
+}
+
 // SetFleet sets the "fleet" edge to the Fleet entity.
 func (_u *FleetMemberUpdate) SetFleet(v *Fleet) *FleetMemberUpdate {
 	return _u.SetFleetID(v.ID)
@@ -620,6 +754,16 @@ func (_u *FleetMemberUpdate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *FleetMemberUpdate) check() error {
+	if v, ok := _u.mutation.PayoutMethod(); ok {
+		if err := fleetmember.PayoutMethodValidator(v); err != nil {
+			return &ValidationError{Name: "payout_method", err: fmt.Errorf(`ent: validator failed for field "FleetMember.payout_method": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.PayoutStatus(); ok {
+		if err := fleetmember.PayoutStatusValidator(v); err != nil {
+			return &ValidationError{Name: "payout_status", err: fmt.Errorf(`ent: validator failed for field "FleetMember.payout_status": %w`, err)}
+		}
+	}
 	if _u.mutation.FleetCleared() && len(_u.mutation.FleetIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "FleetMember.fleet"`)
 	}
@@ -759,6 +903,45 @@ func (_u *FleetMemberUpdate) sqlSave(ctx context.Context) (_node int, err error)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(fleetmember.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if value, ok := _u.mutation.PayoutMethod(); ok {
+		_spec.SetField(fleetmember.FieldPayoutMethod, field.TypeEnum, value)
+	}
+	if _u.mutation.PayoutMethodCleared() {
+		_spec.ClearField(fleetmember.FieldPayoutMethod, field.TypeEnum)
+	}
+	if value, ok := _u.mutation.PayoutPhone(); ok {
+		_spec.SetField(fleetmember.FieldPayoutPhone, field.TypeString, value)
+	}
+	if _u.mutation.PayoutPhoneCleared() {
+		_spec.ClearField(fleetmember.FieldPayoutPhone, field.TypeString)
+	}
+	if value, ok := _u.mutation.PayoutBankCode(); ok {
+		_spec.SetField(fleetmember.FieldPayoutBankCode, field.TypeString, value)
+	}
+	if _u.mutation.PayoutBankCodeCleared() {
+		_spec.ClearField(fleetmember.FieldPayoutBankCode, field.TypeString)
+	}
+	if value, ok := _u.mutation.PayoutAccountNumber(); ok {
+		_spec.SetField(fleetmember.FieldPayoutAccountNumber, field.TypeString, value)
+	}
+	if _u.mutation.PayoutAccountNumberCleared() {
+		_spec.ClearField(fleetmember.FieldPayoutAccountNumber, field.TypeString)
+	}
+	if value, ok := _u.mutation.PayoutAccountName(); ok {
+		_spec.SetField(fleetmember.FieldPayoutAccountName, field.TypeString, value)
+	}
+	if _u.mutation.PayoutAccountNameCleared() {
+		_spec.ClearField(fleetmember.FieldPayoutAccountName, field.TypeString)
+	}
+	if value, ok := _u.mutation.PayoutRecipientCode(); ok {
+		_spec.SetField(fleetmember.FieldPayoutRecipientCode, field.TypeString, value)
+	}
+	if _u.mutation.PayoutRecipientCodeCleared() {
+		_spec.ClearField(fleetmember.FieldPayoutRecipientCode, field.TypeString)
+	}
+	if value, ok := _u.mutation.PayoutStatus(); ok {
+		_spec.SetField(fleetmember.FieldPayoutStatus, field.TypeEnum, value)
 	}
 	if _u.mutation.FleetCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -1394,6 +1577,140 @@ func (_u *FleetMemberUpdateOne) SetUpdatedAt(v time.Time) *FleetMemberUpdateOne 
 	return _u
 }
 
+// SetPayoutMethod sets the "payout_method" field.
+func (_u *FleetMemberUpdateOne) SetPayoutMethod(v fleetmember.PayoutMethod) *FleetMemberUpdateOne {
+	_u.mutation.SetPayoutMethod(v)
+	return _u
+}
+
+// SetNillablePayoutMethod sets the "payout_method" field if the given value is not nil.
+func (_u *FleetMemberUpdateOne) SetNillablePayoutMethod(v *fleetmember.PayoutMethod) *FleetMemberUpdateOne {
+	if v != nil {
+		_u.SetPayoutMethod(*v)
+	}
+	return _u
+}
+
+// ClearPayoutMethod clears the value of the "payout_method" field.
+func (_u *FleetMemberUpdateOne) ClearPayoutMethod() *FleetMemberUpdateOne {
+	_u.mutation.ClearPayoutMethod()
+	return _u
+}
+
+// SetPayoutPhone sets the "payout_phone" field.
+func (_u *FleetMemberUpdateOne) SetPayoutPhone(v string) *FleetMemberUpdateOne {
+	_u.mutation.SetPayoutPhone(v)
+	return _u
+}
+
+// SetNillablePayoutPhone sets the "payout_phone" field if the given value is not nil.
+func (_u *FleetMemberUpdateOne) SetNillablePayoutPhone(v *string) *FleetMemberUpdateOne {
+	if v != nil {
+		_u.SetPayoutPhone(*v)
+	}
+	return _u
+}
+
+// ClearPayoutPhone clears the value of the "payout_phone" field.
+func (_u *FleetMemberUpdateOne) ClearPayoutPhone() *FleetMemberUpdateOne {
+	_u.mutation.ClearPayoutPhone()
+	return _u
+}
+
+// SetPayoutBankCode sets the "payout_bank_code" field.
+func (_u *FleetMemberUpdateOne) SetPayoutBankCode(v string) *FleetMemberUpdateOne {
+	_u.mutation.SetPayoutBankCode(v)
+	return _u
+}
+
+// SetNillablePayoutBankCode sets the "payout_bank_code" field if the given value is not nil.
+func (_u *FleetMemberUpdateOne) SetNillablePayoutBankCode(v *string) *FleetMemberUpdateOne {
+	if v != nil {
+		_u.SetPayoutBankCode(*v)
+	}
+	return _u
+}
+
+// ClearPayoutBankCode clears the value of the "payout_bank_code" field.
+func (_u *FleetMemberUpdateOne) ClearPayoutBankCode() *FleetMemberUpdateOne {
+	_u.mutation.ClearPayoutBankCode()
+	return _u
+}
+
+// SetPayoutAccountNumber sets the "payout_account_number" field.
+func (_u *FleetMemberUpdateOne) SetPayoutAccountNumber(v string) *FleetMemberUpdateOne {
+	_u.mutation.SetPayoutAccountNumber(v)
+	return _u
+}
+
+// SetNillablePayoutAccountNumber sets the "payout_account_number" field if the given value is not nil.
+func (_u *FleetMemberUpdateOne) SetNillablePayoutAccountNumber(v *string) *FleetMemberUpdateOne {
+	if v != nil {
+		_u.SetPayoutAccountNumber(*v)
+	}
+	return _u
+}
+
+// ClearPayoutAccountNumber clears the value of the "payout_account_number" field.
+func (_u *FleetMemberUpdateOne) ClearPayoutAccountNumber() *FleetMemberUpdateOne {
+	_u.mutation.ClearPayoutAccountNumber()
+	return _u
+}
+
+// SetPayoutAccountName sets the "payout_account_name" field.
+func (_u *FleetMemberUpdateOne) SetPayoutAccountName(v string) *FleetMemberUpdateOne {
+	_u.mutation.SetPayoutAccountName(v)
+	return _u
+}
+
+// SetNillablePayoutAccountName sets the "payout_account_name" field if the given value is not nil.
+func (_u *FleetMemberUpdateOne) SetNillablePayoutAccountName(v *string) *FleetMemberUpdateOne {
+	if v != nil {
+		_u.SetPayoutAccountName(*v)
+	}
+	return _u
+}
+
+// ClearPayoutAccountName clears the value of the "payout_account_name" field.
+func (_u *FleetMemberUpdateOne) ClearPayoutAccountName() *FleetMemberUpdateOne {
+	_u.mutation.ClearPayoutAccountName()
+	return _u
+}
+
+// SetPayoutRecipientCode sets the "payout_recipient_code" field.
+func (_u *FleetMemberUpdateOne) SetPayoutRecipientCode(v string) *FleetMemberUpdateOne {
+	_u.mutation.SetPayoutRecipientCode(v)
+	return _u
+}
+
+// SetNillablePayoutRecipientCode sets the "payout_recipient_code" field if the given value is not nil.
+func (_u *FleetMemberUpdateOne) SetNillablePayoutRecipientCode(v *string) *FleetMemberUpdateOne {
+	if v != nil {
+		_u.SetPayoutRecipientCode(*v)
+	}
+	return _u
+}
+
+// ClearPayoutRecipientCode clears the value of the "payout_recipient_code" field.
+func (_u *FleetMemberUpdateOne) ClearPayoutRecipientCode() *FleetMemberUpdateOne {
+	_u.mutation.ClearPayoutRecipientCode()
+	return _u
+}
+
+// SetPayoutStatus sets the "payout_status" field.
+func (_u *FleetMemberUpdateOne) SetPayoutStatus(v fleetmember.PayoutStatus) *FleetMemberUpdateOne {
+	_u.mutation.SetPayoutStatus(v)
+	return _u
+}
+
+// SetNillablePayoutStatus sets the "payout_status" field if the given value is not nil.
+func (_u *FleetMemberUpdateOne) SetNillablePayoutStatus(v *fleetmember.PayoutStatus) *FleetMemberUpdateOne {
+	if v != nil {
+		_u.SetPayoutStatus(*v)
+	}
+	return _u
+}
+
 // SetFleet sets the "fleet" edge to the Fleet entity.
 func (_u *FleetMemberUpdateOne) SetFleet(v *Fleet) *FleetMemberUpdateOne {
 	return _u.SetFleetID(v.ID)
@@ -1555,6 +1872,16 @@ func (_u *FleetMemberUpdateOne) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *FleetMemberUpdateOne) check() error {
+	if v, ok := _u.mutation.PayoutMethod(); ok {
+		if err := fleetmember.PayoutMethodValidator(v); err != nil {
+			return &ValidationError{Name: "payout_method", err: fmt.Errorf(`ent: validator failed for field "FleetMember.payout_method": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.PayoutStatus(); ok {
+		if err := fleetmember.PayoutStatusValidator(v); err != nil {
+			return &ValidationError{Name: "payout_status", err: fmt.Errorf(`ent: validator failed for field "FleetMember.payout_status": %w`, err)}
+		}
+	}
 	if _u.mutation.FleetCleared() && len(_u.mutation.FleetIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "FleetMember.fleet"`)
 	}
@@ -1711,6 +2038,45 @@ func (_u *FleetMemberUpdateOne) sqlSave(ctx context.Context) (_node *FleetMember
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(fleetmember.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if value, ok := _u.mutation.PayoutMethod(); ok {
+		_spec.SetField(fleetmember.FieldPayoutMethod, field.TypeEnum, value)
+	}
+	if _u.mutation.PayoutMethodCleared() {
+		_spec.ClearField(fleetmember.FieldPayoutMethod, field.TypeEnum)
+	}
+	if value, ok := _u.mutation.PayoutPhone(); ok {
+		_spec.SetField(fleetmember.FieldPayoutPhone, field.TypeString, value)
+	}
+	if _u.mutation.PayoutPhoneCleared() {
+		_spec.ClearField(fleetmember.FieldPayoutPhone, field.TypeString)
+	}
+	if value, ok := _u.mutation.PayoutBankCode(); ok {
+		_spec.SetField(fleetmember.FieldPayoutBankCode, field.TypeString, value)
+	}
+	if _u.mutation.PayoutBankCodeCleared() {
+		_spec.ClearField(fleetmember.FieldPayoutBankCode, field.TypeString)
+	}
+	if value, ok := _u.mutation.PayoutAccountNumber(); ok {
+		_spec.SetField(fleetmember.FieldPayoutAccountNumber, field.TypeString, value)
+	}
+	if _u.mutation.PayoutAccountNumberCleared() {
+		_spec.ClearField(fleetmember.FieldPayoutAccountNumber, field.TypeString)
+	}
+	if value, ok := _u.mutation.PayoutAccountName(); ok {
+		_spec.SetField(fleetmember.FieldPayoutAccountName, field.TypeString, value)
+	}
+	if _u.mutation.PayoutAccountNameCleared() {
+		_spec.ClearField(fleetmember.FieldPayoutAccountName, field.TypeString)
+	}
+	if value, ok := _u.mutation.PayoutRecipientCode(); ok {
+		_spec.SetField(fleetmember.FieldPayoutRecipientCode, field.TypeString, value)
+	}
+	if _u.mutation.PayoutRecipientCodeCleared() {
+		_spec.ClearField(fleetmember.FieldPayoutRecipientCode, field.TypeString)
+	}
+	if value, ok := _u.mutation.PayoutStatus(); ok {
+		_spec.SetField(fleetmember.FieldPayoutStatus, field.TypeEnum, value)
 	}
 	if _u.mutation.FleetCleared() {
 		edge := &sqlgraph.EdgeSpec{

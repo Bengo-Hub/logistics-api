@@ -21,9 +21,10 @@ import (
 
 // EarningsHandler exposes earnings, billing event, and pricing rule endpoints.
 type EarningsHandler struct {
-	log         *zap.Logger
-	client      *ent.Client
-	earningsSvc *earnings.Service
+	log            *zap.Logger
+	client         *ent.Client
+	earningsSvc    *earnings.Service
+	treasuryClient *earnings.TreasuryClient
 }
 
 // NewEarningsHandler creates a new EarningsHandler.
@@ -33,6 +34,11 @@ func NewEarningsHandler(log *zap.Logger, client *ent.Client, earningsSvc *earnin
 		client:      client,
 		earningsSvc: earningsSvc,
 	}
+}
+
+// SetTreasuryClient injects the treasury S2S client for payout disbursement.
+func (h *EarningsHandler) SetTreasuryClient(tc *earnings.TreasuryClient) {
+	h.treasuryClient = tc
 }
 
 // RegisterRoutes wires all earnings sub-routes onto the given router (already scoped to /{tenant}).
@@ -46,11 +52,17 @@ func (h *EarningsHandler) RegisterRoutes(r chi.Router) {
 		e.Post("/pricing-rules", h.CreatePricingRule)
 		e.Patch("/pricing-rules/{ruleId}", h.UpdatePricingRule)
 		e.Delete("/pricing-rules/{ruleId}", h.DeletePricingRule)
+		// Statement settlement → rider payout disbursement via treasury-api
+		e.Post("/statements/{statementID}/settle", h.SettleEarningsStatement)
 	})
 
-	// Rider self-service
+	// Rider self-service earnings
 	r.Get("/riders/me/earnings", h.GetMyEarnings)
 	r.Get("/riders/me/earnings/statements", h.ListMyStatements)
+
+	// Rider payout method management
+	r.Get("/riders/{riderID}/payout-method", h.GetRiderPayoutMethod)
+	r.Put("/riders/{riderID}/payout-method", h.UpdateRiderPayoutMethod)
 }
 
 // ListStatements handles GET /api/v1/{tenant}/earnings/statements

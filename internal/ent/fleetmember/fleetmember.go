@@ -3,6 +3,7 @@
 package fleetmember
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -67,6 +68,20 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
+	// FieldPayoutMethod holds the string denoting the payout_method field in the database.
+	FieldPayoutMethod = "payout_method"
+	// FieldPayoutPhone holds the string denoting the payout_phone field in the database.
+	FieldPayoutPhone = "payout_phone"
+	// FieldPayoutBankCode holds the string denoting the payout_bank_code field in the database.
+	FieldPayoutBankCode = "payout_bank_code"
+	// FieldPayoutAccountNumber holds the string denoting the payout_account_number field in the database.
+	FieldPayoutAccountNumber = "payout_account_number"
+	// FieldPayoutAccountName holds the string denoting the payout_account_name field in the database.
+	FieldPayoutAccountName = "payout_account_name"
+	// FieldPayoutRecipientCode holds the string denoting the payout_recipient_code field in the database.
+	FieldPayoutRecipientCode = "payout_recipient_code"
+	// FieldPayoutStatus holds the string denoting the payout_status field in the database.
+	FieldPayoutStatus = "payout_status"
 	// EdgeFleet holds the string denoting the fleet edge name in mutations.
 	EdgeFleet = "fleet"
 	// EdgeUser holds the string denoting the user edge name in mutations.
@@ -145,6 +160,13 @@ var Columns = []string{
 	FieldTotalRatings,
 	FieldCreatedAt,
 	FieldUpdatedAt,
+	FieldPayoutMethod,
+	FieldPayoutPhone,
+	FieldPayoutBankCode,
+	FieldPayoutAccountNumber,
+	FieldPayoutAccountName,
+	FieldPayoutRecipientCode,
+	FieldPayoutStatus,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -183,6 +205,61 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// PayoutMethod defines the type for the "payout_method" enum field.
+type PayoutMethod string
+
+// PayoutMethodMpesaB2c is the default value of the PayoutMethod enum.
+const DefaultPayoutMethod = PayoutMethodMpesaB2c
+
+// PayoutMethod values.
+const (
+	PayoutMethodMpesaB2c       PayoutMethod = "mpesa_b2c"
+	PayoutMethodPaystackBank   PayoutMethod = "paystack_bank"
+	PayoutMethodPaystackMobile PayoutMethod = "paystack_mobile"
+	PayoutMethodCash           PayoutMethod = "cash"
+	PayoutMethodInternalWallet PayoutMethod = "internal_wallet"
+)
+
+func (pm PayoutMethod) String() string {
+	return string(pm)
+}
+
+// PayoutMethodValidator is a validator for the "payout_method" field enum values. It is called by the builders before save.
+func PayoutMethodValidator(pm PayoutMethod) error {
+	switch pm {
+	case PayoutMethodMpesaB2c, PayoutMethodPaystackBank, PayoutMethodPaystackMobile, PayoutMethodCash, PayoutMethodInternalWallet:
+		return nil
+	default:
+		return fmt.Errorf("fleetmember: invalid enum value for payout_method field: %q", pm)
+	}
+}
+
+// PayoutStatus defines the type for the "payout_status" enum field.
+type PayoutStatus string
+
+// PayoutStatusActive is the default value of the PayoutStatus enum.
+const DefaultPayoutStatus = PayoutStatusActive
+
+// PayoutStatus values.
+const (
+	PayoutStatusActive    PayoutStatus = "active"
+	PayoutStatusSuspended PayoutStatus = "suspended"
+)
+
+func (ps PayoutStatus) String() string {
+	return string(ps)
+}
+
+// PayoutStatusValidator is a validator for the "payout_status" field enum values. It is called by the builders before save.
+func PayoutStatusValidator(ps PayoutStatus) error {
+	switch ps {
+	case PayoutStatusActive, PayoutStatusSuspended:
+		return nil
+	default:
+		return fmt.Errorf("fleetmember: invalid enum value for payout_status field: %q", ps)
+	}
+}
 
 // OrderOption defines the ordering options for the FleetMember queries.
 type OrderOption func(*sql.Selector)
@@ -310,6 +387,41 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByUpdatedAt orders the results by the updated_at field.
 func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
+}
+
+// ByPayoutMethod orders the results by the payout_method field.
+func ByPayoutMethod(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPayoutMethod, opts...).ToFunc()
+}
+
+// ByPayoutPhone orders the results by the payout_phone field.
+func ByPayoutPhone(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPayoutPhone, opts...).ToFunc()
+}
+
+// ByPayoutBankCode orders the results by the payout_bank_code field.
+func ByPayoutBankCode(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPayoutBankCode, opts...).ToFunc()
+}
+
+// ByPayoutAccountNumber orders the results by the payout_account_number field.
+func ByPayoutAccountNumber(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPayoutAccountNumber, opts...).ToFunc()
+}
+
+// ByPayoutAccountName orders the results by the payout_account_name field.
+func ByPayoutAccountName(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPayoutAccountName, opts...).ToFunc()
+}
+
+// ByPayoutRecipientCode orders the results by the payout_recipient_code field.
+func ByPayoutRecipientCode(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPayoutRecipientCode, opts...).ToFunc()
+}
+
+// ByPayoutStatus orders the results by the payout_status field.
+func ByPayoutStatus(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPayoutStatus, opts...).ToFunc()
 }
 
 // ByFleetField orders the results by fleet field.
