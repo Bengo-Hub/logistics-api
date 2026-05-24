@@ -97,6 +97,28 @@ func (FleetMember) Fields() []ent.Field {
 		field.Time("updated_at").
 			Default(time.Now).
 			UpdateDefault(time.Now),
+
+		// Payout fields — how and where to disburse rider earnings
+		field.Enum("payout_method").
+			Values("mpesa_b2c", "paystack_bank", "paystack_mobile", "cash", "internal_wallet").
+			Default("mpesa_b2c").
+			Optional(),
+		field.String("payout_phone").
+			Optional().
+			Comment("M-Pesa phone in 254... format for B2C payout"),
+		field.String("payout_bank_code").
+			Optional().
+			Comment("Paystack bank code for bank transfer payout"),
+		field.String("payout_account_number").
+			Optional(),
+		field.String("payout_account_name").
+			Optional(),
+		field.String("payout_recipient_code").
+			Optional().
+			Comment("Cached Paystack RCP_xxx to avoid re-creating recipient"),
+		field.Enum("payout_status").
+			Values("active", "suspended").
+			Default("active"),
 	}
 }
 

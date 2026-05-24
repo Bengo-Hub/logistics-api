@@ -74,6 +74,20 @@ type FleetMember struct {
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// PayoutMethod holds the value of the "payout_method" field.
+	PayoutMethod fleetmember.PayoutMethod `json:"payout_method,omitempty"`
+	// M-Pesa phone in 254... format for B2C payout
+	PayoutPhone string `json:"payout_phone,omitempty"`
+	// Paystack bank code for bank transfer payout
+	PayoutBankCode string `json:"payout_bank_code,omitempty"`
+	// PayoutAccountNumber holds the value of the "payout_account_number" field.
+	PayoutAccountNumber string `json:"payout_account_number,omitempty"`
+	// PayoutAccountName holds the value of the "payout_account_name" field.
+	PayoutAccountName string `json:"payout_account_name,omitempty"`
+	// Cached Paystack RCP_xxx to avoid re-creating recipient
+	PayoutRecipientCode string `json:"payout_recipient_code,omitempty"`
+	// PayoutStatus holds the value of the "payout_status" field.
+	PayoutStatus fleetmember.PayoutStatus `json:"payout_status,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the FleetMemberQuery when eager-loading is set.
 	Edges        FleetMemberEdges `json:"edges"`
@@ -163,7 +177,7 @@ func (*FleetMember) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullFloat64)
 		case fleetmember.FieldTotalRatings:
 			values[i] = new(sql.NullInt64)
-		case fleetmember.FieldDriverCode, fleetmember.FieldIDNumber, fleetmember.FieldLicenseNo, fleetmember.FieldStatus, fleetmember.FieldInviteCode, fleetmember.FieldReviewedBy, fleetmember.FieldRejectionReason, fleetmember.FieldOnboardingSource, fleetmember.FieldIDPassportAttachment, fleetmember.FieldRiderPhoto:
+		case fleetmember.FieldDriverCode, fleetmember.FieldIDNumber, fleetmember.FieldLicenseNo, fleetmember.FieldStatus, fleetmember.FieldInviteCode, fleetmember.FieldReviewedBy, fleetmember.FieldRejectionReason, fleetmember.FieldOnboardingSource, fleetmember.FieldIDPassportAttachment, fleetmember.FieldRiderPhoto, fleetmember.FieldPayoutMethod, fleetmember.FieldPayoutPhone, fleetmember.FieldPayoutBankCode, fleetmember.FieldPayoutAccountNumber, fleetmember.FieldPayoutAccountName, fleetmember.FieldPayoutRecipientCode, fleetmember.FieldPayoutStatus:
 			values[i] = new(sql.NullString)
 		case fleetmember.FieldKycSubmittedAt, fleetmember.FieldReviewedAt, fleetmember.FieldJoinedAt, fleetmember.FieldSuspendedAt, fleetmember.FieldCreatedAt, fleetmember.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -355,6 +369,48 @@ func (_m *FleetMember) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.UpdatedAt = value.Time
 			}
+		case fleetmember.FieldPayoutMethod:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field payout_method", values[i])
+			} else if value.Valid {
+				_m.PayoutMethod = fleetmember.PayoutMethod(value.String)
+			}
+		case fleetmember.FieldPayoutPhone:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field payout_phone", values[i])
+			} else if value.Valid {
+				_m.PayoutPhone = value.String
+			}
+		case fleetmember.FieldPayoutBankCode:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field payout_bank_code", values[i])
+			} else if value.Valid {
+				_m.PayoutBankCode = value.String
+			}
+		case fleetmember.FieldPayoutAccountNumber:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field payout_account_number", values[i])
+			} else if value.Valid {
+				_m.PayoutAccountNumber = value.String
+			}
+		case fleetmember.FieldPayoutAccountName:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field payout_account_name", values[i])
+			} else if value.Valid {
+				_m.PayoutAccountName = value.String
+			}
+		case fleetmember.FieldPayoutRecipientCode:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field payout_recipient_code", values[i])
+			} else if value.Valid {
+				_m.PayoutRecipientCode = value.String
+			}
+		case fleetmember.FieldPayoutStatus:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field payout_status", values[i])
+			} else if value.Valid {
+				_m.PayoutStatus = fleetmember.PayoutStatus(value.String)
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -503,6 +559,27 @@ func (_m *FleetMember) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
 	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	builder.WriteString("payout_method=")
+	builder.WriteString(fmt.Sprintf("%v", _m.PayoutMethod))
+	builder.WriteString(", ")
+	builder.WriteString("payout_phone=")
+	builder.WriteString(_m.PayoutPhone)
+	builder.WriteString(", ")
+	builder.WriteString("payout_bank_code=")
+	builder.WriteString(_m.PayoutBankCode)
+	builder.WriteString(", ")
+	builder.WriteString("payout_account_number=")
+	builder.WriteString(_m.PayoutAccountNumber)
+	builder.WriteString(", ")
+	builder.WriteString("payout_account_name=")
+	builder.WriteString(_m.PayoutAccountName)
+	builder.WriteString(", ")
+	builder.WriteString("payout_recipient_code=")
+	builder.WriteString(_m.PayoutRecipientCode)
+	builder.WriteString(", ")
+	builder.WriteString("payout_status=")
+	builder.WriteString(fmt.Sprintf("%v", _m.PayoutStatus))
 	builder.WriteByte(')')
 	return builder.String()
 }

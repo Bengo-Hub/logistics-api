@@ -22,6 +22,14 @@ type Config struct {
 	Media         MediaConfig
 	Subscriptions SubscriptionsConfig
 	Routing       RoutingConfig
+	Treasury      TreasuryConfig
+}
+
+// TreasuryConfig holds configuration for the treasury-api S2S client.
+type TreasuryConfig struct {
+	ServiceURL         string        `envconfig:"TREASURY_SERVICE_URL" default:"http://treasury-api.treasury.svc.cluster.local:4005"`
+	InternalServiceKey string        `envconfig:"INTERNAL_SERVICE_KEY"`
+	RequestTimeout     time.Duration `envconfig:"TREASURY_REQUEST_TIMEOUT" default:"30s"`
 }
 
 // RoutingConfig holds configuration for the routing engine (Valhalla/OSRM).

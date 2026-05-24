@@ -176,6 +176,31 @@ func UpdatedAt(v time.Time) predicate.FleetMember {
 	return predicate.FleetMember(sql.FieldEQ(FieldUpdatedAt, v))
 }
 
+// PayoutPhone applies equality check predicate on the "payout_phone" field. It's identical to PayoutPhoneEQ.
+func PayoutPhone(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEQ(FieldPayoutPhone, v))
+}
+
+// PayoutBankCode applies equality check predicate on the "payout_bank_code" field. It's identical to PayoutBankCodeEQ.
+func PayoutBankCode(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEQ(FieldPayoutBankCode, v))
+}
+
+// PayoutAccountNumber applies equality check predicate on the "payout_account_number" field. It's identical to PayoutAccountNumberEQ.
+func PayoutAccountNumber(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEQ(FieldPayoutAccountNumber, v))
+}
+
+// PayoutAccountName applies equality check predicate on the "payout_account_name" field. It's identical to PayoutAccountNameEQ.
+func PayoutAccountName(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEQ(FieldPayoutAccountName, v))
+}
+
+// PayoutRecipientCode applies equality check predicate on the "payout_recipient_code" field. It's identical to PayoutRecipientCodeEQ.
+func PayoutRecipientCode(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEQ(FieldPayoutRecipientCode, v))
+}
+
 // TenantIDEQ applies the EQ predicate on the "tenant_id" field.
 func TenantIDEQ(v uuid.UUID) predicate.FleetMember {
 	return predicate.FleetMember(sql.FieldEQ(FieldTenantID, v))
@@ -1434,6 +1459,431 @@ func UpdatedAtLT(v time.Time) predicate.FleetMember {
 // UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
 func UpdatedAtLTE(v time.Time) predicate.FleetMember {
 	return predicate.FleetMember(sql.FieldLTE(FieldUpdatedAt, v))
+}
+
+// PayoutMethodEQ applies the EQ predicate on the "payout_method" field.
+func PayoutMethodEQ(v PayoutMethod) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEQ(FieldPayoutMethod, v))
+}
+
+// PayoutMethodNEQ applies the NEQ predicate on the "payout_method" field.
+func PayoutMethodNEQ(v PayoutMethod) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNEQ(FieldPayoutMethod, v))
+}
+
+// PayoutMethodIn applies the In predicate on the "payout_method" field.
+func PayoutMethodIn(vs ...PayoutMethod) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldIn(FieldPayoutMethod, vs...))
+}
+
+// PayoutMethodNotIn applies the NotIn predicate on the "payout_method" field.
+func PayoutMethodNotIn(vs ...PayoutMethod) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNotIn(FieldPayoutMethod, vs...))
+}
+
+// PayoutMethodIsNil applies the IsNil predicate on the "payout_method" field.
+func PayoutMethodIsNil() predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldIsNull(FieldPayoutMethod))
+}
+
+// PayoutMethodNotNil applies the NotNil predicate on the "payout_method" field.
+func PayoutMethodNotNil() predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNotNull(FieldPayoutMethod))
+}
+
+// PayoutPhoneEQ applies the EQ predicate on the "payout_phone" field.
+func PayoutPhoneEQ(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEQ(FieldPayoutPhone, v))
+}
+
+// PayoutPhoneNEQ applies the NEQ predicate on the "payout_phone" field.
+func PayoutPhoneNEQ(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNEQ(FieldPayoutPhone, v))
+}
+
+// PayoutPhoneIn applies the In predicate on the "payout_phone" field.
+func PayoutPhoneIn(vs ...string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldIn(FieldPayoutPhone, vs...))
+}
+
+// PayoutPhoneNotIn applies the NotIn predicate on the "payout_phone" field.
+func PayoutPhoneNotIn(vs ...string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNotIn(FieldPayoutPhone, vs...))
+}
+
+// PayoutPhoneGT applies the GT predicate on the "payout_phone" field.
+func PayoutPhoneGT(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldGT(FieldPayoutPhone, v))
+}
+
+// PayoutPhoneGTE applies the GTE predicate on the "payout_phone" field.
+func PayoutPhoneGTE(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldGTE(FieldPayoutPhone, v))
+}
+
+// PayoutPhoneLT applies the LT predicate on the "payout_phone" field.
+func PayoutPhoneLT(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldLT(FieldPayoutPhone, v))
+}
+
+// PayoutPhoneLTE applies the LTE predicate on the "payout_phone" field.
+func PayoutPhoneLTE(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldLTE(FieldPayoutPhone, v))
+}
+
+// PayoutPhoneContains applies the Contains predicate on the "payout_phone" field.
+func PayoutPhoneContains(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldContains(FieldPayoutPhone, v))
+}
+
+// PayoutPhoneHasPrefix applies the HasPrefix predicate on the "payout_phone" field.
+func PayoutPhoneHasPrefix(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldHasPrefix(FieldPayoutPhone, v))
+}
+
+// PayoutPhoneHasSuffix applies the HasSuffix predicate on the "payout_phone" field.
+func PayoutPhoneHasSuffix(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldHasSuffix(FieldPayoutPhone, v))
+}
+
+// PayoutPhoneIsNil applies the IsNil predicate on the "payout_phone" field.
+func PayoutPhoneIsNil() predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldIsNull(FieldPayoutPhone))
+}
+
+// PayoutPhoneNotNil applies the NotNil predicate on the "payout_phone" field.
+func PayoutPhoneNotNil() predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNotNull(FieldPayoutPhone))
+}
+
+// PayoutPhoneEqualFold applies the EqualFold predicate on the "payout_phone" field.
+func PayoutPhoneEqualFold(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEqualFold(FieldPayoutPhone, v))
+}
+
+// PayoutPhoneContainsFold applies the ContainsFold predicate on the "payout_phone" field.
+func PayoutPhoneContainsFold(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldContainsFold(FieldPayoutPhone, v))
+}
+
+// PayoutBankCodeEQ applies the EQ predicate on the "payout_bank_code" field.
+func PayoutBankCodeEQ(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEQ(FieldPayoutBankCode, v))
+}
+
+// PayoutBankCodeNEQ applies the NEQ predicate on the "payout_bank_code" field.
+func PayoutBankCodeNEQ(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNEQ(FieldPayoutBankCode, v))
+}
+
+// PayoutBankCodeIn applies the In predicate on the "payout_bank_code" field.
+func PayoutBankCodeIn(vs ...string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldIn(FieldPayoutBankCode, vs...))
+}
+
+// PayoutBankCodeNotIn applies the NotIn predicate on the "payout_bank_code" field.
+func PayoutBankCodeNotIn(vs ...string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNotIn(FieldPayoutBankCode, vs...))
+}
+
+// PayoutBankCodeGT applies the GT predicate on the "payout_bank_code" field.
+func PayoutBankCodeGT(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldGT(FieldPayoutBankCode, v))
+}
+
+// PayoutBankCodeGTE applies the GTE predicate on the "payout_bank_code" field.
+func PayoutBankCodeGTE(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldGTE(FieldPayoutBankCode, v))
+}
+
+// PayoutBankCodeLT applies the LT predicate on the "payout_bank_code" field.
+func PayoutBankCodeLT(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldLT(FieldPayoutBankCode, v))
+}
+
+// PayoutBankCodeLTE applies the LTE predicate on the "payout_bank_code" field.
+func PayoutBankCodeLTE(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldLTE(FieldPayoutBankCode, v))
+}
+
+// PayoutBankCodeContains applies the Contains predicate on the "payout_bank_code" field.
+func PayoutBankCodeContains(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldContains(FieldPayoutBankCode, v))
+}
+
+// PayoutBankCodeHasPrefix applies the HasPrefix predicate on the "payout_bank_code" field.
+func PayoutBankCodeHasPrefix(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldHasPrefix(FieldPayoutBankCode, v))
+}
+
+// PayoutBankCodeHasSuffix applies the HasSuffix predicate on the "payout_bank_code" field.
+func PayoutBankCodeHasSuffix(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldHasSuffix(FieldPayoutBankCode, v))
+}
+
+// PayoutBankCodeIsNil applies the IsNil predicate on the "payout_bank_code" field.
+func PayoutBankCodeIsNil() predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldIsNull(FieldPayoutBankCode))
+}
+
+// PayoutBankCodeNotNil applies the NotNil predicate on the "payout_bank_code" field.
+func PayoutBankCodeNotNil() predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNotNull(FieldPayoutBankCode))
+}
+
+// PayoutBankCodeEqualFold applies the EqualFold predicate on the "payout_bank_code" field.
+func PayoutBankCodeEqualFold(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEqualFold(FieldPayoutBankCode, v))
+}
+
+// PayoutBankCodeContainsFold applies the ContainsFold predicate on the "payout_bank_code" field.
+func PayoutBankCodeContainsFold(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldContainsFold(FieldPayoutBankCode, v))
+}
+
+// PayoutAccountNumberEQ applies the EQ predicate on the "payout_account_number" field.
+func PayoutAccountNumberEQ(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEQ(FieldPayoutAccountNumber, v))
+}
+
+// PayoutAccountNumberNEQ applies the NEQ predicate on the "payout_account_number" field.
+func PayoutAccountNumberNEQ(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNEQ(FieldPayoutAccountNumber, v))
+}
+
+// PayoutAccountNumberIn applies the In predicate on the "payout_account_number" field.
+func PayoutAccountNumberIn(vs ...string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldIn(FieldPayoutAccountNumber, vs...))
+}
+
+// PayoutAccountNumberNotIn applies the NotIn predicate on the "payout_account_number" field.
+func PayoutAccountNumberNotIn(vs ...string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNotIn(FieldPayoutAccountNumber, vs...))
+}
+
+// PayoutAccountNumberGT applies the GT predicate on the "payout_account_number" field.
+func PayoutAccountNumberGT(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldGT(FieldPayoutAccountNumber, v))
+}
+
+// PayoutAccountNumberGTE applies the GTE predicate on the "payout_account_number" field.
+func PayoutAccountNumberGTE(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldGTE(FieldPayoutAccountNumber, v))
+}
+
+// PayoutAccountNumberLT applies the LT predicate on the "payout_account_number" field.
+func PayoutAccountNumberLT(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldLT(FieldPayoutAccountNumber, v))
+}
+
+// PayoutAccountNumberLTE applies the LTE predicate on the "payout_account_number" field.
+func PayoutAccountNumberLTE(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldLTE(FieldPayoutAccountNumber, v))
+}
+
+// PayoutAccountNumberContains applies the Contains predicate on the "payout_account_number" field.
+func PayoutAccountNumberContains(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldContains(FieldPayoutAccountNumber, v))
+}
+
+// PayoutAccountNumberHasPrefix applies the HasPrefix predicate on the "payout_account_number" field.
+func PayoutAccountNumberHasPrefix(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldHasPrefix(FieldPayoutAccountNumber, v))
+}
+
+// PayoutAccountNumberHasSuffix applies the HasSuffix predicate on the "payout_account_number" field.
+func PayoutAccountNumberHasSuffix(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldHasSuffix(FieldPayoutAccountNumber, v))
+}
+
+// PayoutAccountNumberIsNil applies the IsNil predicate on the "payout_account_number" field.
+func PayoutAccountNumberIsNil() predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldIsNull(FieldPayoutAccountNumber))
+}
+
+// PayoutAccountNumberNotNil applies the NotNil predicate on the "payout_account_number" field.
+func PayoutAccountNumberNotNil() predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNotNull(FieldPayoutAccountNumber))
+}
+
+// PayoutAccountNumberEqualFold applies the EqualFold predicate on the "payout_account_number" field.
+func PayoutAccountNumberEqualFold(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEqualFold(FieldPayoutAccountNumber, v))
+}
+
+// PayoutAccountNumberContainsFold applies the ContainsFold predicate on the "payout_account_number" field.
+func PayoutAccountNumberContainsFold(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldContainsFold(FieldPayoutAccountNumber, v))
+}
+
+// PayoutAccountNameEQ applies the EQ predicate on the "payout_account_name" field.
+func PayoutAccountNameEQ(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEQ(FieldPayoutAccountName, v))
+}
+
+// PayoutAccountNameNEQ applies the NEQ predicate on the "payout_account_name" field.
+func PayoutAccountNameNEQ(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNEQ(FieldPayoutAccountName, v))
+}
+
+// PayoutAccountNameIn applies the In predicate on the "payout_account_name" field.
+func PayoutAccountNameIn(vs ...string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldIn(FieldPayoutAccountName, vs...))
+}
+
+// PayoutAccountNameNotIn applies the NotIn predicate on the "payout_account_name" field.
+func PayoutAccountNameNotIn(vs ...string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNotIn(FieldPayoutAccountName, vs...))
+}
+
+// PayoutAccountNameGT applies the GT predicate on the "payout_account_name" field.
+func PayoutAccountNameGT(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldGT(FieldPayoutAccountName, v))
+}
+
+// PayoutAccountNameGTE applies the GTE predicate on the "payout_account_name" field.
+func PayoutAccountNameGTE(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldGTE(FieldPayoutAccountName, v))
+}
+
+// PayoutAccountNameLT applies the LT predicate on the "payout_account_name" field.
+func PayoutAccountNameLT(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldLT(FieldPayoutAccountName, v))
+}
+
+// PayoutAccountNameLTE applies the LTE predicate on the "payout_account_name" field.
+func PayoutAccountNameLTE(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldLTE(FieldPayoutAccountName, v))
+}
+
+// PayoutAccountNameContains applies the Contains predicate on the "payout_account_name" field.
+func PayoutAccountNameContains(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldContains(FieldPayoutAccountName, v))
+}
+
+// PayoutAccountNameHasPrefix applies the HasPrefix predicate on the "payout_account_name" field.
+func PayoutAccountNameHasPrefix(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldHasPrefix(FieldPayoutAccountName, v))
+}
+
+// PayoutAccountNameHasSuffix applies the HasSuffix predicate on the "payout_account_name" field.
+func PayoutAccountNameHasSuffix(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldHasSuffix(FieldPayoutAccountName, v))
+}
+
+// PayoutAccountNameIsNil applies the IsNil predicate on the "payout_account_name" field.
+func PayoutAccountNameIsNil() predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldIsNull(FieldPayoutAccountName))
+}
+
+// PayoutAccountNameNotNil applies the NotNil predicate on the "payout_account_name" field.
+func PayoutAccountNameNotNil() predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNotNull(FieldPayoutAccountName))
+}
+
+// PayoutAccountNameEqualFold applies the EqualFold predicate on the "payout_account_name" field.
+func PayoutAccountNameEqualFold(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEqualFold(FieldPayoutAccountName, v))
+}
+
+// PayoutAccountNameContainsFold applies the ContainsFold predicate on the "payout_account_name" field.
+func PayoutAccountNameContainsFold(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldContainsFold(FieldPayoutAccountName, v))
+}
+
+// PayoutRecipientCodeEQ applies the EQ predicate on the "payout_recipient_code" field.
+func PayoutRecipientCodeEQ(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEQ(FieldPayoutRecipientCode, v))
+}
+
+// PayoutRecipientCodeNEQ applies the NEQ predicate on the "payout_recipient_code" field.
+func PayoutRecipientCodeNEQ(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNEQ(FieldPayoutRecipientCode, v))
+}
+
+// PayoutRecipientCodeIn applies the In predicate on the "payout_recipient_code" field.
+func PayoutRecipientCodeIn(vs ...string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldIn(FieldPayoutRecipientCode, vs...))
+}
+
+// PayoutRecipientCodeNotIn applies the NotIn predicate on the "payout_recipient_code" field.
+func PayoutRecipientCodeNotIn(vs ...string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNotIn(FieldPayoutRecipientCode, vs...))
+}
+
+// PayoutRecipientCodeGT applies the GT predicate on the "payout_recipient_code" field.
+func PayoutRecipientCodeGT(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldGT(FieldPayoutRecipientCode, v))
+}
+
+// PayoutRecipientCodeGTE applies the GTE predicate on the "payout_recipient_code" field.
+func PayoutRecipientCodeGTE(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldGTE(FieldPayoutRecipientCode, v))
+}
+
+// PayoutRecipientCodeLT applies the LT predicate on the "payout_recipient_code" field.
+func PayoutRecipientCodeLT(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldLT(FieldPayoutRecipientCode, v))
+}
+
+// PayoutRecipientCodeLTE applies the LTE predicate on the "payout_recipient_code" field.
+func PayoutRecipientCodeLTE(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldLTE(FieldPayoutRecipientCode, v))
+}
+
+// PayoutRecipientCodeContains applies the Contains predicate on the "payout_recipient_code" field.
+func PayoutRecipientCodeContains(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldContains(FieldPayoutRecipientCode, v))
+}
+
+// PayoutRecipientCodeHasPrefix applies the HasPrefix predicate on the "payout_recipient_code" field.
+func PayoutRecipientCodeHasPrefix(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldHasPrefix(FieldPayoutRecipientCode, v))
+}
+
+// PayoutRecipientCodeHasSuffix applies the HasSuffix predicate on the "payout_recipient_code" field.
+func PayoutRecipientCodeHasSuffix(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldHasSuffix(FieldPayoutRecipientCode, v))
+}
+
+// PayoutRecipientCodeIsNil applies the IsNil predicate on the "payout_recipient_code" field.
+func PayoutRecipientCodeIsNil() predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldIsNull(FieldPayoutRecipientCode))
+}
+
+// PayoutRecipientCodeNotNil applies the NotNil predicate on the "payout_recipient_code" field.
+func PayoutRecipientCodeNotNil() predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNotNull(FieldPayoutRecipientCode))
+}
+
+// PayoutRecipientCodeEqualFold applies the EqualFold predicate on the "payout_recipient_code" field.
+func PayoutRecipientCodeEqualFold(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEqualFold(FieldPayoutRecipientCode, v))
+}
+
+// PayoutRecipientCodeContainsFold applies the ContainsFold predicate on the "payout_recipient_code" field.
+func PayoutRecipientCodeContainsFold(v string) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldContainsFold(FieldPayoutRecipientCode, v))
+}
+
+// PayoutStatusEQ applies the EQ predicate on the "payout_status" field.
+func PayoutStatusEQ(v PayoutStatus) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldEQ(FieldPayoutStatus, v))
+}
+
+// PayoutStatusNEQ applies the NEQ predicate on the "payout_status" field.
+func PayoutStatusNEQ(v PayoutStatus) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNEQ(FieldPayoutStatus, v))
+}
+
+// PayoutStatusIn applies the In predicate on the "payout_status" field.
+func PayoutStatusIn(vs ...PayoutStatus) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldIn(FieldPayoutStatus, vs...))
+}
+
+// PayoutStatusNotIn applies the NotIn predicate on the "payout_status" field.
+func PayoutStatusNotIn(vs ...PayoutStatus) predicate.FleetMember {
+	return predicate.FleetMember(sql.FieldNotIn(FieldPayoutStatus, vs...))
 }
 
 // HasFleet applies the HasEdge predicate on the "fleet" edge.

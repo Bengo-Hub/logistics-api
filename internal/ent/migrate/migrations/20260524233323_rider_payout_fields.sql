@@ -1,0 +1,2 @@
+-- Modify "fleet_members" table
+ALTER TABLE "fleet_members" ADD COLUMN "payout_method" character varying NULL DEFAULT 'mpesa_b2c', ADD COLUMN "payout_phone" character varying NULL, ADD COLUMN "payout_bank_code" character varying NULL, ADD COLUMN "payout_account_number" character varying NULL, ADD COLUMN "payout_account_name" character varying NULL, ADD COLUMN "payout_recipient_code" character varying NULL, ADD COLUMN "payout_status" character varying NOT NULL DEFAULT 'active';

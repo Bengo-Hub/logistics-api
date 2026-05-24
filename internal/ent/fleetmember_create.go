@@ -353,6 +353,104 @@ func (_c *FleetMemberCreate) SetNillableUpdatedAt(v *time.Time) *FleetMemberCrea
 	return _c
 }
 
+// SetPayoutMethod sets the "payout_method" field.
+func (_c *FleetMemberCreate) SetPayoutMethod(v fleetmember.PayoutMethod) *FleetMemberCreate {
+	_c.mutation.SetPayoutMethod(v)
+	return _c
+}
+
+// SetNillablePayoutMethod sets the "payout_method" field if the given value is not nil.
+func (_c *FleetMemberCreate) SetNillablePayoutMethod(v *fleetmember.PayoutMethod) *FleetMemberCreate {
+	if v != nil {
+		_c.SetPayoutMethod(*v)
+	}
+	return _c
+}
+
+// SetPayoutPhone sets the "payout_phone" field.
+func (_c *FleetMemberCreate) SetPayoutPhone(v string) *FleetMemberCreate {
+	_c.mutation.SetPayoutPhone(v)
+	return _c
+}
+
+// SetNillablePayoutPhone sets the "payout_phone" field if the given value is not nil.
+func (_c *FleetMemberCreate) SetNillablePayoutPhone(v *string) *FleetMemberCreate {
+	if v != nil {
+		_c.SetPayoutPhone(*v)
+	}
+	return _c
+}
+
+// SetPayoutBankCode sets the "payout_bank_code" field.
+func (_c *FleetMemberCreate) SetPayoutBankCode(v string) *FleetMemberCreate {
+	_c.mutation.SetPayoutBankCode(v)
+	return _c
+}
+
+// SetNillablePayoutBankCode sets the "payout_bank_code" field if the given value is not nil.
+func (_c *FleetMemberCreate) SetNillablePayoutBankCode(v *string) *FleetMemberCreate {
+	if v != nil {
+		_c.SetPayoutBankCode(*v)
+	}
+	return _c
+}
+
+// SetPayoutAccountNumber sets the "payout_account_number" field.
+func (_c *FleetMemberCreate) SetPayoutAccountNumber(v string) *FleetMemberCreate {
+	_c.mutation.SetPayoutAccountNumber(v)
+	return _c
+}
+
+// SetNillablePayoutAccountNumber sets the "payout_account_number" field if the given value is not nil.
+func (_c *FleetMemberCreate) SetNillablePayoutAccountNumber(v *string) *FleetMemberCreate {
+	if v != nil {
+		_c.SetPayoutAccountNumber(*v)
+	}
+	return _c
+}
+
+// SetPayoutAccountName sets the "payout_account_name" field.
+func (_c *FleetMemberCreate) SetPayoutAccountName(v string) *FleetMemberCreate {
+	_c.mutation.SetPayoutAccountName(v)
+	return _c
+}
+
+// SetNillablePayoutAccountName sets the "payout_account_name" field if the given value is not nil.
+func (_c *FleetMemberCreate) SetNillablePayoutAccountName(v *string) *FleetMemberCreate {
+	if v != nil {
+		_c.SetPayoutAccountName(*v)
+	}
+	return _c
+}
+
+// SetPayoutRecipientCode sets the "payout_recipient_code" field.
+func (_c *FleetMemberCreate) SetPayoutRecipientCode(v string) *FleetMemberCreate {
+	_c.mutation.SetPayoutRecipientCode(v)
+	return _c
+}
+
+// SetNillablePayoutRecipientCode sets the "payout_recipient_code" field if the given value is not nil.
+func (_c *FleetMemberCreate) SetNillablePayoutRecipientCode(v *string) *FleetMemberCreate {
+	if v != nil {
+		_c.SetPayoutRecipientCode(*v)
+	}
+	return _c
+}
+
+// SetPayoutStatus sets the "payout_status" field.
+func (_c *FleetMemberCreate) SetPayoutStatus(v fleetmember.PayoutStatus) *FleetMemberCreate {
+	_c.mutation.SetPayoutStatus(v)
+	return _c
+}
+
+// SetNillablePayoutStatus sets the "payout_status" field if the given value is not nil.
+func (_c *FleetMemberCreate) SetNillablePayoutStatus(v *fleetmember.PayoutStatus) *FleetMemberCreate {
+	if v != nil {
+		_c.SetPayoutStatus(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *FleetMemberCreate) SetID(v uuid.UUID) *FleetMemberCreate {
 	_c.mutation.SetID(v)
@@ -487,6 +585,14 @@ func (_c *FleetMemberCreate) defaults() {
 		v := fleetmember.DefaultUpdatedAt()
 		_c.mutation.SetUpdatedAt(v)
 	}
+	if _, ok := _c.mutation.PayoutMethod(); !ok {
+		v := fleetmember.DefaultPayoutMethod
+		_c.mutation.SetPayoutMethod(v)
+	}
+	if _, ok := _c.mutation.PayoutStatus(); !ok {
+		v := fleetmember.DefaultPayoutStatus
+		_c.mutation.SetPayoutStatus(v)
+	}
 	if _, ok := _c.mutation.ID(); !ok {
 		v := fleetmember.DefaultID()
 		_c.mutation.SetID(v)
@@ -530,6 +636,19 @@ func (_c *FleetMemberCreate) check() error {
 	}
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "FleetMember.updated_at"`)}
+	}
+	if v, ok := _c.mutation.PayoutMethod(); ok {
+		if err := fleetmember.PayoutMethodValidator(v); err != nil {
+			return &ValidationError{Name: "payout_method", err: fmt.Errorf(`ent: validator failed for field "FleetMember.payout_method": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.PayoutStatus(); !ok {
+		return &ValidationError{Name: "payout_status", err: errors.New(`ent: missing required field "FleetMember.payout_status"`)}
+	}
+	if v, ok := _c.mutation.PayoutStatus(); ok {
+		if err := fleetmember.PayoutStatusValidator(v); err != nil {
+			return &ValidationError{Name: "payout_status", err: fmt.Errorf(`ent: validator failed for field "FleetMember.payout_status": %w`, err)}
+		}
 	}
 	if len(_c.mutation.FleetIDs()) == 0 {
 		return &ValidationError{Name: "fleet", err: errors.New(`ent: missing required edge "FleetMember.fleet"`)}
@@ -664,6 +783,34 @@ func (_c *FleetMemberCreate) createSpec() (*FleetMember, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(fleetmember.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
+	}
+	if value, ok := _c.mutation.PayoutMethod(); ok {
+		_spec.SetField(fleetmember.FieldPayoutMethod, field.TypeEnum, value)
+		_node.PayoutMethod = value
+	}
+	if value, ok := _c.mutation.PayoutPhone(); ok {
+		_spec.SetField(fleetmember.FieldPayoutPhone, field.TypeString, value)
+		_node.PayoutPhone = value
+	}
+	if value, ok := _c.mutation.PayoutBankCode(); ok {
+		_spec.SetField(fleetmember.FieldPayoutBankCode, field.TypeString, value)
+		_node.PayoutBankCode = value
+	}
+	if value, ok := _c.mutation.PayoutAccountNumber(); ok {
+		_spec.SetField(fleetmember.FieldPayoutAccountNumber, field.TypeString, value)
+		_node.PayoutAccountNumber = value
+	}
+	if value, ok := _c.mutation.PayoutAccountName(); ok {
+		_spec.SetField(fleetmember.FieldPayoutAccountName, field.TypeString, value)
+		_node.PayoutAccountName = value
+	}
+	if value, ok := _c.mutation.PayoutRecipientCode(); ok {
+		_spec.SetField(fleetmember.FieldPayoutRecipientCode, field.TypeString, value)
+		_node.PayoutRecipientCode = value
+	}
+	if value, ok := _c.mutation.PayoutStatus(); ok {
+		_spec.SetField(fleetmember.FieldPayoutStatus, field.TypeEnum, value)
+		_node.PayoutStatus = value
 	}
 	if nodes := _c.mutation.FleetIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -1202,6 +1349,126 @@ func (u *FleetMemberUpsert) UpdateUpdatedAt() *FleetMemberUpsert {
 	return u
 }
 
+// SetPayoutMethod sets the "payout_method" field.
+func (u *FleetMemberUpsert) SetPayoutMethod(v fleetmember.PayoutMethod) *FleetMemberUpsert {
+	u.Set(fleetmember.FieldPayoutMethod, v)
+	return u
+}
+
+// UpdatePayoutMethod sets the "payout_method" field to the value that was provided on create.
+func (u *FleetMemberUpsert) UpdatePayoutMethod() *FleetMemberUpsert {
+	u.SetExcluded(fleetmember.FieldPayoutMethod)
+	return u
+}
+
+// ClearPayoutMethod clears the value of the "payout_method" field.
+func (u *FleetMemberUpsert) ClearPayoutMethod() *FleetMemberUpsert {
+	u.SetNull(fleetmember.FieldPayoutMethod)
+	return u
+}
+
+// SetPayoutPhone sets the "payout_phone" field.
+func (u *FleetMemberUpsert) SetPayoutPhone(v string) *FleetMemberUpsert {
+	u.Set(fleetmember.FieldPayoutPhone, v)
+	return u
+}
+
+// UpdatePayoutPhone sets the "payout_phone" field to the value that was provided on create.
+func (u *FleetMemberUpsert) UpdatePayoutPhone() *FleetMemberUpsert {
+	u.SetExcluded(fleetmember.FieldPayoutPhone)
+	return u
+}
+
+// ClearPayoutPhone clears the value of the "payout_phone" field.
+func (u *FleetMemberUpsert) ClearPayoutPhone() *FleetMemberUpsert {
+	u.SetNull(fleetmember.FieldPayoutPhone)
+	return u
+}
+
+// SetPayoutBankCode sets the "payout_bank_code" field.
+func (u *FleetMemberUpsert) SetPayoutBankCode(v string) *FleetMemberUpsert {
+	u.Set(fleetmember.FieldPayoutBankCode, v)
+	return u
+}
+
+// UpdatePayoutBankCode sets the "payout_bank_code" field to the value that was provided on create.
+func (u *FleetMemberUpsert) UpdatePayoutBankCode() *FleetMemberUpsert {
+	u.SetExcluded(fleetmember.FieldPayoutBankCode)
+	return u
+}
+
+// ClearPayoutBankCode clears the value of the "payout_bank_code" field.
+func (u *FleetMemberUpsert) ClearPayoutBankCode() *FleetMemberUpsert {
+	u.SetNull(fleetmember.FieldPayoutBankCode)
+	return u
+}
+
+// SetPayoutAccountNumber sets the "payout_account_number" field.
+func (u *FleetMemberUpsert) SetPayoutAccountNumber(v string) *FleetMemberUpsert {
+	u.Set(fleetmember.FieldPayoutAccountNumber, v)
+	return u
+}
+
+// UpdatePayoutAccountNumber sets the "payout_account_number" field to the value that was provided on create.
+func (u *FleetMemberUpsert) UpdatePayoutAccountNumber() *FleetMemberUpsert {
+	u.SetExcluded(fleetmember.FieldPayoutAccountNumber)
+	return u
+}
+
+// ClearPayoutAccountNumber clears the value of the "payout_account_number" field.
+func (u *FleetMemberUpsert) ClearPayoutAccountNumber() *FleetMemberUpsert {
+	u.SetNull(fleetmember.FieldPayoutAccountNumber)
+	return u
+}
+
+// SetPayoutAccountName sets the "payout_account_name" field.
+func (u *FleetMemberUpsert) SetPayoutAccountName(v string) *FleetMemberUpsert {
+	u.Set(fleetmember.FieldPayoutAccountName, v)
+	return u
+}
+
+// UpdatePayoutAccountName sets the "payout_account_name" field to the value that was provided on create.
+func (u *FleetMemberUpsert) UpdatePayoutAccountName() *FleetMemberUpsert {
+	u.SetExcluded(fleetmember.FieldPayoutAccountName)
+	return u
+}
+
+// ClearPayoutAccountName clears the value of the "payout_account_name" field.
+func (u *FleetMemberUpsert) ClearPayoutAccountName() *FleetMemberUpsert {
+	u.SetNull(fleetmember.FieldPayoutAccountName)
+	return u
+}
+
+// SetPayoutRecipientCode sets the "payout_recipient_code" field.
+func (u *FleetMemberUpsert) SetPayoutRecipientCode(v string) *FleetMemberUpsert {
+	u.Set(fleetmember.FieldPayoutRecipientCode, v)
+	return u
+}
+
+// UpdatePayoutRecipientCode sets the "payout_recipient_code" field to the value that was provided on create.
+func (u *FleetMemberUpsert) UpdatePayoutRecipientCode() *FleetMemberUpsert {
+	u.SetExcluded(fleetmember.FieldPayoutRecipientCode)
+	return u
+}
+
+// ClearPayoutRecipientCode clears the value of the "payout_recipient_code" field.
+func (u *FleetMemberUpsert) ClearPayoutRecipientCode() *FleetMemberUpsert {
+	u.SetNull(fleetmember.FieldPayoutRecipientCode)
+	return u
+}
+
+// SetPayoutStatus sets the "payout_status" field.
+func (u *FleetMemberUpsert) SetPayoutStatus(v fleetmember.PayoutStatus) *FleetMemberUpsert {
+	u.Set(fleetmember.FieldPayoutStatus, v)
+	return u
+}
+
+// UpdatePayoutStatus sets the "payout_status" field to the value that was provided on create.
+func (u *FleetMemberUpsert) UpdatePayoutStatus() *FleetMemberUpsert {
+	u.SetExcluded(fleetmember.FieldPayoutStatus)
+	return u
+}
+
 // UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
 // Using this option is equivalent to using:
 //
@@ -1719,6 +1986,146 @@ func (u *FleetMemberUpsertOne) SetUpdatedAt(v time.Time) *FleetMemberUpsertOne {
 func (u *FleetMemberUpsertOne) UpdateUpdatedAt() *FleetMemberUpsertOne {
 	return u.Update(func(s *FleetMemberUpsert) {
 		s.UpdateUpdatedAt()
+	})
+}
+
+// SetPayoutMethod sets the "payout_method" field.
+func (u *FleetMemberUpsertOne) SetPayoutMethod(v fleetmember.PayoutMethod) *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetPayoutMethod(v)
+	})
+}
+
+// UpdatePayoutMethod sets the "payout_method" field to the value that was provided on create.
+func (u *FleetMemberUpsertOne) UpdatePayoutMethod() *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdatePayoutMethod()
+	})
+}
+
+// ClearPayoutMethod clears the value of the "payout_method" field.
+func (u *FleetMemberUpsertOne) ClearPayoutMethod() *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.ClearPayoutMethod()
+	})
+}
+
+// SetPayoutPhone sets the "payout_phone" field.
+func (u *FleetMemberUpsertOne) SetPayoutPhone(v string) *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetPayoutPhone(v)
+	})
+}
+
+// UpdatePayoutPhone sets the "payout_phone" field to the value that was provided on create.
+func (u *FleetMemberUpsertOne) UpdatePayoutPhone() *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdatePayoutPhone()
+	})
+}
+
+// ClearPayoutPhone clears the value of the "payout_phone" field.
+func (u *FleetMemberUpsertOne) ClearPayoutPhone() *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.ClearPayoutPhone()
+	})
+}
+
+// SetPayoutBankCode sets the "payout_bank_code" field.
+func (u *FleetMemberUpsertOne) SetPayoutBankCode(v string) *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetPayoutBankCode(v)
+	})
+}
+
+// UpdatePayoutBankCode sets the "payout_bank_code" field to the value that was provided on create.
+func (u *FleetMemberUpsertOne) UpdatePayoutBankCode() *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdatePayoutBankCode()
+	})
+}
+
+// ClearPayoutBankCode clears the value of the "payout_bank_code" field.
+func (u *FleetMemberUpsertOne) ClearPayoutBankCode() *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.ClearPayoutBankCode()
+	})
+}
+
+// SetPayoutAccountNumber sets the "payout_account_number" field.
+func (u *FleetMemberUpsertOne) SetPayoutAccountNumber(v string) *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetPayoutAccountNumber(v)
+	})
+}
+
+// UpdatePayoutAccountNumber sets the "payout_account_number" field to the value that was provided on create.
+func (u *FleetMemberUpsertOne) UpdatePayoutAccountNumber() *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdatePayoutAccountNumber()
+	})
+}
+
+// ClearPayoutAccountNumber clears the value of the "payout_account_number" field.
+func (u *FleetMemberUpsertOne) ClearPayoutAccountNumber() *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.ClearPayoutAccountNumber()
+	})
+}
+
+// SetPayoutAccountName sets the "payout_account_name" field.
+func (u *FleetMemberUpsertOne) SetPayoutAccountName(v string) *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetPayoutAccountName(v)
+	})
+}
+
+// UpdatePayoutAccountName sets the "payout_account_name" field to the value that was provided on create.
+func (u *FleetMemberUpsertOne) UpdatePayoutAccountName() *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdatePayoutAccountName()
+	})
+}
+
+// ClearPayoutAccountName clears the value of the "payout_account_name" field.
+func (u *FleetMemberUpsertOne) ClearPayoutAccountName() *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.ClearPayoutAccountName()
+	})
+}
+
+// SetPayoutRecipientCode sets the "payout_recipient_code" field.
+func (u *FleetMemberUpsertOne) SetPayoutRecipientCode(v string) *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetPayoutRecipientCode(v)
+	})
+}
+
+// UpdatePayoutRecipientCode sets the "payout_recipient_code" field to the value that was provided on create.
+func (u *FleetMemberUpsertOne) UpdatePayoutRecipientCode() *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdatePayoutRecipientCode()
+	})
+}
+
+// ClearPayoutRecipientCode clears the value of the "payout_recipient_code" field.
+func (u *FleetMemberUpsertOne) ClearPayoutRecipientCode() *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.ClearPayoutRecipientCode()
+	})
+}
+
+// SetPayoutStatus sets the "payout_status" field.
+func (u *FleetMemberUpsertOne) SetPayoutStatus(v fleetmember.PayoutStatus) *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetPayoutStatus(v)
+	})
+}
+
+// UpdatePayoutStatus sets the "payout_status" field to the value that was provided on create.
+func (u *FleetMemberUpsertOne) UpdatePayoutStatus() *FleetMemberUpsertOne {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdatePayoutStatus()
 	})
 }
 
@@ -2406,6 +2813,146 @@ func (u *FleetMemberUpsertBulk) SetUpdatedAt(v time.Time) *FleetMemberUpsertBulk
 func (u *FleetMemberUpsertBulk) UpdateUpdatedAt() *FleetMemberUpsertBulk {
 	return u.Update(func(s *FleetMemberUpsert) {
 		s.UpdateUpdatedAt()
+	})
+}
+
+// SetPayoutMethod sets the "payout_method" field.
+func (u *FleetMemberUpsertBulk) SetPayoutMethod(v fleetmember.PayoutMethod) *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetPayoutMethod(v)
+	})
+}
+
+// UpdatePayoutMethod sets the "payout_method" field to the value that was provided on create.
+func (u *FleetMemberUpsertBulk) UpdatePayoutMethod() *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdatePayoutMethod()
+	})
+}
+
+// ClearPayoutMethod clears the value of the "payout_method" field.
+func (u *FleetMemberUpsertBulk) ClearPayoutMethod() *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.ClearPayoutMethod()
+	})
+}
+
+// SetPayoutPhone sets the "payout_phone" field.
+func (u *FleetMemberUpsertBulk) SetPayoutPhone(v string) *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetPayoutPhone(v)
+	})
+}
+
+// UpdatePayoutPhone sets the "payout_phone" field to the value that was provided on create.
+func (u *FleetMemberUpsertBulk) UpdatePayoutPhone() *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdatePayoutPhone()
+	})
+}
+
+// ClearPayoutPhone clears the value of the "payout_phone" field.
+func (u *FleetMemberUpsertBulk) ClearPayoutPhone() *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.ClearPayoutPhone()
+	})
+}
+
+// SetPayoutBankCode sets the "payout_bank_code" field.
+func (u *FleetMemberUpsertBulk) SetPayoutBankCode(v string) *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetPayoutBankCode(v)
+	})
+}
+
+// UpdatePayoutBankCode sets the "payout_bank_code" field to the value that was provided on create.
+func (u *FleetMemberUpsertBulk) UpdatePayoutBankCode() *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdatePayoutBankCode()
+	})
+}
+
+// ClearPayoutBankCode clears the value of the "payout_bank_code" field.
+func (u *FleetMemberUpsertBulk) ClearPayoutBankCode() *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.ClearPayoutBankCode()
+	})
+}
+
+// SetPayoutAccountNumber sets the "payout_account_number" field.
+func (u *FleetMemberUpsertBulk) SetPayoutAccountNumber(v string) *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetPayoutAccountNumber(v)
+	})
+}
+
+// UpdatePayoutAccountNumber sets the "payout_account_number" field to the value that was provided on create.
+func (u *FleetMemberUpsertBulk) UpdatePayoutAccountNumber() *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdatePayoutAccountNumber()
+	})
+}
+
+// ClearPayoutAccountNumber clears the value of the "payout_account_number" field.
+func (u *FleetMemberUpsertBulk) ClearPayoutAccountNumber() *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.ClearPayoutAccountNumber()
+	})
+}
+
+// SetPayoutAccountName sets the "payout_account_name" field.
+func (u *FleetMemberUpsertBulk) SetPayoutAccountName(v string) *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetPayoutAccountName(v)
+	})
+}
+
+// UpdatePayoutAccountName sets the "payout_account_name" field to the value that was provided on create.
+func (u *FleetMemberUpsertBulk) UpdatePayoutAccountName() *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdatePayoutAccountName()
+	})
+}
+
+// ClearPayoutAccountName clears the value of the "payout_account_name" field.
+func (u *FleetMemberUpsertBulk) ClearPayoutAccountName() *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.ClearPayoutAccountName()
+	})
+}
+
+// SetPayoutRecipientCode sets the "payout_recipient_code" field.
+func (u *FleetMemberUpsertBulk) SetPayoutRecipientCode(v string) *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetPayoutRecipientCode(v)
+	})
+}
+
+// UpdatePayoutRecipientCode sets the "payout_recipient_code" field to the value that was provided on create.
+func (u *FleetMemberUpsertBulk) UpdatePayoutRecipientCode() *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdatePayoutRecipientCode()
+	})
+}
+
+// ClearPayoutRecipientCode clears the value of the "payout_recipient_code" field.
+func (u *FleetMemberUpsertBulk) ClearPayoutRecipientCode() *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.ClearPayoutRecipientCode()
+	})
+}
+
+// SetPayoutStatus sets the "payout_status" field.
+func (u *FleetMemberUpsertBulk) SetPayoutStatus(v fleetmember.PayoutStatus) *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.SetPayoutStatus(v)
+	})
+}
+
+// UpdatePayoutStatus sets the "payout_status" field to the value that was provided on create.
+func (u *FleetMemberUpsertBulk) UpdatePayoutStatus() *FleetMemberUpsertBulk {
+	return u.Update(func(s *FleetMemberUpsert) {
+		s.UpdatePayoutStatus()
 	})
 }
 

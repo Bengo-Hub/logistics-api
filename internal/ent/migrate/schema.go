@@ -141,6 +141,13 @@ var (
 		{Name: "total_ratings", Type: field.TypeInt, Default: 0},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "payout_method", Type: field.TypeEnum, Nullable: true, Enums: []string{"mpesa_b2c", "paystack_bank", "paystack_mobile", "cash", "internal_wallet"}, Default: "mpesa_b2c"},
+		{Name: "payout_phone", Type: field.TypeString, Nullable: true},
+		{Name: "payout_bank_code", Type: field.TypeString, Nullable: true},
+		{Name: "payout_account_number", Type: field.TypeString, Nullable: true},
+		{Name: "payout_account_name", Type: field.TypeString, Nullable: true},
+		{Name: "payout_recipient_code", Type: field.TypeString, Nullable: true},
+		{Name: "payout_status", Type: field.TypeEnum, Enums: []string{"active", "suspended"}, Default: "active"},
 		{Name: "fleet_id", Type: field.TypeUUID},
 		{Name: "vehicle_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "user_id", Type: field.TypeUUID},
@@ -153,19 +160,19 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "fleet_members_fleets_members",
-				Columns:    []*schema.Column{FleetMembersColumns[24]},
+				Columns:    []*schema.Column{FleetMembersColumns[31]},
 				RefColumns: []*schema.Column{FleetsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "fleet_members_vehicles_vehicle",
-				Columns:    []*schema.Column{FleetMembersColumns[25]},
+				Columns:    []*schema.Column{FleetMembersColumns[32]},
 				RefColumns: []*schema.Column{VehiclesColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "fleet_members_users_fleet_memberships",
-				Columns:    []*schema.Column{FleetMembersColumns[26]},
+				Columns:    []*schema.Column{FleetMembersColumns[33]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -174,7 +181,7 @@ var (
 			{
 				Name:    "fleetmember_tenant_id_user_id",
 				Unique:  true,
-				Columns: []*schema.Column{FleetMembersColumns[1], FleetMembersColumns[26]},
+				Columns: []*schema.Column{FleetMembersColumns[1], FleetMembersColumns[33]},
 			},
 			{
 				Name:    "fleetmember_driver_code",

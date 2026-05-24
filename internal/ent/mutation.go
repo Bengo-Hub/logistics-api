@@ -4425,6 +4425,13 @@ type FleetMemberMutation struct {
 	addtotal_ratings          *int
 	created_at                *time.Time
 	updated_at                *time.Time
+	payout_method             *fleetmember.PayoutMethod
+	payout_phone              *string
+	payout_bank_code          *string
+	payout_account_number     *string
+	payout_account_name       *string
+	payout_recipient_code     *string
+	payout_status             *fleetmember.PayoutStatus
 	clearedFields             map[string]struct{}
 	fleet                     *uuid.UUID
 	clearedfleet              bool
@@ -5741,6 +5748,336 @@ func (m *FleetMemberMutation) ResetUpdatedAt() {
 	m.updated_at = nil
 }
 
+// SetPayoutMethod sets the "payout_method" field.
+func (m *FleetMemberMutation) SetPayoutMethod(fm fleetmember.PayoutMethod) {
+	m.payout_method = &fm
+}
+
+// PayoutMethod returns the value of the "payout_method" field in the mutation.
+func (m *FleetMemberMutation) PayoutMethod() (r fleetmember.PayoutMethod, exists bool) {
+	v := m.payout_method
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPayoutMethod returns the old "payout_method" field's value of the FleetMember entity.
+// If the FleetMember object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *FleetMemberMutation) OldPayoutMethod(ctx context.Context) (v fleetmember.PayoutMethod, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPayoutMethod is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPayoutMethod requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPayoutMethod: %w", err)
+	}
+	return oldValue.PayoutMethod, nil
+}
+
+// ClearPayoutMethod clears the value of the "payout_method" field.
+func (m *FleetMemberMutation) ClearPayoutMethod() {
+	m.payout_method = nil
+	m.clearedFields[fleetmember.FieldPayoutMethod] = struct{}{}
+}
+
+// PayoutMethodCleared returns if the "payout_method" field was cleared in this mutation.
+func (m *FleetMemberMutation) PayoutMethodCleared() bool {
+	_, ok := m.clearedFields[fleetmember.FieldPayoutMethod]
+	return ok
+}
+
+// ResetPayoutMethod resets all changes to the "payout_method" field.
+func (m *FleetMemberMutation) ResetPayoutMethod() {
+	m.payout_method = nil
+	delete(m.clearedFields, fleetmember.FieldPayoutMethod)
+}
+
+// SetPayoutPhone sets the "payout_phone" field.
+func (m *FleetMemberMutation) SetPayoutPhone(s string) {
+	m.payout_phone = &s
+}
+
+// PayoutPhone returns the value of the "payout_phone" field in the mutation.
+func (m *FleetMemberMutation) PayoutPhone() (r string, exists bool) {
+	v := m.payout_phone
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPayoutPhone returns the old "payout_phone" field's value of the FleetMember entity.
+// If the FleetMember object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *FleetMemberMutation) OldPayoutPhone(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPayoutPhone is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPayoutPhone requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPayoutPhone: %w", err)
+	}
+	return oldValue.PayoutPhone, nil
+}
+
+// ClearPayoutPhone clears the value of the "payout_phone" field.
+func (m *FleetMemberMutation) ClearPayoutPhone() {
+	m.payout_phone = nil
+	m.clearedFields[fleetmember.FieldPayoutPhone] = struct{}{}
+}
+
+// PayoutPhoneCleared returns if the "payout_phone" field was cleared in this mutation.
+func (m *FleetMemberMutation) PayoutPhoneCleared() bool {
+	_, ok := m.clearedFields[fleetmember.FieldPayoutPhone]
+	return ok
+}
+
+// ResetPayoutPhone resets all changes to the "payout_phone" field.
+func (m *FleetMemberMutation) ResetPayoutPhone() {
+	m.payout_phone = nil
+	delete(m.clearedFields, fleetmember.FieldPayoutPhone)
+}
+
+// SetPayoutBankCode sets the "payout_bank_code" field.
+func (m *FleetMemberMutation) SetPayoutBankCode(s string) {
+	m.payout_bank_code = &s
+}
+
+// PayoutBankCode returns the value of the "payout_bank_code" field in the mutation.
+func (m *FleetMemberMutation) PayoutBankCode() (r string, exists bool) {
+	v := m.payout_bank_code
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPayoutBankCode returns the old "payout_bank_code" field's value of the FleetMember entity.
+// If the FleetMember object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *FleetMemberMutation) OldPayoutBankCode(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPayoutBankCode is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPayoutBankCode requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPayoutBankCode: %w", err)
+	}
+	return oldValue.PayoutBankCode, nil
+}
+
+// ClearPayoutBankCode clears the value of the "payout_bank_code" field.
+func (m *FleetMemberMutation) ClearPayoutBankCode() {
+	m.payout_bank_code = nil
+	m.clearedFields[fleetmember.FieldPayoutBankCode] = struct{}{}
+}
+
+// PayoutBankCodeCleared returns if the "payout_bank_code" field was cleared in this mutation.
+func (m *FleetMemberMutation) PayoutBankCodeCleared() bool {
+	_, ok := m.clearedFields[fleetmember.FieldPayoutBankCode]
+	return ok
+}
+
+// ResetPayoutBankCode resets all changes to the "payout_bank_code" field.
+func (m *FleetMemberMutation) ResetPayoutBankCode() {
+	m.payout_bank_code = nil
+	delete(m.clearedFields, fleetmember.FieldPayoutBankCode)
+}
+
+// SetPayoutAccountNumber sets the "payout_account_number" field.
+func (m *FleetMemberMutation) SetPayoutAccountNumber(s string) {
+	m.payout_account_number = &s
+}
+
+// PayoutAccountNumber returns the value of the "payout_account_number" field in the mutation.
+func (m *FleetMemberMutation) PayoutAccountNumber() (r string, exists bool) {
+	v := m.payout_account_number
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPayoutAccountNumber returns the old "payout_account_number" field's value of the FleetMember entity.
+// If the FleetMember object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *FleetMemberMutation) OldPayoutAccountNumber(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPayoutAccountNumber is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPayoutAccountNumber requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPayoutAccountNumber: %w", err)
+	}
+	return oldValue.PayoutAccountNumber, nil
+}
+
+// ClearPayoutAccountNumber clears the value of the "payout_account_number" field.
+func (m *FleetMemberMutation) ClearPayoutAccountNumber() {
+	m.payout_account_number = nil
+	m.clearedFields[fleetmember.FieldPayoutAccountNumber] = struct{}{}
+}
+
+// PayoutAccountNumberCleared returns if the "payout_account_number" field was cleared in this mutation.
+func (m *FleetMemberMutation) PayoutAccountNumberCleared() bool {
+	_, ok := m.clearedFields[fleetmember.FieldPayoutAccountNumber]
+	return ok
+}
+
+// ResetPayoutAccountNumber resets all changes to the "payout_account_number" field.
+func (m *FleetMemberMutation) ResetPayoutAccountNumber() {
+	m.payout_account_number = nil
+	delete(m.clearedFields, fleetmember.FieldPayoutAccountNumber)
+}
+
+// SetPayoutAccountName sets the "payout_account_name" field.
+func (m *FleetMemberMutation) SetPayoutAccountName(s string) {
+	m.payout_account_name = &s
+}
+
+// PayoutAccountName returns the value of the "payout_account_name" field in the mutation.
+func (m *FleetMemberMutation) PayoutAccountName() (r string, exists bool) {
+	v := m.payout_account_name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPayoutAccountName returns the old "payout_account_name" field's value of the FleetMember entity.
+// If the FleetMember object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *FleetMemberMutation) OldPayoutAccountName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPayoutAccountName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPayoutAccountName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPayoutAccountName: %w", err)
+	}
+	return oldValue.PayoutAccountName, nil
+}
+
+// ClearPayoutAccountName clears the value of the "payout_account_name" field.
+func (m *FleetMemberMutation) ClearPayoutAccountName() {
+	m.payout_account_name = nil
+	m.clearedFields[fleetmember.FieldPayoutAccountName] = struct{}{}
+}
+
+// PayoutAccountNameCleared returns if the "payout_account_name" field was cleared in this mutation.
+func (m *FleetMemberMutation) PayoutAccountNameCleared() bool {
+	_, ok := m.clearedFields[fleetmember.FieldPayoutAccountName]
+	return ok
+}
+
+// ResetPayoutAccountName resets all changes to the "payout_account_name" field.
+func (m *FleetMemberMutation) ResetPayoutAccountName() {
+	m.payout_account_name = nil
+	delete(m.clearedFields, fleetmember.FieldPayoutAccountName)
+}
+
+// SetPayoutRecipientCode sets the "payout_recipient_code" field.
+func (m *FleetMemberMutation) SetPayoutRecipientCode(s string) {
+	m.payout_recipient_code = &s
+}
+
+// PayoutRecipientCode returns the value of the "payout_recipient_code" field in the mutation.
+func (m *FleetMemberMutation) PayoutRecipientCode() (r string, exists bool) {
+	v := m.payout_recipient_code
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPayoutRecipientCode returns the old "payout_recipient_code" field's value of the FleetMember entity.
+// If the FleetMember object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *FleetMemberMutation) OldPayoutRecipientCode(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPayoutRecipientCode is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPayoutRecipientCode requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPayoutRecipientCode: %w", err)
+	}
+	return oldValue.PayoutRecipientCode, nil
+}
+
+// ClearPayoutRecipientCode clears the value of the "payout_recipient_code" field.
+func (m *FleetMemberMutation) ClearPayoutRecipientCode() {
+	m.payout_recipient_code = nil
+	m.clearedFields[fleetmember.FieldPayoutRecipientCode] = struct{}{}
+}
+
+// PayoutRecipientCodeCleared returns if the "payout_recipient_code" field was cleared in this mutation.
+func (m *FleetMemberMutation) PayoutRecipientCodeCleared() bool {
+	_, ok := m.clearedFields[fleetmember.FieldPayoutRecipientCode]
+	return ok
+}
+
+// ResetPayoutRecipientCode resets all changes to the "payout_recipient_code" field.
+func (m *FleetMemberMutation) ResetPayoutRecipientCode() {
+	m.payout_recipient_code = nil
+	delete(m.clearedFields, fleetmember.FieldPayoutRecipientCode)
+}
+
+// SetPayoutStatus sets the "payout_status" field.
+func (m *FleetMemberMutation) SetPayoutStatus(fs fleetmember.PayoutStatus) {
+	m.payout_status = &fs
+}
+
+// PayoutStatus returns the value of the "payout_status" field in the mutation.
+func (m *FleetMemberMutation) PayoutStatus() (r fleetmember.PayoutStatus, exists bool) {
+	v := m.payout_status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPayoutStatus returns the old "payout_status" field's value of the FleetMember entity.
+// If the FleetMember object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *FleetMemberMutation) OldPayoutStatus(ctx context.Context) (v fleetmember.PayoutStatus, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPayoutStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPayoutStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPayoutStatus: %w", err)
+	}
+	return oldValue.PayoutStatus, nil
+}
+
+// ResetPayoutStatus resets all changes to the "payout_status" field.
+func (m *FleetMemberMutation) ResetPayoutStatus() {
+	m.payout_status = nil
+}
+
 // ClearFleet clears the "fleet" edge to the Fleet entity.
 func (m *FleetMemberMutation) ClearFleet() {
 	m.clearedfleet = true
@@ -5964,7 +6301,7 @@ func (m *FleetMemberMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *FleetMemberMutation) Fields() []string {
-	fields := make([]string, 0, 26)
+	fields := make([]string, 0, 33)
 	if m.tenant_id != nil {
 		fields = append(fields, fleetmember.FieldTenantID)
 	}
@@ -6043,6 +6380,27 @@ func (m *FleetMemberMutation) Fields() []string {
 	if m.updated_at != nil {
 		fields = append(fields, fleetmember.FieldUpdatedAt)
 	}
+	if m.payout_method != nil {
+		fields = append(fields, fleetmember.FieldPayoutMethod)
+	}
+	if m.payout_phone != nil {
+		fields = append(fields, fleetmember.FieldPayoutPhone)
+	}
+	if m.payout_bank_code != nil {
+		fields = append(fields, fleetmember.FieldPayoutBankCode)
+	}
+	if m.payout_account_number != nil {
+		fields = append(fields, fleetmember.FieldPayoutAccountNumber)
+	}
+	if m.payout_account_name != nil {
+		fields = append(fields, fleetmember.FieldPayoutAccountName)
+	}
+	if m.payout_recipient_code != nil {
+		fields = append(fields, fleetmember.FieldPayoutRecipientCode)
+	}
+	if m.payout_status != nil {
+		fields = append(fields, fleetmember.FieldPayoutStatus)
+	}
 	return fields
 }
 
@@ -6103,6 +6461,20 @@ func (m *FleetMemberMutation) Field(name string) (ent.Value, bool) {
 		return m.CreatedAt()
 	case fleetmember.FieldUpdatedAt:
 		return m.UpdatedAt()
+	case fleetmember.FieldPayoutMethod:
+		return m.PayoutMethod()
+	case fleetmember.FieldPayoutPhone:
+		return m.PayoutPhone()
+	case fleetmember.FieldPayoutBankCode:
+		return m.PayoutBankCode()
+	case fleetmember.FieldPayoutAccountNumber:
+		return m.PayoutAccountNumber()
+	case fleetmember.FieldPayoutAccountName:
+		return m.PayoutAccountName()
+	case fleetmember.FieldPayoutRecipientCode:
+		return m.PayoutRecipientCode()
+	case fleetmember.FieldPayoutStatus:
+		return m.PayoutStatus()
 	}
 	return nil, false
 }
@@ -6164,6 +6536,20 @@ func (m *FleetMemberMutation) OldField(ctx context.Context, name string) (ent.Va
 		return m.OldCreatedAt(ctx)
 	case fleetmember.FieldUpdatedAt:
 		return m.OldUpdatedAt(ctx)
+	case fleetmember.FieldPayoutMethod:
+		return m.OldPayoutMethod(ctx)
+	case fleetmember.FieldPayoutPhone:
+		return m.OldPayoutPhone(ctx)
+	case fleetmember.FieldPayoutBankCode:
+		return m.OldPayoutBankCode(ctx)
+	case fleetmember.FieldPayoutAccountNumber:
+		return m.OldPayoutAccountNumber(ctx)
+	case fleetmember.FieldPayoutAccountName:
+		return m.OldPayoutAccountName(ctx)
+	case fleetmember.FieldPayoutRecipientCode:
+		return m.OldPayoutRecipientCode(ctx)
+	case fleetmember.FieldPayoutStatus:
+		return m.OldPayoutStatus(ctx)
 	}
 	return nil, fmt.Errorf("unknown FleetMember field %s", name)
 }
@@ -6355,6 +6741,55 @@ func (m *FleetMemberMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetUpdatedAt(v)
 		return nil
+	case fleetmember.FieldPayoutMethod:
+		v, ok := value.(fleetmember.PayoutMethod)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPayoutMethod(v)
+		return nil
+	case fleetmember.FieldPayoutPhone:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPayoutPhone(v)
+		return nil
+	case fleetmember.FieldPayoutBankCode:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPayoutBankCode(v)
+		return nil
+	case fleetmember.FieldPayoutAccountNumber:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPayoutAccountNumber(v)
+		return nil
+	case fleetmember.FieldPayoutAccountName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPayoutAccountName(v)
+		return nil
+	case fleetmember.FieldPayoutRecipientCode:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPayoutRecipientCode(v)
+		return nil
+	case fleetmember.FieldPayoutStatus:
+		v, ok := value.(fleetmember.PayoutStatus)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPayoutStatus(v)
+		return nil
 	}
 	return fmt.Errorf("unknown FleetMember field %s", name)
 }
@@ -6466,6 +6901,24 @@ func (m *FleetMemberMutation) ClearedFields() []string {
 	if m.FieldCleared(fleetmember.FieldMaxWeightCapacityKg) {
 		fields = append(fields, fleetmember.FieldMaxWeightCapacityKg)
 	}
+	if m.FieldCleared(fleetmember.FieldPayoutMethod) {
+		fields = append(fields, fleetmember.FieldPayoutMethod)
+	}
+	if m.FieldCleared(fleetmember.FieldPayoutPhone) {
+		fields = append(fields, fleetmember.FieldPayoutPhone)
+	}
+	if m.FieldCleared(fleetmember.FieldPayoutBankCode) {
+		fields = append(fields, fleetmember.FieldPayoutBankCode)
+	}
+	if m.FieldCleared(fleetmember.FieldPayoutAccountNumber) {
+		fields = append(fields, fleetmember.FieldPayoutAccountNumber)
+	}
+	if m.FieldCleared(fleetmember.FieldPayoutAccountName) {
+		fields = append(fields, fleetmember.FieldPayoutAccountName)
+	}
+	if m.FieldCleared(fleetmember.FieldPayoutRecipientCode) {
+		fields = append(fields, fleetmember.FieldPayoutRecipientCode)
+	}
 	return fields
 }
 
@@ -6521,6 +6974,24 @@ func (m *FleetMemberMutation) ClearField(name string) error {
 		return nil
 	case fleetmember.FieldMaxWeightCapacityKg:
 		m.ClearMaxWeightCapacityKg()
+		return nil
+	case fleetmember.FieldPayoutMethod:
+		m.ClearPayoutMethod()
+		return nil
+	case fleetmember.FieldPayoutPhone:
+		m.ClearPayoutPhone()
+		return nil
+	case fleetmember.FieldPayoutBankCode:
+		m.ClearPayoutBankCode()
+		return nil
+	case fleetmember.FieldPayoutAccountNumber:
+		m.ClearPayoutAccountNumber()
+		return nil
+	case fleetmember.FieldPayoutAccountName:
+		m.ClearPayoutAccountName()
+		return nil
+	case fleetmember.FieldPayoutRecipientCode:
+		m.ClearPayoutRecipientCode()
 		return nil
 	}
 	return fmt.Errorf("unknown FleetMember nullable field %s", name)
@@ -6607,6 +7078,27 @@ func (m *FleetMemberMutation) ResetField(name string) error {
 		return nil
 	case fleetmember.FieldUpdatedAt:
 		m.ResetUpdatedAt()
+		return nil
+	case fleetmember.FieldPayoutMethod:
+		m.ResetPayoutMethod()
+		return nil
+	case fleetmember.FieldPayoutPhone:
+		m.ResetPayoutPhone()
+		return nil
+	case fleetmember.FieldPayoutBankCode:
+		m.ResetPayoutBankCode()
+		return nil
+	case fleetmember.FieldPayoutAccountNumber:
+		m.ResetPayoutAccountNumber()
+		return nil
+	case fleetmember.FieldPayoutAccountName:
+		m.ResetPayoutAccountName()
+		return nil
+	case fleetmember.FieldPayoutRecipientCode:
+		m.ResetPayoutRecipientCode()
+		return nil
+	case fleetmember.FieldPayoutStatus:
+		m.ResetPayoutStatus()
 		return nil
 	}
 	return fmt.Errorf("unknown FleetMember field %s", name)
