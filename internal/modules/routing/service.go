@@ -33,7 +33,7 @@ func NewService(primary Provider, fallback Provider, rdb *redis.Client, cacheTTL
 // Route calculates a route, using cache and fallback.
 func (s *Service) Route(ctx context.Context, origin, destination LatLng) (*Route, error) {
 	// Check cache
-	cacheKey := fmt.Sprintf("route:%f,%f:%f,%f", origin.Lat, origin.Lng, destination.Lat, destination.Lng)
+	cacheKey := fmt.Sprintf("route:%.4f,%.4f:%.4f,%.4f", origin.Lat, origin.Lng, destination.Lat, destination.Lng)
 	if cached, err := s.getFromCache(ctx, cacheKey); err == nil {
 		var route Route
 		if json.Unmarshal(cached, &route) == nil {
