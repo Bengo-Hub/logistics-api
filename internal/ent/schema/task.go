@@ -108,5 +108,7 @@ func (Task) Indexes() []ent.Index {
 		index.Fields("tenant_id", "external_reference"),
 		index.Fields("status"),
 		index.Fields("tracking_code"),
+		index.Fields("tenant_id", "status", "created_at"),
+		index.Fields("tenant_id", "outlet_id", "created_at"),
 	}
 }
