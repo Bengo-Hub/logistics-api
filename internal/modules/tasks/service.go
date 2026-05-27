@@ -271,7 +271,7 @@ func (s *Service) GetTask(ctx context.Context, tenantID, taskID uuid.UUID) (*ent
 }
 
 // ListTasks returns tasks for a tenant with optional filters.
-func (s *Service) ListTasks(ctx context.Context, tenantID uuid.UUID, f ListTasksFilter) ([]*ent.Task, error) {
+func (s *Service) ListTasks(ctx context.Context, tenantID uuid.UUID, f ListTasksFilter) ([]*ent.Task, int, error) {
 	q := s.client.Task.Query().
 		Where(task.TenantID(tenantID)).
 		WithAssignments()
@@ -284,17 +284,17 @@ func (s *Service) ListTasks(ctx context.Context, tenantID uuid.UUID, f ListTasks
 		q = q.Where(task.OutletIDEQ(*f.OutletID))
 	}
 
+	total, _ := q.Clone().Count(ctx)
+
 	limit := f.Limit
 	if limit <= 0 || limit > 100 {
-		limit = 50
+		limit = 20
 	}
-	q = q.Limit(limit).Offset(f.Offset).Order(ent.Desc(task.FieldCreatedAt))
-
-	tasks, err := q.All(ctx)
+	tasks, err := q.Limit(limit).Offset(f.Offset).Order(ent.Desc(task.FieldCreatedAt)).All(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("tasks: list: %w", err)
+		return nil, 0, fmt.Errorf("tasks: list: %w", err)
 	}
-	return tasks, nil
+	return tasks, total, nil
 }
 
 // UpdateStatus transitions a task to a new status.

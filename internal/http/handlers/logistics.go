@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/Bengo-Hub/pagination"
 	authclient "github.com/Bengo-Hub/shared-auth-client"
 	httpware "github.com/Bengo-Hub/httpware"
 	"github.com/go-chi/chi/v5"
@@ -74,9 +75,11 @@ func (h *LogisticsHandler) ListTasks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	p := pagination.Parse(r)
 	filter := tasks.ListTasksFilter{
 		Status: r.URL.Query().Get("status"),
-		Limit:  50,
+		Limit:  p.Limit,
+		Offset: p.Offset,
 	}
 
 	// Apply outlet context filter if X-Outlet-ID was sent
@@ -86,14 +89,14 @@ func (h *LogisticsHandler) ListTasks(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	list, err := h.taskSvc.ListTasks(r.Context(), tenantID, filter)
+	list, total, err := h.taskSvc.ListTasks(r.Context(), tenantID, filter)
 	if err != nil {
 		h.log.Error("list tasks", zap.Error(err))
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	respondJSON(w, http.StatusOK, list)
+	respondJSON(w, http.StatusOK, pagination.NewResponse(list, total, p))
 }
 
 // GetTask handles GET /api/v1/{tenant}/tasks/{taskId}
