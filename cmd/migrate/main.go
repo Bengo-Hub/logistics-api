@@ -35,9 +35,14 @@ func main() {
 		log.Fatalf("failed to load config: %v", err)
 	}
 
-	log.Printf("connecting to database: %s", maskPassword(cfg.Postgres.URL))
+	dbURL := cfg.Postgres.URL
+	if cfg.Postgres.MigrateURL != "" {
+		dbURL = cfg.Postgres.MigrateURL
+	}
 
-	db, err := sql.Open("pgx", cfg.Postgres.URL)
+	log.Printf("connecting to database: %s", maskPassword(dbURL))
+
+	db, err := sql.Open("pgx", dbURL)
 	if err != nil {
 		log.Fatalf("failed to open database: %v", err)
 	}
