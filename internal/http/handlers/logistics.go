@@ -312,16 +312,18 @@ func (h *LogisticsHandler) ListMembers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	p := pagination.Parse(r)
 	status := r.URL.Query().Get("status")
+	search := r.URL.Query().Get("search")
 
-	members, err := h.fleetSvc.ListMembers(r.Context(), tenantID, status)
+	members, total, err := h.fleetSvc.ListMembers(r.Context(), tenantID, status, search, p.Limit, p.Offset)
 	if err != nil {
 		h.log.Error("list fleet members", zap.Error(err))
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	respondJSON(w, http.StatusOK, members)
+	respondJSON(w, http.StatusOK, pagination.NewResponse(members, total, p))
 }
 
 // GetMember handles GET /api/v1/{tenant}/fleet/members/{memberId}

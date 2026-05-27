@@ -93,21 +93,33 @@ func (s *Service) GetOrCreateFleet(ctx context.Context, tenantID uuid.UUID, tena
 }
 
 // ListMembers returns fleet members for a tenant.
-func (s *Service) ListMembers(ctx context.Context, tenantID uuid.UUID, status string) ([]*ent.FleetMember, error) {
-	q := s.client.FleetMember.Query().
-		Where(fleetmember.TenantID(tenantID)).
-		WithVehicle().
-		WithUser()
+func (s *Service) ListMembers(ctx context.Context, tenantID uuid.UUID, status, search string, limit, offset int) ([]*ent.FleetMember, int, error) {
+	q := s.client.FleetMember.Query().Where(fleetmember.TenantID(tenantID))
 
 	if status != "" {
 		q = q.Where(fleetmember.Status(status))
 	}
-
-	members, err := q.Limit(500).All(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("fleet: list members: %w", err)
+	if search != "" {
+		q = q.Where(fleetmember.HasUserWith(
+			entuser.Or(
+				entuser.FullNameContainsFold(search),
+				entuser.EmailContainsFold(search),
+				entuser.PhoneContainsFold(search),
+			),
+		))
 	}
-	return members, nil
+	total, _ := q.Clone().Count(ctx)
+	members, err := q.
+		WithVehicle().
+		WithUser().
+		Order(ent.Desc(fleetmember.FieldCreatedAt)).
+		Limit(limit).
+		Offset(offset).
+		All(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("fleet: list members: %w", err)
+	}
+	return members, total, nil
 }
 
 // GetMember returns a specific fleet member.

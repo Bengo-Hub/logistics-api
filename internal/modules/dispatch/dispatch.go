@@ -102,7 +102,7 @@ func (d *AutoDispatcher) DispatchTask(ctx context.Context, tenantID, taskID uuid
 	}
 
 	// 3. Get all active fleet members for this tenant
-	members, err := d.fleetSvc.ListMembers(ctx, tenantID, "active")
+	members, _, err := d.fleetSvc.ListMembers(ctx, tenantID, "active", "", 1000, 0)
 	if err != nil {
 		return fmt.Errorf("dispatch: list members: %w", err)
 	}
