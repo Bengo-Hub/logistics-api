@@ -91,13 +91,20 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 					}
 					// All other requests require authentication
 					authMiddleware.RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-						// Skip subscription check for GET requests (read-only)
-						if r.Method == http.MethodGet {
+						// GET/HEAD/OPTIONS always pass through (read-only)
+						if r.Method == http.MethodGet || r.Method == http.MethodHead || r.Method == http.MethodOptions {
 							next.ServeHTTP(w, r)
 							return
 						}
-						// Enforce subscription for mutation requests
-						authclient.RequireActiveSubscription()(next).ServeHTTP(w, r)
+						// Mutations: enforce subscription with explicit superuser/platform owner bypass
+						claims, ok := authclient.ClaimsFromContext(r.Context())
+						if !ok || claims.IsSuperuser() || claims.IsPlatformOwner || claims.IsSubscriptionActive() {
+							next.ServeHTTP(w, r)
+							return
+						}
+						w.Header().Set("Content-Type", "application/json")
+						w.WriteHeader(http.StatusForbidden)
+						_, _ = w.Write([]byte(`{"error":"Your subscription is not active. Please renew to continue.","code":"subscription_inactive","upgrade":true}`))
 					})).ServeHTTP(w, r)
 				})
 			})
@@ -173,11 +180,18 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 				})
 			}
 
-			tenant.Route("/riders", func(riders chi.Router) {
-				idHandler := handlers.NewIdentityHandler(idSvc)
-				riders.Get("/me", idHandler.GetMe)
-				riders.Patch("/me/profile", idHandler.UpdateProfile)
-			})
+			if idSvc != nil {
+				idHandler := handlers.NewIdentityHandler(idSvc, rbacSvc)
+				// Service-level auth/me: returns logistics RBAC role + permissions (Trinity Layer 3)
+				tenant.Route("/auth", func(authR chi.Router) {
+					authR.Get("/me", idHandler.GetAuthMe)
+				})
+				// Rider-specific profile (used by rider-app)
+				tenant.Route("/riders", func(riders chi.Router) {
+					riders.Get("/me", idHandler.GetMe)
+					riders.Patch("/me/profile", idHandler.UpdateProfile)
+				})
+			}
 
 			if zh != nil {
 				tenant.Route("/zones", func(zoneR chi.Router) {
