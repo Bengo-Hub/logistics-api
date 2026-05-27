@@ -678,6 +678,16 @@ var (
 				Unique:  false,
 				Columns: []*schema.Column{TasksColumns[2]},
 			},
+			{
+				Name:    "task_tenant_id_status_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{TasksColumns[1], TasksColumns[7], TasksColumns[22]},
+			},
+			{
+				Name:    "task_tenant_id_outlet_id_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{TasksColumns[1], TasksColumns[20], TasksColumns[22]},
+			},
 		},
 	}
 	// TaskAssignmentsColumns holds the columns for the "task_assignments" table.
