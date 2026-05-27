@@ -25,6 +25,10 @@ type OrderReadyConsumer struct {
 	log        *zap.Logger
 	taskSvc    *tasks.Service
 	dispatcher *dispatch.AutoDispatcher
+	// svcCtx is the service-level context stored during Start() so that
+	// the NATS handler (which has no context parameter) can derive bounded
+	// goroutine contexts that respect service shutdown.
+	svcCtx context.Context //nolint:containedctx
 }
 
 // NewOrderReadyConsumer creates the consumer.
@@ -33,11 +37,13 @@ func NewOrderReadyConsumer(log *zap.Logger, taskSvc *tasks.Service, dispatcher *
 		log:        log.Named("consumers.order_ready"),
 		taskSvc:    taskSvc,
 		dispatcher: dispatcher,
+		svcCtx:     context.Background(), // replaced by Start()
 	}
 }
 
 // Start begins consuming ordering.order.ready via JetStream.
 func (c *OrderReadyConsumer) Start(ctx context.Context, js nats.JetStreamContext) error {
+	c.svcCtx = ctx
 	sub, err := js.Subscribe(
 		"ordering.order.ready",
 		c.handleMessage,
@@ -79,7 +85,7 @@ type orderReadyEvent struct {
 }
 
 func (c *OrderReadyConsumer) handleMessage(msg *nats.Msg) {
-	ctx := context.Background()
+	ctx := c.svcCtx
 
 	var envelope orderReadyEvent
 	if err := json.Unmarshal(msg.Data, &envelope); err != nil {
@@ -154,10 +160,13 @@ func (c *OrderReadyConsumer) handleMessage(msg *nats.Msg) {
 		zap.String("order_id", orderID),
 	)
 
-	// Auto-dispatch: find and assign nearest available rider (async, best-effort)
+	// Auto-dispatch: find and assign nearest available rider (async, best-effort).
+	// Derive from svcCtx (not Background) so the goroutine is cancelled when the
+	// service shuts down — prevents double-dispatch on rolling restarts.
 	if c.dispatcher != nil {
+		dispatchCtx, dispatchCancel := context.WithTimeout(c.svcCtx, 30*time.Second)
 		go func() {
-			dispatchCtx := context.Background()
+			defer dispatchCancel()
 			if dispatchErr := c.dispatcher.DispatchTask(dispatchCtx, tenantID, t.ID); dispatchErr != nil {
 				c.log.Warn("auto-dispatch failed",
 					zap.String("task_id", t.ID.String()),

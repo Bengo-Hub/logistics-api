@@ -76,22 +76,35 @@ func (s *BatchScheduler) Start(ctx context.Context) {
 }
 
 // runBatchCycle processes all tenants that have pending tasks.
+// Tenants are processed in pages of 100 to avoid loading the full tenant list into memory.
 func (s *BatchScheduler) runBatchCycle(ctx context.Context) {
-	tenants, err := s.entClient.Tenant.Query().
-		Where(tenant.StatusEQ("active")).
-		All(ctx)
-	if err != nil {
-		s.log.Warn("batch: failed to query tenants", zap.Error(err))
-		return
-	}
-
-	for _, t := range tenants {
-		if err := s.batchDispatch(ctx, t.ID); err != nil {
-			s.log.Warn("batch dispatch failed for tenant",
-				zap.String("tenant_id", t.ID.String()),
-				zap.Error(err),
-			)
+	const pageSize = 100
+	offset := 0
+	for {
+		tenants, err := s.entClient.Tenant.Query().
+			Where(tenant.StatusEQ("active")).
+			Limit(pageSize).
+			Offset(offset).
+			All(ctx)
+		if err != nil {
+			s.log.Warn("batch: failed to query tenants", zap.Error(err))
+			return
 		}
+		if len(tenants) == 0 {
+			break
+		}
+		for _, t := range tenants {
+			if err := s.batchDispatch(ctx, t.ID); err != nil {
+				s.log.Warn("batch dispatch failed for tenant",
+					zap.String("tenant_id", t.ID.String()),
+					zap.Error(err),
+				)
+			}
+		}
+		if len(tenants) < pageSize {
+			break
+		}
+		offset += pageSize
 	}
 }
 

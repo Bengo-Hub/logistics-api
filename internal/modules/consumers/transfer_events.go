@@ -26,6 +26,7 @@ type TransferReadyConsumer struct {
 	log        *zap.Logger
 	taskSvc    *tasks.Service
 	dispatcher *dispatch.AutoDispatcher
+	svcCtx     context.Context //nolint:containedctx
 }
 
 // NewTransferReadyConsumer creates the consumer.
@@ -34,11 +35,13 @@ func NewTransferReadyConsumer(log *zap.Logger, taskSvc *tasks.Service, dispatche
 		log:        log.Named("consumers.transfer_ready"),
 		taskSvc:    taskSvc,
 		dispatcher: dispatcher,
+		svcCtx:     context.Background(),
 	}
 }
 
 // Start begins consuming inventory.transfer.created via JetStream.
 func (c *TransferReadyConsumer) Start(ctx context.Context, js nats.JetStreamContext) error {
+	c.svcCtx = ctx
 	sub, err := js.Subscribe(
 		"inventory.transfer.created",
 		c.handleMessage,
@@ -82,7 +85,7 @@ type transferCreatedEvent struct {
 }
 
 func (c *TransferReadyConsumer) handleMessage(msg *nats.Msg) {
-	ctx := context.Background()
+	ctx := c.svcCtx
 
 	var evt transferCreatedEvent
 	if err := json.Unmarshal(msg.Data, &evt); err != nil {
@@ -184,10 +187,12 @@ func (c *TransferReadyConsumer) handleMessage(msg *nats.Msg) {
 		zap.String("to", evt.Payload.ToWarehouse),
 	)
 
-	// Auto-dispatch if configured
+	// Auto-dispatch if configured — derive from svcCtx (not Background) so the
+	// goroutine is cancelled when the service shuts down.
 	if c.dispatcher != nil {
+		dispatchCtx, dispatchCancel := context.WithTimeout(c.svcCtx, 30*time.Second)
 		go func() {
-			dispatchCtx := context.Background()
+			defer dispatchCancel()
 			if dispatchErr := c.dispatcher.DispatchTask(dispatchCtx, tenantID, t.ID); dispatchErr != nil {
 				c.log.Warn("auto-dispatch failed for transfer task",
 					zap.String("task_id", t.ID.String()),

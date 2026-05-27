@@ -103,7 +103,7 @@ func (s *Service) ListMembers(ctx context.Context, tenantID uuid.UUID, status st
 		q = q.Where(fleetmember.Status(status))
 	}
 
-	members, err := q.All(ctx)
+	members, err := q.Limit(500).All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("fleet: list members: %w", err)
 	}
