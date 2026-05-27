@@ -6,15 +6,70 @@ import (
 
 	authclient "github.com/Bengo-Hub/shared-auth-client"
 	"github.com/bengobox/logistics-service/internal/modules/identity"
+	"github.com/bengobox/logistics-service/internal/modules/rbac"
 	"github.com/google/uuid"
 )
 
 type IdentityHandler struct {
-	svc *identity.Service
+	svc     *identity.Service
+	rbacSvc *rbac.Service
 }
 
-func NewIdentityHandler(svc *identity.Service) *IdentityHandler {
-	return &IdentityHandler{svc: svc}
+func NewIdentityHandler(svc *identity.Service, rbacSvc *rbac.Service) *IdentityHandler {
+	return &IdentityHandler{svc: svc, rbacSvc: rbacSvc}
+}
+
+// GetAuthMe returns the caller's service-level role and permissions (Trinity Layer 3 enrichment).
+// Frontends call this after SSO /auth/me to get logistics-specific RBAC data.
+func (h *IdentityHandler) GetAuthMe(w http.ResponseWriter, r *http.Request) {
+	claims, ok := authclient.ClaimsFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	authID, _ := uuid.Parse(claims.Subject)
+	tenantID, _ := uuid.Parse(claims.TenantID)
+
+	type roleInfo struct {
+		ID   string `json:"id"`
+		Code string `json:"code"`
+		Name string `json:"name"`
+	}
+
+	var serviceRole *roleInfo
+	var permCodes []string
+
+	if h.rbacSvc != nil && tenantID != uuid.Nil {
+		roles, err := h.rbacSvc.GetUserRoles(r.Context(), tenantID, authID)
+		if err == nil && len(roles) > 0 {
+			r0 := roles[0]
+			serviceRole = &roleInfo{ID: r0.ID.String(), Code: r0.RoleCode, Name: r0.Name}
+		}
+		perms, err := h.rbacSvc.GetUserPermissions(r.Context(), tenantID, authID)
+		if err == nil {
+			for _, p := range perms {
+				permCodes = append(permCodes, p.PermissionCode)
+			}
+		}
+	}
+	if permCodes == nil {
+		permCodes = []string{}
+	}
+
+	resp := map[string]any{
+		"id":               claims.Subject,
+		"email":            claims.Email,
+		"global_roles":     claims.Roles,
+		"service_role":     serviceRole,
+		"permissions":      permCodes,
+		"tenant_id":        claims.TenantID,
+		"tenant_slug":      claims.GetTenantSlug(),
+		"is_platform_owner": claims.IsPlatformOwner,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
 }
 
 func (h *IdentityHandler) GetMe(w http.ResponseWriter, r *http.Request) {

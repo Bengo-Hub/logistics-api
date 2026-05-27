@@ -42,6 +42,16 @@ func (s *Service) HasPermission(ctx context.Context, tenantID uuid.UUID, userID 
 	return false, nil
 }
 
+// GetUserRoles returns all roles assigned to a user in a tenant.
+func (s *Service) GetUserRoles(ctx context.Context, tenantID uuid.UUID, userID uuid.UUID) ([]*LogisticsRole, error) {
+	return s.repo.GetUserRoles(ctx, tenantID, userID)
+}
+
+// GetUserPermissions returns all permissions granted to a user in a tenant (via their roles).
+func (s *Service) GetUserPermissions(ctx context.Context, tenantID uuid.UUID, userID uuid.UUID) ([]*LogisticsPermission, error) {
+	return s.repo.GetUserPermissions(ctx, tenantID, userID)
+}
+
 // HasRole checks if a user has a specific role.
 func (s *Service) HasRole(ctx context.Context, tenantID uuid.UUID, userID uuid.UUID, roleCode string) (bool, error) {
 	roles, err := s.repo.GetUserRoles(ctx, tenantID, userID)
@@ -110,12 +120,3 @@ func (s *Service) RevokeRole(ctx context.Context, tenantID uuid.UUID, userID uui
 	return nil
 }
 
-// GetUserRoles retrieves all roles for a user.
-func (s *Service) GetUserRoles(ctx context.Context, tenantID uuid.UUID, userID uuid.UUID) ([]*LogisticsRole, error) {
-	return s.repo.GetUserRoles(ctx, tenantID, userID)
-}
-
-// GetUserPermissions retrieves all permissions for a user.
-func (s *Service) GetUserPermissions(ctx context.Context, tenantID uuid.UUID, userID uuid.UUID) ([]*LogisticsPermission, error) {
-	return s.repo.GetUserPermissions(ctx, tenantID, userID)
-}
