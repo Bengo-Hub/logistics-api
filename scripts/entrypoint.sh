@@ -4,6 +4,9 @@
 
 set -e
 
+# Use direct PostgreSQL URL for migrate/seed to bypass PgBouncer transaction mode.
+MIGRATE_URL="${POSTGRES_MIGRATE_URL:-$POSTGRES_URL}"
+
 echo "=========================================="
 echo "Logistics-API Service Startup"
 echo "=========================================="
@@ -14,30 +17,28 @@ MEDIA_DIR="${MEDIA_ROOT:-/data/media}"
 mkdir -p "$MEDIA_DIR/uploads/kyc"
 echo "Media directory ready: $MEDIA_DIR"
 
-# Wait for database to be ready (with timeout)
-echo "Waiting for database connection..."
+echo "Waiting for database and running migrations..."
 MAX_RETRIES=60
 RETRY_COUNT=0
 
-# Use the logistics-migrate binary to check connection and run migrations
-until /usr/local/bin/logistics-migrate > /dev/null 2>&1 || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
+until POSTGRES_URL="$MIGRATE_URL" /usr/local/bin/logistics-migrate > /dev/null 2>&1 || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
   RETRY_COUNT=$((RETRY_COUNT+1))
-  echo "Database not ready yet or migrations failing... (attempt $RETRY_COUNT/$MAX_RETRIES)"
+  echo "Database not ready yet... (attempt $RETRY_COUNT/$MAX_RETRIES)"
   sleep 5
 done
 
 if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
-  echo "❌ Database connection timeout after $MAX_RETRIES attempts"
+  echo "Database connection timeout after $MAX_RETRIES attempts"
   exit 1
-else
-  echo "✅ Database connected and migrations completed"
 fi
+
+echo "Migrations applied successfully"
 
 echo ""
 echo "=========================================="
 echo "Running seed (idempotent)"
 echo "=========================================="
-/usr/local/bin/logistics-seed || echo "⚠️ Seed completed with warnings (non-fatal)"
+POSTGRES_URL="$MIGRATE_URL" /usr/local/bin/logistics-seed || echo "Seed completed with warnings (non-fatal)"
 
 echo ""
 echo "=========================================="
