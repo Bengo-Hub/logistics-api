@@ -1,8 +1,17 @@
 # Sprint 3 – Routing & Dispatch (MVP) (Weeks 6-7)
 
-**Status**: Not Started  
-**Start Date**: TBD  
-**Target Completion**: TBD
+**Status**: Partially Complete (Shift scheduling done; routing/dispatch pending)  
+**Start Date**: 2026-05-28  
+**Last Updated**: 2026-05-28
+
+## ✅ Completed (2026-05-28)
+
+| Task | File | Notes |
+|------|------|-------|
+| Shift management API | `internal/http/handlers/shift.go` | `GET/POST /{tenant}/shifts`, `PUT /{tenant}/shifts/{id}`, start/end actions |
+| Shift scheduling registered in router | `internal/http/router/router.go` | ShiftHandler registered under tenant routes |
+| RiderShift Ent schema | `internal/ent/schema/ridershift.go` | Pre-existing; now fully surfaced via API |
+| Zone-based shift assignment | `shift.go` | Shifts accept `zone_ids[]` for zone-based dispatch |
 
 ## Goals
 

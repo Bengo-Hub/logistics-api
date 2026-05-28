@@ -57,23 +57,52 @@ invited → pending → pending_review → active
 
 ## Use Case 2: Central Warehouse Distribution (fleet_type = distribution)
 
-**Scenario**: KEMSA style — HQ warehouse → regional warehouses → end-user delivery.
+**Scenario**: KEMSA style — HQ warehouse → regional warehouses → hospital delivery.
+
+> **Updated 2026-05-28**: Shipment + ChainOfCustody entities now fully implemented. See `docs/erd.md#distribution--kemsa`.
 
 ### Flow
+
+#### A. Warehouse-to-Warehouse Transfer
 1. Inventory service creates a StockTransfer (source → destination warehouse)
 2. `inventory.transfer.created` event published to NATS
 3. Logistics service auto-creates a Task with `task_type=transfer`
-4. Dispatcher assigns task to available driver (proximity + vehicle capacity)
-5. Driver picks up from source warehouse, delivers to destination
-6. Proof of delivery captured (photo + signature)
-7. `logistics.task.completed` event published
-8. Inventory service marks transfer as received
+4. Dispatcher creates a **Shipment** (`POST /{tenant}/shipments`) grouping the transfer tasks
+5. Dispatcher sets cold-chain parameters (`temperature_min_celsius`, `temperature_max_celsius`) and `seal_number`
+6. `POST /{tenant}/shipments/{id}/dispatch` dispatches the shipment — records dispatch timestamp + seal
+7. Chain of custody event `released` is recorded at source facility
+8. Driver picks up batch, travels to destination warehouse
+9. At destination, driver and receiving staff record `received` custody event with:
+   - `received_quantity` — units verified at handover
+   - `receiving_staff_name` — name of receiving staff
+   - `signature_url` — receiving staff signature
+   - `temperature_reading` — cold chain verification
+10. If temperature breaches range → custody event `temperature_breach` recorded → notification published
+11. `logistics.task.completed` event published → inventory marks transfer as received
+
+#### B. Hospital Delivery (Multi-Step PoD)
+1. Dispatcher creates a `hospital_delivery` shipment
+2. Tasks assigned to distribution fleet driver
+3. At hospital, extended PoD is captured:
+   - `POST /{tenant}/tasks/{id}/pod` with `receiving_staff_name`, `condition_on_arrival`, `received_quantity`, `batch_reference`
+4. Chain of custody `received` event recorded with full audit fields
+5. Report generated via `GET /{tenant}/reports/shipment-manifest/{shipmentId}`
+
+### Key Endpoints (Added 2026-05-28)
+| Endpoint | Description |
+|----------|-------------|
+| `POST /{tenant}/shipments` | Create distribution batch |
+| `GET /{tenant}/shipments` | List shipments with filters |
+| `GET /{tenant}/shipments/{id}` | Detail + custody ledger |
+| `POST /{tenant}/shipments/{id}/dispatch` | Dispatch with seal recording |
+| `POST /{tenant}/shipments/{id}/custody` | Add custody event |
+| `GET /{tenant}/shipments/{id}/custody` | Full custody ledger |
 
 ### Integration Points
 - **inventory-api**: StockTransfer, Warehouse (with lat/lng), StockTransferLine
-- **logistics-api**: Task (task_type=transfer), transfer_links bridge table
+- **logistics-api**: Task (task_type=transfer), Shipment, ChainOfCustody
 - **Routing**: Valhalla engine for optimal routes between warehouses
-- **Tracking**: Real-time GPS via WebSocket
+- **Tracking**: Real-time GPS via WebSocket; temperature via IoT sensor → `telemetry_points.temperature_celsius`
 
 ### Proximity-Based Supply
 - Warehouses have GPS coordinates (`latitude`, `longitude`)

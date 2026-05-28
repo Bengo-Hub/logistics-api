@@ -68,6 +68,61 @@ Logistics-api owns **fleets, riders (fleet members), vehicles, tasks, routes, pr
 
 ---
 
+## Module Enablement System (Added 2026-05-28)
+
+Logistics-api serves three distinct business use cases. Module gating controls which features are visible per tenant.
+
+### Use Cases & Default Module Sets
+
+| `use_case` | Default Modules |
+|------------|----------------|
+| `courier` | `dashboard`, `fleet`, `dispatch`, `tracking`, `analytics`, `earnings`, `vehicles`, `settings`, `rbac` |
+| `delivery` | `dashboard`, `fleet`, `dispatch`, `tracking`, `analytics`, `earnings`, `pricing`, `settings`, `rbac` |
+| `distribution` | `dashboard`, `fleet`, `dispatch`, `tracking`, `distribution`, `cold_chain`, `smart_locks`, `analytics`, `earnings`, `vehicles`, `settings`, `rbac` |
+
+### Module Resolution in `/auth/me`
+
+The `GET /{tenant}/auth/me` response now includes:
+
+```json
+{
+  "enabled_modules": ["dashboard", "fleet", "dispatch", "tracking", ...],
+  "use_case": "courier"
+}
+```
+
+**Resolution order:**
+1. Explicit `ServiceConfig` override (`key = "logistics.enabled_modules"`, stored as JSON array)
+2. `use_case` defaults from `consts/modules.go`
+3. All modules (platform owner / fallback)
+
+Platform admins can override modules via `PUT /{tenant}/service-config` with `{"key": "logistics.enabled_modules", "value": ["module1", "module2"]}`.
+
+### Analytics KPI Endpoint (Added 2026-05-28)
+
+`GET /{tenant}/analytics/kpis?period=today|7d|30d`
+
+Returns computed KPIs:
+
+```json
+{
+  "period": "7d",
+  "total_tasks": 120,
+  "pending_tasks": 5,
+  "active_tasks": 8,
+  "completed_tasks": 100,
+  "failed_tasks": 4,
+  "cancelled_tasks": 3,
+  "on_time_percent": 91.7,
+  "active_riders": 12,
+  "total_riders": 18,
+  "utilization_percent": 66.7,
+  "avg_delivery_minutes": 32.4
+}
+```
+
+---
+
 ## Map Services Integration (Valhalla + TileServer)
 
 Logistics-api wraps the self-hosted Valhalla routing engine with Redis caching, provider fallback, and tenant-scoped rate limiting. The map tile server (TileServer-GL) serves OpenStreetMap vector tiles to all frontends via `@bengo-hub/maps`.
