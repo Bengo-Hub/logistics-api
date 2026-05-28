@@ -1,8 +1,17 @@
 # Sprint 6 – Connectors (Carriers & Smart Locks) (Weeks 12-13)
 
-**Status**: Not Started  
-**Start Date**: TBD  
-**Target Completion**: TBD
+**Status**: Foundation Complete (seal_number tracking done; full smart lock OAuth pending)  
+**Start Date**: 2026-05-28  
+**Last Updated**: 2026-05-28
+
+## ✅ Completed (2026-05-28)
+
+| Task | File | Notes |
+|------|------|-------|
+| `seal_number` field on Task | `internal/ent/schema/task.go` | Physical seal/lock ID captured in audit trail |
+| `seal_number` field on Shipment | `internal/ent/schema/shipment.go` | Shipment-level seal tracking for KEMSA |
+| Shipment dispatch endpoint | `internal/http/handlers/shipment.go` | `POST /{tenant}/shipments/{id}/dispatch` records seal/dispatch time |
+| Chain of custody sealed/unsealed events | `internal/http/handlers/shipment.go` | `event_type: "sealed" \| "unsealed"` in custody ledger |
 
 ## Goals
 

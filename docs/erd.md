@@ -25,7 +25,7 @@ Ent schemas model the domain and power migrations.
 
 | Table | Key Columns | Description |
 |-------|-------------|-------------|
-| `tasks` | `id`, `tenant_id`, `external_reference`, `source_service`, `task_type`, `priority`, `status`, `sla_due_at`, `requested_pickup_at`, `requested_dropoff_at`, `metadata`, `created_at`, `updated_at` | Canonical work orders (deliveries, pickups, returns, transfers, ride). |
+| `tasks` | `id`, `tenant_id`, `external_reference`, `source_service`, `task_type`, `priority`, `status`, `sla_due_at`, `requested_pickup_at`, `requested_dropoff_at`, `shipment_id` *(opt)*, `seal_number` *(opt)*, `metadata`, `created_at`, `updated_at` | Canonical work orders (deliveries, pickups, returns, transfers, ride). `shipment_id` links to KEMSA distribution batch. `seal_number` records physical seal/lock ID for chain-of-custody. |
 | `task_steps` | `id`, `task_id`, `step_type`, `sequence`, `location_name`, `address_json`, `geo_point`, `contact_name`, `contact_phone`, `requires_signature`, `requires_photo`, `metadata` | Ordered steps (pickup/drop-off hubs). |
 | `task_events` | `id`, `task_id`, `event_type`, `actor_id`, `actor_type`, `payload`, `occurred_at` | State transitions (created, assigned, in-progress, completed, failed). |
 | `task_assignments` | `id`, `task_id`, `fleet_member_id`, `assignment_status`, `assigned_at`, `accepted_at`, `declined_at`, `completed_at`, `reason_code`, `metadata` | Mapping tasks to riders/drivers. |
@@ -46,18 +46,36 @@ Ent schemas model the domain and power migrations.
 | Table | Key Columns | Description |
 |-------|-------------|-------------|
 | `telemetry_streams` | `id`, `tenant_id`, `fleet_member_id`, `device_id`, `started_at`, `ended_at`, `status`, `metadata` | Session-level telemetry bundling. |
-| `telemetry_points` | `id`, `stream_id`, `captured_at`, `geo_point`, `speed_kph`, `bearing_deg`, `accuracy_m`, `altitude_m`, `battery_pct`, `metadata` | Individual location samples (compressed for storage). |
+| `telemetry_points` | `id`, `fleet_member_id`, `lat`, `lng`, `speed`, `heading`, `accuracy`, `battery_level`, `temperature_celsius` *(opt)*, `recorded_at` | Individual location samples. `temperature_celsius` enables cold-chain SLA monitoring for KEMSA vehicles with IoT sensors. |
 | `geo_fence_events` | `id`, `tenant_id`, `fleet_member_id`, `fence_id`, `event_type`, `occurred_at`, `geo_point`, `task_id`, `metadata` | Entry/exit of virtual zones. |
-| `telemetry_alerts` | `id`, `tenant_id`, `alert_type`, `severity`, `detected_at`, `resolved_at`, `payload`, `task_id`, `fleet_member_id` | Anomalies (speeding, offline, route deviation). |
+| `telemetry_alerts` | `id`, `tenant_id`, `alert_type`, `severity`, `detected_at`, `resolved_at`, `payload`, `task_id`, `fleet_member_id` | Anomalies (speeding, offline, route deviation, temperature breach). |
 
 ## Proof of Delivery & Compliance
 
 | Table | Key Columns | Description |
 |-------|-------------|-------------|
-| `proof_of_delivery` | `id`, `task_id`, `fleet_member_id`, `signature_url`, `photo_url`, `otp_code`, `captured_at`, `metadata` | Delivery confirmation artifacts. |
+| `proof_of_delivery` | `id`, `task_id`, `fleet_member_id`, `signature_url`, `photo_url`, `otp_code`, `notes`, `receiving_staff_name` *(opt)*, `receiving_staff_signature_url` *(opt)*, `condition_on_arrival` *(opt)*, `received_quantity` *(opt)*, `batch_reference` *(opt)*, `created_at`, `metadata` | Delivery confirmation artifacts. Extended fields support KEMSA hospital multi-step PoD (staff name, condition, quantity, batch reference). |
 | `customer_feedback` | `id`, `task_id`, `rating`, `comments`, `reported_at`, `metadata` | Customer experience capture. |
 | `delivery_incidents` | `id`, `task_id`, `incident_type`, `description`, `reported_by`, `reported_at`, `resolution_status`, `resolved_at`, `metadata` | SLA breaches, damages, escalations. |
 | `kyc_attachments` | `id`, `entity_id`, `entity_type`, `file_url`, `file_size`, `mime_type`, `status`, `captured_at` | (Conceptual) Metadata for KYC files. |
+
+## Distribution & KEMSA (Medical Supply Chain)
+
+> Added 2026-05-28. Gated by `distribution` module — only active for tenants with `use_case=distribution`.
+
+| Table | Key Columns | Description |
+|-------|-------------|-------------|
+| `shipments` | `id`, `tenant_id`, `shipment_code`, `shipment_type` (`warehouse_transfer`/`hospital_delivery`/`recall`), `status` (`planned`/`in_transit`/`partially_delivered`/`completed`/`cancelled`), `source_facility_id`, `source_facility_name`, `dest_facility_id`, `dest_facility_name`, `temperature_min_celsius`, `temperature_max_celsius`, `special_handling`, `seal_number`, `planned_dispatch_at`, `dispatched_at`, `completed_at`, `external_reference`, `metadata`, `created_at`, `updated_at` | Distribution batch (group of tasks traveling together). Cold-chain parameters enforce SLA. `seal_number` is the physical seal affixed at dispatch. |
+| `chain_of_custody` | `id`, `shipment_id`, `task_id` *(opt)*, `actor_id`, `actor_name`, `event_type` (`released`/`received`/`sealed`/`unsealed`/`temperature_breach`/`damaged`/`partial`), `location_name`, `latitude`, `longitude`, `notes`, `photo_url`, `signature_url`, `temperature_reading`, `received_quantity`, `receiving_staff_name`, `occurred_at` | Immutable custody ledger. Each handoff, seal/unseal, and temperature reading is recorded as an append-only event. |
+
+**API endpoints (all under `/{tenant}/`):**
+- `POST /shipments` — create distribution batch
+- `GET /shipments` — list with status/date/facility filters
+- `GET /shipments/{id}` — detail with tasks + full custody ledger
+- `POST /shipments/{id}/tasks` — add tasks to shipment
+- `POST /shipments/{id}/dispatch` — dispatch (records seal, sets dispatched_at)
+- `POST /shipments/{id}/custody` — add custody event (seal, release, receive, temperature reading)
+- `GET /shipments/{id}/custody` — full custody ledger
 
 > [!IMPORTANT]
 > **KYC File Requirements**
