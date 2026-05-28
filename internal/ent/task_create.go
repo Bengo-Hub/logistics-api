@@ -298,6 +298,34 @@ func (_c *TaskCreate) SetNillableCarrierID(v *string) *TaskCreate {
 	return _c
 }
 
+// SetShipmentID sets the "shipment_id" field.
+func (_c *TaskCreate) SetShipmentID(v uuid.UUID) *TaskCreate {
+	_c.mutation.SetShipmentID(v)
+	return _c
+}
+
+// SetNillableShipmentID sets the "shipment_id" field if the given value is not nil.
+func (_c *TaskCreate) SetNillableShipmentID(v *uuid.UUID) *TaskCreate {
+	if v != nil {
+		_c.SetShipmentID(*v)
+	}
+	return _c
+}
+
+// SetSealNumber sets the "seal_number" field.
+func (_c *TaskCreate) SetSealNumber(v string) *TaskCreate {
+	_c.mutation.SetSealNumber(v)
+	return _c
+}
+
+// SetNillableSealNumber sets the "seal_number" field if the given value is not nil.
+func (_c *TaskCreate) SetNillableSealNumber(v *string) *TaskCreate {
+	if v != nil {
+		_c.SetSealNumber(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *TaskCreate) SetCreatedAt(v time.Time) *TaskCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -651,6 +679,14 @@ func (_c *TaskCreate) createSpec() (*Task, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.CarrierID(); ok {
 		_spec.SetField(task.FieldCarrierID, field.TypeString, value)
 		_node.CarrierID = value
+	}
+	if value, ok := _c.mutation.ShipmentID(); ok {
+		_spec.SetField(task.FieldShipmentID, field.TypeUUID, value)
+		_node.ShipmentID = &value
+	}
+	if value, ok := _c.mutation.SealNumber(); ok {
+		_spec.SetField(task.FieldSealNumber, field.TypeString, value)
+		_node.SealNumber = value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(task.FieldCreatedAt, field.TypeTime, value)
@@ -1112,6 +1148,42 @@ func (u *TaskUpsert) ClearCarrierID() *TaskUpsert {
 	return u
 }
 
+// SetShipmentID sets the "shipment_id" field.
+func (u *TaskUpsert) SetShipmentID(v uuid.UUID) *TaskUpsert {
+	u.Set(task.FieldShipmentID, v)
+	return u
+}
+
+// UpdateShipmentID sets the "shipment_id" field to the value that was provided on create.
+func (u *TaskUpsert) UpdateShipmentID() *TaskUpsert {
+	u.SetExcluded(task.FieldShipmentID)
+	return u
+}
+
+// ClearShipmentID clears the value of the "shipment_id" field.
+func (u *TaskUpsert) ClearShipmentID() *TaskUpsert {
+	u.SetNull(task.FieldShipmentID)
+	return u
+}
+
+// SetSealNumber sets the "seal_number" field.
+func (u *TaskUpsert) SetSealNumber(v string) *TaskUpsert {
+	u.Set(task.FieldSealNumber, v)
+	return u
+}
+
+// UpdateSealNumber sets the "seal_number" field to the value that was provided on create.
+func (u *TaskUpsert) UpdateSealNumber() *TaskUpsert {
+	u.SetExcluded(task.FieldSealNumber)
+	return u
+}
+
+// ClearSealNumber clears the value of the "seal_number" field.
+func (u *TaskUpsert) ClearSealNumber() *TaskUpsert {
+	u.SetNull(task.FieldSealNumber)
+	return u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (u *TaskUpsert) SetUpdatedAt(v time.Time) *TaskUpsert {
 	u.Set(task.FieldUpdatedAt, v)
@@ -1564,6 +1636,48 @@ func (u *TaskUpsertOne) UpdateCarrierID() *TaskUpsertOne {
 func (u *TaskUpsertOne) ClearCarrierID() *TaskUpsertOne {
 	return u.Update(func(s *TaskUpsert) {
 		s.ClearCarrierID()
+	})
+}
+
+// SetShipmentID sets the "shipment_id" field.
+func (u *TaskUpsertOne) SetShipmentID(v uuid.UUID) *TaskUpsertOne {
+	return u.Update(func(s *TaskUpsert) {
+		s.SetShipmentID(v)
+	})
+}
+
+// UpdateShipmentID sets the "shipment_id" field to the value that was provided on create.
+func (u *TaskUpsertOne) UpdateShipmentID() *TaskUpsertOne {
+	return u.Update(func(s *TaskUpsert) {
+		s.UpdateShipmentID()
+	})
+}
+
+// ClearShipmentID clears the value of the "shipment_id" field.
+func (u *TaskUpsertOne) ClearShipmentID() *TaskUpsertOne {
+	return u.Update(func(s *TaskUpsert) {
+		s.ClearShipmentID()
+	})
+}
+
+// SetSealNumber sets the "seal_number" field.
+func (u *TaskUpsertOne) SetSealNumber(v string) *TaskUpsertOne {
+	return u.Update(func(s *TaskUpsert) {
+		s.SetSealNumber(v)
+	})
+}
+
+// UpdateSealNumber sets the "seal_number" field to the value that was provided on create.
+func (u *TaskUpsertOne) UpdateSealNumber() *TaskUpsertOne {
+	return u.Update(func(s *TaskUpsert) {
+		s.UpdateSealNumber()
+	})
+}
+
+// ClearSealNumber clears the value of the "seal_number" field.
+func (u *TaskUpsertOne) ClearSealNumber() *TaskUpsertOne {
+	return u.Update(func(s *TaskUpsert) {
+		s.ClearSealNumber()
 	})
 }
 
@@ -2188,6 +2302,48 @@ func (u *TaskUpsertBulk) UpdateCarrierID() *TaskUpsertBulk {
 func (u *TaskUpsertBulk) ClearCarrierID() *TaskUpsertBulk {
 	return u.Update(func(s *TaskUpsert) {
 		s.ClearCarrierID()
+	})
+}
+
+// SetShipmentID sets the "shipment_id" field.
+func (u *TaskUpsertBulk) SetShipmentID(v uuid.UUID) *TaskUpsertBulk {
+	return u.Update(func(s *TaskUpsert) {
+		s.SetShipmentID(v)
+	})
+}
+
+// UpdateShipmentID sets the "shipment_id" field to the value that was provided on create.
+func (u *TaskUpsertBulk) UpdateShipmentID() *TaskUpsertBulk {
+	return u.Update(func(s *TaskUpsert) {
+		s.UpdateShipmentID()
+	})
+}
+
+// ClearShipmentID clears the value of the "shipment_id" field.
+func (u *TaskUpsertBulk) ClearShipmentID() *TaskUpsertBulk {
+	return u.Update(func(s *TaskUpsert) {
+		s.ClearShipmentID()
+	})
+}
+
+// SetSealNumber sets the "seal_number" field.
+func (u *TaskUpsertBulk) SetSealNumber(v string) *TaskUpsertBulk {
+	return u.Update(func(s *TaskUpsert) {
+		s.SetSealNumber(v)
+	})
+}
+
+// UpdateSealNumber sets the "seal_number" field to the value that was provided on create.
+func (u *TaskUpsertBulk) UpdateSealNumber() *TaskUpsertBulk {
+	return u.Update(func(s *TaskUpsert) {
+		s.UpdateSealNumber()
+	})
+}
+
+// ClearSealNumber clears the value of the "seal_number" field.
+func (u *TaskUpsertBulk) ClearSealNumber() *TaskUpsertBulk {
+	return u.Update(func(s *TaskUpsert) {
+		s.ClearSealNumber()
 	})
 }
 

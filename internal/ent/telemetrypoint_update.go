@@ -193,6 +193,33 @@ func (_u *TelemetryPointUpdate) ClearBatteryPct() *TelemetryPointUpdate {
 	return _u
 }
 
+// SetTemperatureCelsius sets the "temperature_celsius" field.
+func (_u *TelemetryPointUpdate) SetTemperatureCelsius(v float64) *TelemetryPointUpdate {
+	_u.mutation.ResetTemperatureCelsius()
+	_u.mutation.SetTemperatureCelsius(v)
+	return _u
+}
+
+// SetNillableTemperatureCelsius sets the "temperature_celsius" field if the given value is not nil.
+func (_u *TelemetryPointUpdate) SetNillableTemperatureCelsius(v *float64) *TelemetryPointUpdate {
+	if v != nil {
+		_u.SetTemperatureCelsius(*v)
+	}
+	return _u
+}
+
+// AddTemperatureCelsius adds value to the "temperature_celsius" field.
+func (_u *TelemetryPointUpdate) AddTemperatureCelsius(v float64) *TelemetryPointUpdate {
+	_u.mutation.AddTemperatureCelsius(v)
+	return _u
+}
+
+// ClearTemperatureCelsius clears the value of the "temperature_celsius" field.
+func (_u *TelemetryPointUpdate) ClearTemperatureCelsius() *TelemetryPointUpdate {
+	_u.mutation.ClearTemperatureCelsius()
+	return _u
+}
+
 // SetMetadata sets the "metadata" field.
 func (_u *TelemetryPointUpdate) SetMetadata(v map[string]interface{}) *TelemetryPointUpdate {
 	_u.mutation.SetMetadata(v)
@@ -309,6 +336,15 @@ func (_u *TelemetryPointUpdate) sqlSave(ctx context.Context) (_node int, err err
 	}
 	if _u.mutation.BatteryPctCleared() {
 		_spec.ClearField(telemetrypoint.FieldBatteryPct, field.TypeFloat64)
+	}
+	if value, ok := _u.mutation.TemperatureCelsius(); ok {
+		_spec.SetField(telemetrypoint.FieldTemperatureCelsius, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedTemperatureCelsius(); ok {
+		_spec.AddField(telemetrypoint.FieldTemperatureCelsius, field.TypeFloat64, value)
+	}
+	if _u.mutation.TemperatureCelsiusCleared() {
+		_spec.ClearField(telemetrypoint.FieldTemperatureCelsius, field.TypeFloat64)
 	}
 	if value, ok := _u.mutation.Metadata(); ok {
 		_spec.SetField(telemetrypoint.FieldMetadata, field.TypeJSON, value)
@@ -525,6 +561,33 @@ func (_u *TelemetryPointUpdateOne) ClearBatteryPct() *TelemetryPointUpdateOne {
 	return _u
 }
 
+// SetTemperatureCelsius sets the "temperature_celsius" field.
+func (_u *TelemetryPointUpdateOne) SetTemperatureCelsius(v float64) *TelemetryPointUpdateOne {
+	_u.mutation.ResetTemperatureCelsius()
+	_u.mutation.SetTemperatureCelsius(v)
+	return _u
+}
+
+// SetNillableTemperatureCelsius sets the "temperature_celsius" field if the given value is not nil.
+func (_u *TelemetryPointUpdateOne) SetNillableTemperatureCelsius(v *float64) *TelemetryPointUpdateOne {
+	if v != nil {
+		_u.SetTemperatureCelsius(*v)
+	}
+	return _u
+}
+
+// AddTemperatureCelsius adds value to the "temperature_celsius" field.
+func (_u *TelemetryPointUpdateOne) AddTemperatureCelsius(v float64) *TelemetryPointUpdateOne {
+	_u.mutation.AddTemperatureCelsius(v)
+	return _u
+}
+
+// ClearTemperatureCelsius clears the value of the "temperature_celsius" field.
+func (_u *TelemetryPointUpdateOne) ClearTemperatureCelsius() *TelemetryPointUpdateOne {
+	_u.mutation.ClearTemperatureCelsius()
+	return _u
+}
+
 // SetMetadata sets the "metadata" field.
 func (_u *TelemetryPointUpdateOne) SetMetadata(v map[string]interface{}) *TelemetryPointUpdateOne {
 	_u.mutation.SetMetadata(v)
@@ -671,6 +734,15 @@ func (_u *TelemetryPointUpdateOne) sqlSave(ctx context.Context) (_node *Telemetr
 	}
 	if _u.mutation.BatteryPctCleared() {
 		_spec.ClearField(telemetrypoint.FieldBatteryPct, field.TypeFloat64)
+	}
+	if value, ok := _u.mutation.TemperatureCelsius(); ok {
+		_spec.SetField(telemetrypoint.FieldTemperatureCelsius, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedTemperatureCelsius(); ok {
+		_spec.AddField(telemetrypoint.FieldTemperatureCelsius, field.TypeFloat64, value)
+	}
+	if _u.mutation.TemperatureCelsiusCleared() {
+		_spec.ClearField(telemetrypoint.FieldTemperatureCelsius, field.TypeFloat64)
 	}
 	if value, ok := _u.mutation.Metadata(); ok {
 		_spec.SetField(telemetrypoint.FieldMetadata, field.TypeJSON, value)

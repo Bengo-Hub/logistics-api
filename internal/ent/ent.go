@@ -15,6 +15,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/billingevent"
 	"github.com/bengobox/logistics-service/internal/ent/carrierjob"
 	"github.com/bengobox/logistics-service/internal/ent/carrierpartner"
+	"github.com/bengobox/logistics-service/internal/ent/chainofcustody"
 	"github.com/bengobox/logistics-service/internal/ent/earningsstatement"
 	"github.com/bengobox/logistics-service/internal/ent/fleet"
 	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
@@ -31,6 +32,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/ridershift"
 	"github.com/bengobox/logistics-service/internal/ent/rolepermission"
 	"github.com/bengobox/logistics-service/internal/ent/serviceconfig"
+	"github.com/bengobox/logistics-service/internal/ent/shipment"
 	"github.com/bengobox/logistics-service/internal/ent/task"
 	"github.com/bengobox/logistics-service/internal/ent/taskassignment"
 	"github.com/bengobox/logistics-service/internal/ent/taskevent"
@@ -105,6 +107,7 @@ func checkColumn(t, c string) error {
 			billingevent.Table:        billingevent.ValidColumn,
 			carrierjob.Table:          carrierjob.ValidColumn,
 			carrierpartner.Table:      carrierpartner.ValidColumn,
+			chainofcustody.Table:      chainofcustody.ValidColumn,
 			earningsstatement.Table:   earningsstatement.ValidColumn,
 			fleet.Table:               fleet.ValidColumn,
 			fleetmember.Table:         fleetmember.ValidColumn,
@@ -121,6 +124,7 @@ func checkColumn(t, c string) error {
 			ridershift.Table:          ridershift.ValidColumn,
 			rolepermission.Table:      rolepermission.ValidColumn,
 			serviceconfig.Table:       serviceconfig.ValidColumn,
+			shipment.Table:            shipment.ValidColumn,
 			task.Table:                task.ValidColumn,
 			taskassignment.Table:      taskassignment.ValidColumn,
 			taskevent.Table:           taskevent.ValidColumn,

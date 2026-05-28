@@ -15,6 +15,9 @@ type CarrierJob func(*sql.Selector)
 // CarrierPartner is the predicate function for carrierpartner builders.
 type CarrierPartner func(*sql.Selector)
 
+// ChainOfCustody is the predicate function for chainofcustody builders.
+type ChainOfCustody func(*sql.Selector)
+
 // EarningsStatement is the predicate function for earningsstatement builders.
 type EarningsStatement func(*sql.Selector)
 
@@ -62,6 +65,9 @@ type RolePermission func(*sql.Selector)
 
 // ServiceConfig is the predicate function for serviceconfig builders.
 type ServiceConfig func(*sql.Selector)
+
+// Shipment is the predicate function for shipment builders.
+type Shipment func(*sql.Selector)
 
 // Task is the predicate function for task builders.
 type Task func(*sql.Selector)

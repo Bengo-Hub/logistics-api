@@ -57,6 +57,16 @@ func (h *IdentityHandler) GetAuthMe(w http.ResponseWriter, r *http.Request) {
 		permCodes = []string{}
 	}
 
+	// Resolve enabled modules and use_case for this tenant (Trinity Layer 3 module gating).
+	// Platform owners get all modules; others get tenant-specific or use_case defaults.
+	var enabledModules []string
+	useCase := ""
+	if claims.IsPlatformOwner {
+		enabledModules = nil // nil = all modules (frontend treats nil/empty as unrestricted)
+	} else if h.svc != nil && tenantID != uuid.Nil {
+		enabledModules, useCase = h.svc.ResolveEnabledModules(r.Context(), tenantID)
+	}
+
 	resp := map[string]any{
 		"id":               claims.Subject,
 		"email":            claims.Email,
@@ -66,6 +76,8 @@ func (h *IdentityHandler) GetAuthMe(w http.ResponseWriter, r *http.Request) {
 		"tenant_id":        claims.TenantID,
 		"tenant_slug":      claims.GetTenantSlug(),
 		"is_platform_owner": claims.IsPlatformOwner,
+		"use_case":         useCase,
+		"enabled_modules":  enabledModules,
 	}
 
 	w.Header().Set("Content-Type", "application/json")

@@ -1,4 +1,4 @@
-h1:ZRmexdHD39dz1eCwCwoMHUWknChuuZslYJGWPOxTPss=
+h1:j7mzjK9ORK21o6tqZ0CNOgErD9gE4YxcQk85n61edXQ=
 20260314184847_initial_schema.sql h1:L0wAADcTDNVU6BeR2ScWX5poErpcRylCO9xWQakqX+M=
 20260320140940_add_tracking_code_and_routing.sql h1:kfFLd/S6aqmD3l6l5aHN+44M18ct8inCdUO/ebQVzPs=
 20260320144356_add_geo_fence_zones.sql h1:DIWWryUDFzragzPYE4N/Qag94zVyu/XejorTCXB5eUc=
@@ -13,3 +13,4 @@ h1:ZRmexdHD39dz1eCwCwoMHUWknChuuZslYJGWPOxTPss=
 20260524233323_rider_payout_fields.sql h1:vHGfdmOjiNwHpL4io3cBQJsgIx0oynLsupRX6hn4ktA=
 20260527162502_add_task_filter_indexes.sql h1:JbhkfMvIJcTQ5AI1IhibWXw7/95osExQ8vfJIRzKh4I=
 20260528012352_add_outlet.sql h1:Y4w+zXgHLXDnV6JyqqwS+YSJlXiAU4AR6RUxnc5r5b4=
+20260528180000_shipment_chain_cold_chain.sql h1:eYTFl4LDngyppKYV9qlutlqWx5BOWdNd2n0gULd+1eg=

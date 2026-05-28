@@ -19,6 +19,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/billingevent"
 	"github.com/bengobox/logistics-service/internal/ent/carrierjob"
 	"github.com/bengobox/logistics-service/internal/ent/carrierpartner"
+	"github.com/bengobox/logistics-service/internal/ent/chainofcustody"
 	"github.com/bengobox/logistics-service/internal/ent/earningsstatement"
 	"github.com/bengobox/logistics-service/internal/ent/fleet"
 	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
@@ -35,6 +36,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/ridershift"
 	"github.com/bengobox/logistics-service/internal/ent/rolepermission"
 	"github.com/bengobox/logistics-service/internal/ent/serviceconfig"
+	"github.com/bengobox/logistics-service/internal/ent/shipment"
 	"github.com/bengobox/logistics-service/internal/ent/task"
 	"github.com/bengobox/logistics-service/internal/ent/taskassignment"
 	"github.com/bengobox/logistics-service/internal/ent/taskevent"
@@ -59,6 +61,8 @@ type Client struct {
 	CarrierJob *CarrierJobClient
 	// CarrierPartner is the client for interacting with the CarrierPartner builders.
 	CarrierPartner *CarrierPartnerClient
+	// ChainOfCustody is the client for interacting with the ChainOfCustody builders.
+	ChainOfCustody *ChainOfCustodyClient
 	// EarningsStatement is the client for interacting with the EarningsStatement builders.
 	EarningsStatement *EarningsStatementClient
 	// Fleet is the client for interacting with the Fleet builders.
@@ -91,6 +95,8 @@ type Client struct {
 	RolePermission *RolePermissionClient
 	// ServiceConfig is the client for interacting with the ServiceConfig builders.
 	ServiceConfig *ServiceConfigClient
+	// Shipment is the client for interacting with the Shipment builders.
+	Shipment *ShipmentClient
 	// Task is the client for interacting with the Task builders.
 	Task *TaskClient
 	// TaskAssignment is the client for interacting with the TaskAssignment builders.
@@ -127,6 +133,7 @@ func (c *Client) init() {
 	c.BillingEvent = NewBillingEventClient(c.config)
 	c.CarrierJob = NewCarrierJobClient(c.config)
 	c.CarrierPartner = NewCarrierPartnerClient(c.config)
+	c.ChainOfCustody = NewChainOfCustodyClient(c.config)
 	c.EarningsStatement = NewEarningsStatementClient(c.config)
 	c.Fleet = NewFleetClient(c.config)
 	c.FleetMember = NewFleetMemberClient(c.config)
@@ -143,6 +150,7 @@ func (c *Client) init() {
 	c.RiderShift = NewRiderShiftClient(c.config)
 	c.RolePermission = NewRolePermissionClient(c.config)
 	c.ServiceConfig = NewServiceConfigClient(c.config)
+	c.Shipment = NewShipmentClient(c.config)
 	c.Task = NewTaskClient(c.config)
 	c.TaskAssignment = NewTaskAssignmentClient(c.config)
 	c.TaskEvent = NewTaskEventClient(c.config)
@@ -249,6 +257,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		BillingEvent:        NewBillingEventClient(cfg),
 		CarrierJob:          NewCarrierJobClient(cfg),
 		CarrierPartner:      NewCarrierPartnerClient(cfg),
+		ChainOfCustody:      NewChainOfCustodyClient(cfg),
 		EarningsStatement:   NewEarningsStatementClient(cfg),
 		Fleet:               NewFleetClient(cfg),
 		FleetMember:         NewFleetMemberClient(cfg),
@@ -265,6 +274,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		RiderShift:          NewRiderShiftClient(cfg),
 		RolePermission:      NewRolePermissionClient(cfg),
 		ServiceConfig:       NewServiceConfigClient(cfg),
+		Shipment:            NewShipmentClient(cfg),
 		Task:                NewTaskClient(cfg),
 		TaskAssignment:      NewTaskAssignmentClient(cfg),
 		TaskEvent:           NewTaskEventClient(cfg),
@@ -298,6 +308,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		BillingEvent:        NewBillingEventClient(cfg),
 		CarrierJob:          NewCarrierJobClient(cfg),
 		CarrierPartner:      NewCarrierPartnerClient(cfg),
+		ChainOfCustody:      NewChainOfCustodyClient(cfg),
 		EarningsStatement:   NewEarningsStatementClient(cfg),
 		Fleet:               NewFleetClient(cfg),
 		FleetMember:         NewFleetMemberClient(cfg),
@@ -314,6 +325,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		RiderShift:          NewRiderShiftClient(cfg),
 		RolePermission:      NewRolePermissionClient(cfg),
 		ServiceConfig:       NewServiceConfigClient(cfg),
+		Shipment:            NewShipmentClient(cfg),
 		Task:                NewTaskClient(cfg),
 		TaskAssignment:      NewTaskAssignmentClient(cfg),
 		TaskEvent:           NewTaskEventClient(cfg),
@@ -354,13 +366,13 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.BillingEvent, c.CarrierJob, c.CarrierPartner, c.EarningsStatement, c.Fleet,
-		c.FleetMember, c.GeoFence, c.IntegrationSetting, c.LogisticsPermission,
-		c.LogisticsRole, c.OutboxEvent, c.Outlet, c.PricingRule, c.ProofOfDelivery,
-		c.RateLimitConfig, c.RiderRating, c.RiderShift, c.RolePermission,
-		c.ServiceConfig, c.Task, c.TaskAssignment, c.TaskEvent, c.TaskStep,
-		c.TelemetryPoint, c.TelemetryStream, c.Tenant, c.TenantSyncEvent, c.User,
-		c.UserRoleAssignment, c.Vehicle,
+		c.BillingEvent, c.CarrierJob, c.CarrierPartner, c.ChainOfCustody,
+		c.EarningsStatement, c.Fleet, c.FleetMember, c.GeoFence, c.IntegrationSetting,
+		c.LogisticsPermission, c.LogisticsRole, c.OutboxEvent, c.Outlet, c.PricingRule,
+		c.ProofOfDelivery, c.RateLimitConfig, c.RiderRating, c.RiderShift,
+		c.RolePermission, c.ServiceConfig, c.Shipment, c.Task, c.TaskAssignment,
+		c.TaskEvent, c.TaskStep, c.TelemetryPoint, c.TelemetryStream, c.Tenant,
+		c.TenantSyncEvent, c.User, c.UserRoleAssignment, c.Vehicle,
 	} {
 		n.Use(hooks...)
 	}
@@ -370,13 +382,13 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.BillingEvent, c.CarrierJob, c.CarrierPartner, c.EarningsStatement, c.Fleet,
-		c.FleetMember, c.GeoFence, c.IntegrationSetting, c.LogisticsPermission,
-		c.LogisticsRole, c.OutboxEvent, c.Outlet, c.PricingRule, c.ProofOfDelivery,
-		c.RateLimitConfig, c.RiderRating, c.RiderShift, c.RolePermission,
-		c.ServiceConfig, c.Task, c.TaskAssignment, c.TaskEvent, c.TaskStep,
-		c.TelemetryPoint, c.TelemetryStream, c.Tenant, c.TenantSyncEvent, c.User,
-		c.UserRoleAssignment, c.Vehicle,
+		c.BillingEvent, c.CarrierJob, c.CarrierPartner, c.ChainOfCustody,
+		c.EarningsStatement, c.Fleet, c.FleetMember, c.GeoFence, c.IntegrationSetting,
+		c.LogisticsPermission, c.LogisticsRole, c.OutboxEvent, c.Outlet, c.PricingRule,
+		c.ProofOfDelivery, c.RateLimitConfig, c.RiderRating, c.RiderShift,
+		c.RolePermission, c.ServiceConfig, c.Shipment, c.Task, c.TaskAssignment,
+		c.TaskEvent, c.TaskStep, c.TelemetryPoint, c.TelemetryStream, c.Tenant,
+		c.TenantSyncEvent, c.User, c.UserRoleAssignment, c.Vehicle,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -391,6 +403,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.CarrierJob.mutate(ctx, m)
 	case *CarrierPartnerMutation:
 		return c.CarrierPartner.mutate(ctx, m)
+	case *ChainOfCustodyMutation:
+		return c.ChainOfCustody.mutate(ctx, m)
 	case *EarningsStatementMutation:
 		return c.EarningsStatement.mutate(ctx, m)
 	case *FleetMutation:
@@ -423,6 +437,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.RolePermission.mutate(ctx, m)
 	case *ServiceConfigMutation:
 		return c.ServiceConfig.mutate(ctx, m)
+	case *ShipmentMutation:
+		return c.Shipment.mutate(ctx, m)
 	case *TaskMutation:
 		return c.Task.mutate(ctx, m)
 	case *TaskAssignmentMutation:
@@ -846,6 +862,155 @@ func (c *CarrierPartnerClient) mutate(ctx context.Context, m *CarrierPartnerMuta
 		return (&CarrierPartnerDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown CarrierPartner mutation op: %q", m.Op())
+	}
+}
+
+// ChainOfCustodyClient is a client for the ChainOfCustody schema.
+type ChainOfCustodyClient struct {
+	config
+}
+
+// NewChainOfCustodyClient returns a client for the ChainOfCustody from the given config.
+func NewChainOfCustodyClient(c config) *ChainOfCustodyClient {
+	return &ChainOfCustodyClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `chainofcustody.Hooks(f(g(h())))`.
+func (c *ChainOfCustodyClient) Use(hooks ...Hook) {
+	c.hooks.ChainOfCustody = append(c.hooks.ChainOfCustody, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `chainofcustody.Intercept(f(g(h())))`.
+func (c *ChainOfCustodyClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ChainOfCustody = append(c.inters.ChainOfCustody, interceptors...)
+}
+
+// Create returns a builder for creating a ChainOfCustody entity.
+func (c *ChainOfCustodyClient) Create() *ChainOfCustodyCreate {
+	mutation := newChainOfCustodyMutation(c.config, OpCreate)
+	return &ChainOfCustodyCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ChainOfCustody entities.
+func (c *ChainOfCustodyClient) CreateBulk(builders ...*ChainOfCustodyCreate) *ChainOfCustodyCreateBulk {
+	return &ChainOfCustodyCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ChainOfCustodyClient) MapCreateBulk(slice any, setFunc func(*ChainOfCustodyCreate, int)) *ChainOfCustodyCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ChainOfCustodyCreateBulk{err: fmt.Errorf("calling to ChainOfCustodyClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ChainOfCustodyCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ChainOfCustodyCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ChainOfCustody.
+func (c *ChainOfCustodyClient) Update() *ChainOfCustodyUpdate {
+	mutation := newChainOfCustodyMutation(c.config, OpUpdate)
+	return &ChainOfCustodyUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ChainOfCustodyClient) UpdateOne(_m *ChainOfCustody) *ChainOfCustodyUpdateOne {
+	mutation := newChainOfCustodyMutation(c.config, OpUpdateOne, withChainOfCustody(_m))
+	return &ChainOfCustodyUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ChainOfCustodyClient) UpdateOneID(id uuid.UUID) *ChainOfCustodyUpdateOne {
+	mutation := newChainOfCustodyMutation(c.config, OpUpdateOne, withChainOfCustodyID(id))
+	return &ChainOfCustodyUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ChainOfCustody.
+func (c *ChainOfCustodyClient) Delete() *ChainOfCustodyDelete {
+	mutation := newChainOfCustodyMutation(c.config, OpDelete)
+	return &ChainOfCustodyDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ChainOfCustodyClient) DeleteOne(_m *ChainOfCustody) *ChainOfCustodyDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ChainOfCustodyClient) DeleteOneID(id uuid.UUID) *ChainOfCustodyDeleteOne {
+	builder := c.Delete().Where(chainofcustody.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ChainOfCustodyDeleteOne{builder}
+}
+
+// Query returns a query builder for ChainOfCustody.
+func (c *ChainOfCustodyClient) Query() *ChainOfCustodyQuery {
+	return &ChainOfCustodyQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeChainOfCustody},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ChainOfCustody entity by its id.
+func (c *ChainOfCustodyClient) Get(ctx context.Context, id uuid.UUID) (*ChainOfCustody, error) {
+	return c.Query().Where(chainofcustody.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ChainOfCustodyClient) GetX(ctx context.Context, id uuid.UUID) *ChainOfCustody {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryShipment queries the shipment edge of a ChainOfCustody.
+func (c *ChainOfCustodyClient) QueryShipment(_m *ChainOfCustody) *ShipmentQuery {
+	query := (&ShipmentClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(chainofcustody.Table, chainofcustody.FieldID, id),
+			sqlgraph.To(shipment.Table, shipment.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, chainofcustody.ShipmentTable, chainofcustody.ShipmentColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *ChainOfCustodyClient) Hooks() []Hook {
+	return c.hooks.ChainOfCustody
+}
+
+// Interceptors returns the client interceptors.
+func (c *ChainOfCustodyClient) Interceptors() []Interceptor {
+	return c.inters.ChainOfCustody
+}
+
+func (c *ChainOfCustodyClient) mutate(ctx context.Context, m *ChainOfCustodyMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ChainOfCustodyCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ChainOfCustodyUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ChainOfCustodyUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ChainOfCustodyDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ChainOfCustody mutation op: %q", m.Op())
 	}
 }
 
@@ -3233,6 +3398,155 @@ func (c *ServiceConfigClient) mutate(ctx context.Context, m *ServiceConfigMutati
 	}
 }
 
+// ShipmentClient is a client for the Shipment schema.
+type ShipmentClient struct {
+	config
+}
+
+// NewShipmentClient returns a client for the Shipment from the given config.
+func NewShipmentClient(c config) *ShipmentClient {
+	return &ShipmentClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `shipment.Hooks(f(g(h())))`.
+func (c *ShipmentClient) Use(hooks ...Hook) {
+	c.hooks.Shipment = append(c.hooks.Shipment, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `shipment.Intercept(f(g(h())))`.
+func (c *ShipmentClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Shipment = append(c.inters.Shipment, interceptors...)
+}
+
+// Create returns a builder for creating a Shipment entity.
+func (c *ShipmentClient) Create() *ShipmentCreate {
+	mutation := newShipmentMutation(c.config, OpCreate)
+	return &ShipmentCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Shipment entities.
+func (c *ShipmentClient) CreateBulk(builders ...*ShipmentCreate) *ShipmentCreateBulk {
+	return &ShipmentCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ShipmentClient) MapCreateBulk(slice any, setFunc func(*ShipmentCreate, int)) *ShipmentCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ShipmentCreateBulk{err: fmt.Errorf("calling to ShipmentClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ShipmentCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ShipmentCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Shipment.
+func (c *ShipmentClient) Update() *ShipmentUpdate {
+	mutation := newShipmentMutation(c.config, OpUpdate)
+	return &ShipmentUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ShipmentClient) UpdateOne(_m *Shipment) *ShipmentUpdateOne {
+	mutation := newShipmentMutation(c.config, OpUpdateOne, withShipment(_m))
+	return &ShipmentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ShipmentClient) UpdateOneID(id uuid.UUID) *ShipmentUpdateOne {
+	mutation := newShipmentMutation(c.config, OpUpdateOne, withShipmentID(id))
+	return &ShipmentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Shipment.
+func (c *ShipmentClient) Delete() *ShipmentDelete {
+	mutation := newShipmentMutation(c.config, OpDelete)
+	return &ShipmentDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ShipmentClient) DeleteOne(_m *Shipment) *ShipmentDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ShipmentClient) DeleteOneID(id uuid.UUID) *ShipmentDeleteOne {
+	builder := c.Delete().Where(shipment.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ShipmentDeleteOne{builder}
+}
+
+// Query returns a query builder for Shipment.
+func (c *ShipmentClient) Query() *ShipmentQuery {
+	return &ShipmentQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeShipment},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a Shipment entity by its id.
+func (c *ShipmentClient) Get(ctx context.Context, id uuid.UUID) (*Shipment, error) {
+	return c.Query().Where(shipment.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ShipmentClient) GetX(ctx context.Context, id uuid.UUID) *Shipment {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryChainOfCustody queries the chain_of_custody edge of a Shipment.
+func (c *ShipmentClient) QueryChainOfCustody(_m *Shipment) *ChainOfCustodyQuery {
+	query := (&ChainOfCustodyClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(shipment.Table, shipment.FieldID, id),
+			sqlgraph.To(chainofcustody.Table, chainofcustody.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, shipment.ChainOfCustodyTable, shipment.ChainOfCustodyColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *ShipmentClient) Hooks() []Hook {
+	return c.hooks.Shipment
+}
+
+// Interceptors returns the client interceptors.
+func (c *ShipmentClient) Interceptors() []Interceptor {
+	return c.inters.Shipment
+}
+
+func (c *ShipmentClient) mutate(ctx context.Context, m *ShipmentMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ShipmentCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ShipmentUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ShipmentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ShipmentDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Shipment mutation op: %q", m.Op())
+	}
+}
+
 // TaskClient is a client for the Task schema.
 type TaskClient struct {
 	config
@@ -4987,19 +5301,21 @@ func (c *VehicleClient) mutate(ctx context.Context, m *VehicleMutation) (Value, 
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		BillingEvent, CarrierJob, CarrierPartner, EarningsStatement, Fleet, FleetMember,
-		GeoFence, IntegrationSetting, LogisticsPermission, LogisticsRole, OutboxEvent,
-		Outlet, PricingRule, ProofOfDelivery, RateLimitConfig, RiderRating, RiderShift,
-		RolePermission, ServiceConfig, Task, TaskAssignment, TaskEvent, TaskStep,
-		TelemetryPoint, TelemetryStream, Tenant, TenantSyncEvent, User,
-		UserRoleAssignment, Vehicle []ent.Hook
+		BillingEvent, CarrierJob, CarrierPartner, ChainOfCustody, EarningsStatement,
+		Fleet, FleetMember, GeoFence, IntegrationSetting, LogisticsPermission,
+		LogisticsRole, OutboxEvent, Outlet, PricingRule, ProofOfDelivery,
+		RateLimitConfig, RiderRating, RiderShift, RolePermission, ServiceConfig,
+		Shipment, Task, TaskAssignment, TaskEvent, TaskStep, TelemetryPoint,
+		TelemetryStream, Tenant, TenantSyncEvent, User, UserRoleAssignment,
+		Vehicle []ent.Hook
 	}
 	inters struct {
-		BillingEvent, CarrierJob, CarrierPartner, EarningsStatement, Fleet, FleetMember,
-		GeoFence, IntegrationSetting, LogisticsPermission, LogisticsRole, OutboxEvent,
-		Outlet, PricingRule, ProofOfDelivery, RateLimitConfig, RiderRating, RiderShift,
-		RolePermission, ServiceConfig, Task, TaskAssignment, TaskEvent, TaskStep,
-		TelemetryPoint, TelemetryStream, Tenant, TenantSyncEvent, User,
-		UserRoleAssignment, Vehicle []ent.Interceptor
+		BillingEvent, CarrierJob, CarrierPartner, ChainOfCustody, EarningsStatement,
+		Fleet, FleetMember, GeoFence, IntegrationSetting, LogisticsPermission,
+		LogisticsRole, OutboxEvent, Outlet, PricingRule, ProofOfDelivery,
+		RateLimitConfig, RiderRating, RiderShift, RolePermission, ServiceConfig,
+		Shipment, Task, TaskAssignment, TaskEvent, TaskStep, TelemetryPoint,
+		TelemetryStream, Tenant, TenantSyncEvent, User, UserRoleAssignment,
+		Vehicle []ent.Interceptor
 	}
 )

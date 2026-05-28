@@ -151,6 +151,16 @@ func CarrierID(v string) predicate.Task {
 	return predicate.Task(sql.FieldEQ(FieldCarrierID, v))
 }
 
+// ShipmentID applies equality check predicate on the "shipment_id" field. It's identical to ShipmentIDEQ.
+func ShipmentID(v uuid.UUID) predicate.Task {
+	return predicate.Task(sql.FieldEQ(FieldShipmentID, v))
+}
+
+// SealNumber applies equality check predicate on the "seal_number" field. It's identical to SealNumberEQ.
+func SealNumber(v string) predicate.Task {
+	return predicate.Task(sql.FieldEQ(FieldSealNumber, v))
+}
+
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.Task {
 	return predicate.Task(sql.FieldEQ(FieldCreatedAt, v))
@@ -1084,6 +1094,131 @@ func CarrierIDEqualFold(v string) predicate.Task {
 // CarrierIDContainsFold applies the ContainsFold predicate on the "carrier_id" field.
 func CarrierIDContainsFold(v string) predicate.Task {
 	return predicate.Task(sql.FieldContainsFold(FieldCarrierID, v))
+}
+
+// ShipmentIDEQ applies the EQ predicate on the "shipment_id" field.
+func ShipmentIDEQ(v uuid.UUID) predicate.Task {
+	return predicate.Task(sql.FieldEQ(FieldShipmentID, v))
+}
+
+// ShipmentIDNEQ applies the NEQ predicate on the "shipment_id" field.
+func ShipmentIDNEQ(v uuid.UUID) predicate.Task {
+	return predicate.Task(sql.FieldNEQ(FieldShipmentID, v))
+}
+
+// ShipmentIDIn applies the In predicate on the "shipment_id" field.
+func ShipmentIDIn(vs ...uuid.UUID) predicate.Task {
+	return predicate.Task(sql.FieldIn(FieldShipmentID, vs...))
+}
+
+// ShipmentIDNotIn applies the NotIn predicate on the "shipment_id" field.
+func ShipmentIDNotIn(vs ...uuid.UUID) predicate.Task {
+	return predicate.Task(sql.FieldNotIn(FieldShipmentID, vs...))
+}
+
+// ShipmentIDGT applies the GT predicate on the "shipment_id" field.
+func ShipmentIDGT(v uuid.UUID) predicate.Task {
+	return predicate.Task(sql.FieldGT(FieldShipmentID, v))
+}
+
+// ShipmentIDGTE applies the GTE predicate on the "shipment_id" field.
+func ShipmentIDGTE(v uuid.UUID) predicate.Task {
+	return predicate.Task(sql.FieldGTE(FieldShipmentID, v))
+}
+
+// ShipmentIDLT applies the LT predicate on the "shipment_id" field.
+func ShipmentIDLT(v uuid.UUID) predicate.Task {
+	return predicate.Task(sql.FieldLT(FieldShipmentID, v))
+}
+
+// ShipmentIDLTE applies the LTE predicate on the "shipment_id" field.
+func ShipmentIDLTE(v uuid.UUID) predicate.Task {
+	return predicate.Task(sql.FieldLTE(FieldShipmentID, v))
+}
+
+// ShipmentIDIsNil applies the IsNil predicate on the "shipment_id" field.
+func ShipmentIDIsNil() predicate.Task {
+	return predicate.Task(sql.FieldIsNull(FieldShipmentID))
+}
+
+// ShipmentIDNotNil applies the NotNil predicate on the "shipment_id" field.
+func ShipmentIDNotNil() predicate.Task {
+	return predicate.Task(sql.FieldNotNull(FieldShipmentID))
+}
+
+// SealNumberEQ applies the EQ predicate on the "seal_number" field.
+func SealNumberEQ(v string) predicate.Task {
+	return predicate.Task(sql.FieldEQ(FieldSealNumber, v))
+}
+
+// SealNumberNEQ applies the NEQ predicate on the "seal_number" field.
+func SealNumberNEQ(v string) predicate.Task {
+	return predicate.Task(sql.FieldNEQ(FieldSealNumber, v))
+}
+
+// SealNumberIn applies the In predicate on the "seal_number" field.
+func SealNumberIn(vs ...string) predicate.Task {
+	return predicate.Task(sql.FieldIn(FieldSealNumber, vs...))
+}
+
+// SealNumberNotIn applies the NotIn predicate on the "seal_number" field.
+func SealNumberNotIn(vs ...string) predicate.Task {
+	return predicate.Task(sql.FieldNotIn(FieldSealNumber, vs...))
+}
+
+// SealNumberGT applies the GT predicate on the "seal_number" field.
+func SealNumberGT(v string) predicate.Task {
+	return predicate.Task(sql.FieldGT(FieldSealNumber, v))
+}
+
+// SealNumberGTE applies the GTE predicate on the "seal_number" field.
+func SealNumberGTE(v string) predicate.Task {
+	return predicate.Task(sql.FieldGTE(FieldSealNumber, v))
+}
+
+// SealNumberLT applies the LT predicate on the "seal_number" field.
+func SealNumberLT(v string) predicate.Task {
+	return predicate.Task(sql.FieldLT(FieldSealNumber, v))
+}
+
+// SealNumberLTE applies the LTE predicate on the "seal_number" field.
+func SealNumberLTE(v string) predicate.Task {
+	return predicate.Task(sql.FieldLTE(FieldSealNumber, v))
+}
+
+// SealNumberContains applies the Contains predicate on the "seal_number" field.
+func SealNumberContains(v string) predicate.Task {
+	return predicate.Task(sql.FieldContains(FieldSealNumber, v))
+}
+
+// SealNumberHasPrefix applies the HasPrefix predicate on the "seal_number" field.
+func SealNumberHasPrefix(v string) predicate.Task {
+	return predicate.Task(sql.FieldHasPrefix(FieldSealNumber, v))
+}
+
+// SealNumberHasSuffix applies the HasSuffix predicate on the "seal_number" field.
+func SealNumberHasSuffix(v string) predicate.Task {
+	return predicate.Task(sql.FieldHasSuffix(FieldSealNumber, v))
+}
+
+// SealNumberIsNil applies the IsNil predicate on the "seal_number" field.
+func SealNumberIsNil() predicate.Task {
+	return predicate.Task(sql.FieldIsNull(FieldSealNumber))
+}
+
+// SealNumberNotNil applies the NotNil predicate on the "seal_number" field.
+func SealNumberNotNil() predicate.Task {
+	return predicate.Task(sql.FieldNotNull(FieldSealNumber))
+}
+
+// SealNumberEqualFold applies the EqualFold predicate on the "seal_number" field.
+func SealNumberEqualFold(v string) predicate.Task {
+	return predicate.Task(sql.FieldEqualFold(FieldSealNumber, v))
+}
+
+// SealNumberContainsFold applies the ContainsFold predicate on the "seal_number" field.
+func SealNumberContainsFold(v string) predicate.Task {
+	return predicate.Task(sql.FieldContainsFold(FieldSealNumber, v))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.

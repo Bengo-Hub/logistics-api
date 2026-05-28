@@ -63,6 +63,51 @@ var (
 		Columns:    CarrierPartnersColumns,
 		PrimaryKey: []*schema.Column{CarrierPartnersColumns[0]},
 	}
+	// ChainOfCustodiesColumns holds the columns for the "chain_of_custodies" table.
+	ChainOfCustodiesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "task_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "actor_id", Type: field.TypeUUID},
+		{Name: "actor_name", Type: field.TypeString},
+		{Name: "event_type", Type: field.TypeString},
+		{Name: "location_name", Type: field.TypeString, Nullable: true},
+		{Name: "latitude", Type: field.TypeFloat64, Nullable: true},
+		{Name: "longitude", Type: field.TypeFloat64, Nullable: true},
+		{Name: "notes", Type: field.TypeString, Nullable: true},
+		{Name: "photo_url", Type: field.TypeString, Nullable: true},
+		{Name: "signature_url", Type: field.TypeString, Nullable: true},
+		{Name: "temperature_reading", Type: field.TypeFloat64, Nullable: true},
+		{Name: "received_quantity", Type: field.TypeInt, Nullable: true},
+		{Name: "receiving_staff_name", Type: field.TypeString, Nullable: true},
+		{Name: "occurred_at", Type: field.TypeTime},
+		{Name: "shipment_id", Type: field.TypeUUID},
+	}
+	// ChainOfCustodiesTable holds the schema information for the "chain_of_custodies" table.
+	ChainOfCustodiesTable = &schema.Table{
+		Name:       "chain_of_custodies",
+		Columns:    ChainOfCustodiesColumns,
+		PrimaryKey: []*schema.Column{ChainOfCustodiesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "chain_of_custodies_shipments_chain_of_custody",
+				Columns:    []*schema.Column{ChainOfCustodiesColumns[15]},
+				RefColumns: []*schema.Column{ShipmentsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "chainofcustody_shipment_id_occurred_at",
+				Unique:  false,
+				Columns: []*schema.Column{ChainOfCustodiesColumns[15], ChainOfCustodiesColumns[14]},
+			},
+			{
+				Name:    "chainofcustody_task_id",
+				Unique:  false,
+				Columns: []*schema.Column{ChainOfCustodiesColumns[1]},
+			},
+		},
+	}
 	// EarningsStatementsColumns holds the columns for the "earnings_statements" table.
 	EarningsStatementsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -443,6 +488,11 @@ var (
 		{Name: "amount_collected", Type: field.TypeFloat64, Default: 0},
 		{Name: "collection_method", Type: field.TypeString, Nullable: true},
 		{Name: "captured_at", Type: field.TypeTime},
+		{Name: "receiving_staff_name", Type: field.TypeString, Nullable: true},
+		{Name: "receiving_staff_signature_url", Type: field.TypeString, Nullable: true},
+		{Name: "condition_on_arrival", Type: field.TypeString, Nullable: true},
+		{Name: "received_quantity", Type: field.TypeInt, Nullable: true},
+		{Name: "batch_reference", Type: field.TypeString, Nullable: true},
 		{Name: "metadata", Type: field.TypeJSON},
 		{Name: "task_id", Type: field.TypeUUID, Unique: true},
 	}
@@ -454,7 +504,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "proof_of_deliveries_tasks_proof_of_delivery",
-				Columns:    []*schema.Column{ProofOfDeliveriesColumns[10]},
+				Columns:    []*schema.Column{ProofOfDeliveriesColumns[15]},
 				RefColumns: []*schema.Column{TasksColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -468,7 +518,7 @@ var (
 			{
 				Name:    "proofofdelivery_tenant_id_task_id",
 				Unique:  false,
-				Columns: []*schema.Column{ProofOfDeliveriesColumns[1], ProofOfDeliveriesColumns[10]},
+				Columns: []*schema.Column{ProofOfDeliveriesColumns[1], ProofOfDeliveriesColumns[15]},
 			},
 		},
 	}
@@ -655,6 +705,53 @@ var (
 			},
 		},
 	}
+	// ShipmentsColumns holds the columns for the "shipments" table.
+	ShipmentsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID},
+		{Name: "shipment_code", Type: field.TypeString, Unique: true},
+		{Name: "shipment_type", Type: field.TypeString, Default: "warehouse_transfer"},
+		{Name: "status", Type: field.TypeString, Default: "planned"},
+		{Name: "fleet_type", Type: field.TypeString, Default: "distribution"},
+		{Name: "source_facility_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "source_facility_name", Type: field.TypeString, Nullable: true},
+		{Name: "dest_facility_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "dest_facility_name", Type: field.TypeString, Nullable: true},
+		{Name: "temperature_min_celsius", Type: field.TypeFloat64, Nullable: true},
+		{Name: "temperature_max_celsius", Type: field.TypeFloat64, Nullable: true},
+		{Name: "special_handling", Type: field.TypeJSON, Nullable: true},
+		{Name: "seal_number", Type: field.TypeString, Nullable: true},
+		{Name: "planned_dispatch_at", Type: field.TypeTime, Nullable: true},
+		{Name: "dispatched_at", Type: field.TypeTime, Nullable: true},
+		{Name: "completed_at", Type: field.TypeTime, Nullable: true},
+		{Name: "external_reference", Type: field.TypeString, Nullable: true},
+		{Name: "metadata", Type: field.TypeJSON},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// ShipmentsTable holds the schema information for the "shipments" table.
+	ShipmentsTable = &schema.Table{
+		Name:       "shipments",
+		Columns:    ShipmentsColumns,
+		PrimaryKey: []*schema.Column{ShipmentsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "shipment_tenant_id_status_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{ShipmentsColumns[1], ShipmentsColumns[4], ShipmentsColumns[19]},
+			},
+			{
+				Name:    "shipment_shipment_code",
+				Unique:  true,
+				Columns: []*schema.Column{ShipmentsColumns[2]},
+			},
+			{
+				Name:    "shipment_external_reference",
+				Unique:  false,
+				Columns: []*schema.Column{ShipmentsColumns[17]},
+			},
+		},
+	}
 	// TasksColumns holds the columns for the "tasks" table.
 	TasksColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -679,6 +776,8 @@ var (
 		{Name: "cash_collected", Type: field.TypeBool, Default: false},
 		{Name: "outlet_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "carrier_id", Type: field.TypeString, Nullable: true},
+		{Name: "shipment_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "seal_number", Type: field.TypeString, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "user_tasks", Type: field.TypeUUID, Nullable: true},
@@ -691,7 +790,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "tasks_users_tasks",
-				Columns:    []*schema.Column{TasksColumns[24]},
+				Columns:    []*schema.Column{TasksColumns[26]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -715,12 +814,12 @@ var (
 			{
 				Name:    "task_tenant_id_status_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{TasksColumns[1], TasksColumns[7], TasksColumns[22]},
+				Columns: []*schema.Column{TasksColumns[1], TasksColumns[7], TasksColumns[24]},
 			},
 			{
 				Name:    "task_tenant_id_outlet_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{TasksColumns[1], TasksColumns[20], TasksColumns[22]},
+				Columns: []*schema.Column{TasksColumns[1], TasksColumns[20], TasksColumns[24]},
 			},
 		},
 	}
@@ -818,6 +917,7 @@ var (
 		{Name: "accuracy_m", Type: field.TypeFloat64, Nullable: true},
 		{Name: "altitude_m", Type: field.TypeFloat64, Nullable: true},
 		{Name: "battery_pct", Type: field.TypeFloat64, Nullable: true},
+		{Name: "temperature_celsius", Type: field.TypeFloat64, Nullable: true},
 		{Name: "metadata", Type: field.TypeJSON},
 		{Name: "stream_id", Type: field.TypeUUID},
 	}
@@ -829,7 +929,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "telemetry_points_telemetry_streams_points",
-				Columns:    []*schema.Column{TelemetryPointsColumns[8]},
+				Columns:    []*schema.Column{TelemetryPointsColumns[9]},
 				RefColumns: []*schema.Column{TelemetryStreamsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -1062,6 +1162,7 @@ var (
 		BillingEventsTable,
 		CarrierJobsTable,
 		CarrierPartnersTable,
+		ChainOfCustodiesTable,
 		EarningsStatementsTable,
 		FleetsTable,
 		FleetMembersTable,
@@ -1078,6 +1179,7 @@ var (
 		RiderShiftsTable,
 		RolePermissionsTable,
 		ServiceConfigsTable,
+		ShipmentsTable,
 		TasksTable,
 		TaskAssignmentsTable,
 		TaskEventsTable,
@@ -1093,6 +1195,7 @@ var (
 )
 
 func init() {
+	ChainOfCustodiesTable.ForeignKeys[0].RefTable = ShipmentsTable
 	FleetMembersTable.ForeignKeys[0].RefTable = FleetsTable
 	FleetMembersTable.ForeignKeys[1].RefTable = VehiclesTable
 	FleetMembersTable.ForeignKeys[2].RefTable = UsersTable

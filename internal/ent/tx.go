@@ -18,6 +18,8 @@ type Tx struct {
 	CarrierJob *CarrierJobClient
 	// CarrierPartner is the client for interacting with the CarrierPartner builders.
 	CarrierPartner *CarrierPartnerClient
+	// ChainOfCustody is the client for interacting with the ChainOfCustody builders.
+	ChainOfCustody *ChainOfCustodyClient
 	// EarningsStatement is the client for interacting with the EarningsStatement builders.
 	EarningsStatement *EarningsStatementClient
 	// Fleet is the client for interacting with the Fleet builders.
@@ -50,6 +52,8 @@ type Tx struct {
 	RolePermission *RolePermissionClient
 	// ServiceConfig is the client for interacting with the ServiceConfig builders.
 	ServiceConfig *ServiceConfigClient
+	// Shipment is the client for interacting with the Shipment builders.
+	Shipment *ShipmentClient
 	// Task is the client for interacting with the Task builders.
 	Task *TaskClient
 	// TaskAssignment is the client for interacting with the TaskAssignment builders.
@@ -206,6 +210,7 @@ func (tx *Tx) init() {
 	tx.BillingEvent = NewBillingEventClient(tx.config)
 	tx.CarrierJob = NewCarrierJobClient(tx.config)
 	tx.CarrierPartner = NewCarrierPartnerClient(tx.config)
+	tx.ChainOfCustody = NewChainOfCustodyClient(tx.config)
 	tx.EarningsStatement = NewEarningsStatementClient(tx.config)
 	tx.Fleet = NewFleetClient(tx.config)
 	tx.FleetMember = NewFleetMemberClient(tx.config)
@@ -222,6 +227,7 @@ func (tx *Tx) init() {
 	tx.RiderShift = NewRiderShiftClient(tx.config)
 	tx.RolePermission = NewRolePermissionClient(tx.config)
 	tx.ServiceConfig = NewServiceConfigClient(tx.config)
+	tx.Shipment = NewShipmentClient(tx.config)
 	tx.Task = NewTaskClient(tx.config)
 	tx.TaskAssignment = NewTaskAssignmentClient(tx.config)
 	tx.TaskEvent = NewTaskEventClient(tx.config)

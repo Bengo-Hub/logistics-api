@@ -39,6 +39,23 @@ func (ProofOfDelivery) Fields() []ent.Field {
 			Comment("How cash was collected: cash, mobile_money"),
 		field.Time("captured_at").
 			Default(time.Now),
+		// Hospital / KEMSA multi-step PoD fields
+		field.String("receiving_staff_name").
+			Optional().
+			Comment("Name of hospital/facility staff who received the delivery"),
+		field.String("receiving_staff_signature_url").
+			Optional().
+			Comment("Digital signature of receiving staff"),
+		field.String("condition_on_arrival").
+			Optional().
+			Comment("good | damaged | temperature_breach"),
+		field.Int("received_quantity").
+			Optional().
+			Nillable().
+			Comment("Quantity verified at destination (for distribution deliveries)"),
+		field.String("batch_reference").
+			Optional().
+			Comment("Links to shipment_code for KEMSA batch tracking"),
 		field.JSON("metadata", map[string]any{}).
 			Default(map[string]any{}),
 	}

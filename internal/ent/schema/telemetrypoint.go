@@ -33,6 +33,10 @@ func (TelemetryPoint) Fields() []ent.Field {
 			Optional(),
 		field.Float("battery_pct").
 			Optional(),
+		field.Float("temperature_celsius").
+			Optional().
+			Nillable().
+			Comment("Temperature reading from IoT sensor (°C) — used for cold chain monitoring"),
 		field.JSON("metadata", map[string]any{}).
 			Default(map[string]any{}),
 	}

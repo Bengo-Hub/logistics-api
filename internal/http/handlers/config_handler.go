@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
+	"github.com/bengobox/logistics-service/internal/consts"
 	"github.com/bengobox/logistics-service/internal/ent"
 	"github.com/bengobox/logistics-service/internal/ent/serviceconfig"
 )
@@ -265,6 +266,84 @@ func (h *ServiceConfigHandler) UpsertTenantSetting(w http.ResponseWriter, r *htt
 	respondJSON(w, http.StatusOK, toLogisticsSCResponse(cfg, true))
 }
 
+// GetTenantModules returns the enabled modules for a tenant with available module list.
+// GET /api/v1/{tenant}/settings/modules
+func (h *ServiceConfigHandler) GetTenantModules(w http.ResponseWriter, r *http.Request) {
+	tenantIDStr := chi.URLParam(r, "tenant")
+	tenantID, err := uuid.Parse(tenantIDStr)
+	if err != nil {
+		respondJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid tenant ID"})
+		return
+	}
+
+	ctx := r.Context()
+
+	sc, scErr := h.client.ServiceConfig.Query().
+		Where(serviceconfig.ConfigKey("logistics.enabled_modules"), serviceconfig.TenantID(tenantID)).
+		First(ctx)
+
+	var enabled []string
+	if scErr == nil && sc != nil && sc.ConfigValue != "" {
+		_ = json.Unmarshal([]byte(sc.ConfigValue), &enabled)
+	}
+
+	respondJSON(w, http.StatusOK, map[string]any{
+		"enabled_modules": enabled,
+		"all_modules":     consts.AllModules,
+		"use_case_defaults": consts.UseCaseModules,
+	})
+}
+
+// UpdateTenantModules sets the enabled modules override for a tenant.
+// PUT /api/v1/{tenant}/settings/modules
+func (h *ServiceConfigHandler) UpdateTenantModules(w http.ResponseWriter, r *http.Request) {
+	tenantIDStr := chi.URLParam(r, "tenant")
+	tenantID, err := uuid.Parse(tenantIDStr)
+	if err != nil {
+		respondJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid tenant ID"})
+		return
+	}
+
+	var req struct {
+		EnabledModules []string `json:"enabled_modules"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		return
+	}
+
+	val, err := json.Marshal(req.EnabledModules)
+	if err != nil {
+		respondJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to encode modules"})
+		return
+	}
+
+	ctx := r.Context()
+	existing, _ := h.client.ServiceConfig.Query().
+		Where(serviceconfig.ConfigKey("logistics.enabled_modules"), serviceconfig.TenantID(tenantID)).
+		First(ctx)
+
+	if existing != nil {
+		_, err = existing.Update().SetConfigValue(string(val)).Save(ctx)
+	} else {
+		_, err = h.client.ServiceConfig.Create().
+			SetTenantID(tenantID).
+			SetConfigKey("logistics.enabled_modules").
+			SetConfigValue(string(val)).
+			SetConfigType("json").
+			SetDescription("Enabled module keys for this tenant").
+			Save(ctx)
+	}
+
+	if err != nil {
+		h.logger.Error("failed to save modules config", zap.Error(err))
+		respondJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to save modules"})
+		return
+	}
+
+	respondJSON(w, http.StatusOK, map[string]any{"enabled_modules": req.EnabledModules})
+}
+
 // RegisterPlatformRoutes registers platform admin config routes (platform owner only).
 func (h *ServiceConfigHandler) RegisterPlatformRoutes(r chi.Router) {
 	r.Get("/config", h.ListPlatformSettings)
@@ -276,5 +355,7 @@ func (h *ServiceConfigHandler) RegisterTenantRoutes(r chi.Router) {
 	r.Route("/settings", func(s chi.Router) {
 		s.Get("/", h.ListTenantSettings)
 		s.Put("/{key}", h.UpsertTenantSetting)
+		s.Get("/modules", h.GetTenantModules)
+		s.Put("/modules", h.UpdateTenantModules)
 	})
 }
