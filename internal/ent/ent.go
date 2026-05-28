@@ -23,6 +23,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/logisticspermission"
 	"github.com/bengobox/logistics-service/internal/ent/logisticsrole"
 	"github.com/bengobox/logistics-service/internal/ent/outboxevent"
+	"github.com/bengobox/logistics-service/internal/ent/outlet"
 	"github.com/bengobox/logistics-service/internal/ent/pricingrule"
 	"github.com/bengobox/logistics-service/internal/ent/proofofdelivery"
 	"github.com/bengobox/logistics-service/internal/ent/ratelimitconfig"
@@ -112,6 +113,7 @@ func checkColumn(t, c string) error {
 			logisticspermission.Table: logisticspermission.ValidColumn,
 			logisticsrole.Table:       logisticsrole.ValidColumn,
 			outboxevent.Table:         outboxevent.ValidColumn,
+			outlet.Table:              outlet.ValidColumn,
 			pricingrule.Table:         pricingrule.ValidColumn,
 			proofofdelivery.Table:     proofofdelivery.ValidColumn,
 			ratelimitconfig.Table:     ratelimitconfig.ValidColumn,

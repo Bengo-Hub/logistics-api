@@ -17,6 +17,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/logisticspermission"
 	"github.com/bengobox/logistics-service/internal/ent/ratelimitconfig"
 	"github.com/bengobox/logistics-service/internal/ent/serviceconfig"
+	"github.com/bengobox/logistics-service/internal/modules/tenant"
 )
 
 func main() {
@@ -39,6 +40,17 @@ func main() {
 
 	if err := runSeed(ctx, client); err != nil {
 		log.Fatalf("failed to seed data: %v", err)
+	}
+
+	// Sync tenants so the tenant rows exist before runtime NATS outlet events arrive.
+	// Outlets are synced automatically at runtime via auth.outlet.* JetStream events.
+	syncer := tenant.NewSyncer(client, cfg.Auth.ServiceURL)
+	for _, slug := range []string{"codevertex-demo", "urban-loft", "kura"} {
+		if _, err := syncer.SyncTenant(ctx, slug); err != nil {
+			log.Printf("  [SKIP] sync tenant %s: %v", slug, err)
+		} else {
+			log.Printf("  ✓ Tenant synced: %s", slug)
+		}
 	}
 
 	log.Println("database seed completed successfully")

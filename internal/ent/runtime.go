@@ -16,6 +16,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/logisticspermission"
 	"github.com/bengobox/logistics-service/internal/ent/logisticsrole"
 	"github.com/bengobox/logistics-service/internal/ent/outboxevent"
+	"github.com/bengobox/logistics-service/internal/ent/outlet"
 	"github.com/bengobox/logistics-service/internal/ent/pricingrule"
 	"github.com/bengobox/logistics-service/internal/ent/proofofdelivery"
 	"github.com/bengobox/logistics-service/internal/ent/ratelimitconfig"
@@ -383,6 +384,46 @@ func init() {
 	outboxeventDescID := outboxeventFields[0].Descriptor()
 	// outboxevent.DefaultID holds the default value on creation for the id field.
 	outboxevent.DefaultID = outboxeventDescID.Default.(func() uuid.UUID)
+	outletFields := schema.Outlet{}.Fields()
+	_ = outletFields
+	// outletDescCode is the schema descriptor for code field.
+	outletDescCode := outletFields[2].Descriptor()
+	// outlet.CodeValidator is a validator for the "code" field. It is called by the builders before save.
+	outlet.CodeValidator = outletDescCode.Validators[0].(func(string) error)
+	// outletDescName is the schema descriptor for name field.
+	outletDescName := outletFields[3].Descriptor()
+	// outlet.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	outlet.NameValidator = outletDescName.Validators[0].(func(string) error)
+	// outletDescUseCase is the schema descriptor for use_case field.
+	outletDescUseCase := outletFields[4].Descriptor()
+	// outlet.DefaultUseCase holds the default value on creation for the use_case field.
+	outlet.DefaultUseCase = outletDescUseCase.Default.(string)
+	// outletDescTimezone is the schema descriptor for timezone field.
+	outletDescTimezone := outletFields[8].Descriptor()
+	// outlet.DefaultTimezone holds the default value on creation for the timezone field.
+	outlet.DefaultTimezone = outletDescTimezone.Default.(string)
+	// outletDescIsHq is the schema descriptor for is_hq field.
+	outletDescIsHq := outletFields[9].Descriptor()
+	// outlet.DefaultIsHq holds the default value on creation for the is_hq field.
+	outlet.DefaultIsHq = outletDescIsHq.Default.(bool)
+	// outletDescStatus is the schema descriptor for status field.
+	outletDescStatus := outletFields[10].Descriptor()
+	// outlet.DefaultStatus holds the default value on creation for the status field.
+	outlet.DefaultStatus = outletDescStatus.Default.(string)
+	// outletDescCreatedAt is the schema descriptor for created_at field.
+	outletDescCreatedAt := outletFields[11].Descriptor()
+	// outlet.DefaultCreatedAt holds the default value on creation for the created_at field.
+	outlet.DefaultCreatedAt = outletDescCreatedAt.Default.(func() time.Time)
+	// outletDescUpdatedAt is the schema descriptor for updated_at field.
+	outletDescUpdatedAt := outletFields[12].Descriptor()
+	// outlet.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	outlet.DefaultUpdatedAt = outletDescUpdatedAt.Default.(func() time.Time)
+	// outlet.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	outlet.UpdateDefaultUpdatedAt = outletDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// outletDescID is the schema descriptor for id field.
+	outletDescID := outletFields[0].Descriptor()
+	// outlet.DefaultID holds the default value on creation for the id field.
+	outlet.DefaultID = outletDescID.Default.(func() uuid.UUID)
 	pricingruleFields := schema.PricingRule{}.Fields()
 	_ = pricingruleFields
 	// pricingruleDescName is the schema descriptor for name field.

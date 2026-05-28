@@ -27,6 +27,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/logisticspermission"
 	"github.com/bengobox/logistics-service/internal/ent/logisticsrole"
 	"github.com/bengobox/logistics-service/internal/ent/outboxevent"
+	"github.com/bengobox/logistics-service/internal/ent/outlet"
 	"github.com/bengobox/logistics-service/internal/ent/pricingrule"
 	"github.com/bengobox/logistics-service/internal/ent/proofofdelivery"
 	"github.com/bengobox/logistics-service/internal/ent/ratelimitconfig"
@@ -74,6 +75,8 @@ type Client struct {
 	LogisticsRole *LogisticsRoleClient
 	// OutboxEvent is the client for interacting with the OutboxEvent builders.
 	OutboxEvent *OutboxEventClient
+	// Outlet is the client for interacting with the Outlet builders.
+	Outlet *OutletClient
 	// PricingRule is the client for interacting with the PricingRule builders.
 	PricingRule *PricingRuleClient
 	// ProofOfDelivery is the client for interacting with the ProofOfDelivery builders.
@@ -132,6 +135,7 @@ func (c *Client) init() {
 	c.LogisticsPermission = NewLogisticsPermissionClient(c.config)
 	c.LogisticsRole = NewLogisticsRoleClient(c.config)
 	c.OutboxEvent = NewOutboxEventClient(c.config)
+	c.Outlet = NewOutletClient(c.config)
 	c.PricingRule = NewPricingRuleClient(c.config)
 	c.ProofOfDelivery = NewProofOfDeliveryClient(c.config)
 	c.RateLimitConfig = NewRateLimitConfigClient(c.config)
@@ -253,6 +257,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		LogisticsPermission: NewLogisticsPermissionClient(cfg),
 		LogisticsRole:       NewLogisticsRoleClient(cfg),
 		OutboxEvent:         NewOutboxEventClient(cfg),
+		Outlet:              NewOutletClient(cfg),
 		PricingRule:         NewPricingRuleClient(cfg),
 		ProofOfDelivery:     NewProofOfDeliveryClient(cfg),
 		RateLimitConfig:     NewRateLimitConfigClient(cfg),
@@ -301,6 +306,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		LogisticsPermission: NewLogisticsPermissionClient(cfg),
 		LogisticsRole:       NewLogisticsRoleClient(cfg),
 		OutboxEvent:         NewOutboxEventClient(cfg),
+		Outlet:              NewOutletClient(cfg),
 		PricingRule:         NewPricingRuleClient(cfg),
 		ProofOfDelivery:     NewProofOfDeliveryClient(cfg),
 		RateLimitConfig:     NewRateLimitConfigClient(cfg),
@@ -350,7 +356,7 @@ func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.BillingEvent, c.CarrierJob, c.CarrierPartner, c.EarningsStatement, c.Fleet,
 		c.FleetMember, c.GeoFence, c.IntegrationSetting, c.LogisticsPermission,
-		c.LogisticsRole, c.OutboxEvent, c.PricingRule, c.ProofOfDelivery,
+		c.LogisticsRole, c.OutboxEvent, c.Outlet, c.PricingRule, c.ProofOfDelivery,
 		c.RateLimitConfig, c.RiderRating, c.RiderShift, c.RolePermission,
 		c.ServiceConfig, c.Task, c.TaskAssignment, c.TaskEvent, c.TaskStep,
 		c.TelemetryPoint, c.TelemetryStream, c.Tenant, c.TenantSyncEvent, c.User,
@@ -366,7 +372,7 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.BillingEvent, c.CarrierJob, c.CarrierPartner, c.EarningsStatement, c.Fleet,
 		c.FleetMember, c.GeoFence, c.IntegrationSetting, c.LogisticsPermission,
-		c.LogisticsRole, c.OutboxEvent, c.PricingRule, c.ProofOfDelivery,
+		c.LogisticsRole, c.OutboxEvent, c.Outlet, c.PricingRule, c.ProofOfDelivery,
 		c.RateLimitConfig, c.RiderRating, c.RiderShift, c.RolePermission,
 		c.ServiceConfig, c.Task, c.TaskAssignment, c.TaskEvent, c.TaskStep,
 		c.TelemetryPoint, c.TelemetryStream, c.Tenant, c.TenantSyncEvent, c.User,
@@ -401,6 +407,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.LogisticsRole.mutate(ctx, m)
 	case *OutboxEventMutation:
 		return c.OutboxEvent.mutate(ctx, m)
+	case *OutletMutation:
+		return c.Outlet.mutate(ctx, m)
 	case *PricingRuleMutation:
 		return c.PricingRule.mutate(ctx, m)
 	case *ProofOfDeliveryMutation:
@@ -2094,6 +2102,139 @@ func (c *OutboxEventClient) mutate(ctx context.Context, m *OutboxEventMutation) 
 		return (&OutboxEventDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown OutboxEvent mutation op: %q", m.Op())
+	}
+}
+
+// OutletClient is a client for the Outlet schema.
+type OutletClient struct {
+	config
+}
+
+// NewOutletClient returns a client for the Outlet from the given config.
+func NewOutletClient(c config) *OutletClient {
+	return &OutletClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `outlet.Hooks(f(g(h())))`.
+func (c *OutletClient) Use(hooks ...Hook) {
+	c.hooks.Outlet = append(c.hooks.Outlet, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `outlet.Intercept(f(g(h())))`.
+func (c *OutletClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Outlet = append(c.inters.Outlet, interceptors...)
+}
+
+// Create returns a builder for creating a Outlet entity.
+func (c *OutletClient) Create() *OutletCreate {
+	mutation := newOutletMutation(c.config, OpCreate)
+	return &OutletCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Outlet entities.
+func (c *OutletClient) CreateBulk(builders ...*OutletCreate) *OutletCreateBulk {
+	return &OutletCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *OutletClient) MapCreateBulk(slice any, setFunc func(*OutletCreate, int)) *OutletCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &OutletCreateBulk{err: fmt.Errorf("calling to OutletClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*OutletCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &OutletCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Outlet.
+func (c *OutletClient) Update() *OutletUpdate {
+	mutation := newOutletMutation(c.config, OpUpdate)
+	return &OutletUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *OutletClient) UpdateOne(_m *Outlet) *OutletUpdateOne {
+	mutation := newOutletMutation(c.config, OpUpdateOne, withOutlet(_m))
+	return &OutletUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *OutletClient) UpdateOneID(id uuid.UUID) *OutletUpdateOne {
+	mutation := newOutletMutation(c.config, OpUpdateOne, withOutletID(id))
+	return &OutletUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Outlet.
+func (c *OutletClient) Delete() *OutletDelete {
+	mutation := newOutletMutation(c.config, OpDelete)
+	return &OutletDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *OutletClient) DeleteOne(_m *Outlet) *OutletDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *OutletClient) DeleteOneID(id uuid.UUID) *OutletDeleteOne {
+	builder := c.Delete().Where(outlet.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &OutletDeleteOne{builder}
+}
+
+// Query returns a query builder for Outlet.
+func (c *OutletClient) Query() *OutletQuery {
+	return &OutletQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeOutlet},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a Outlet entity by its id.
+func (c *OutletClient) Get(ctx context.Context, id uuid.UUID) (*Outlet, error) {
+	return c.Query().Where(outlet.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *OutletClient) GetX(ctx context.Context, id uuid.UUID) *Outlet {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *OutletClient) Hooks() []Hook {
+	return c.hooks.Outlet
+}
+
+// Interceptors returns the client interceptors.
+func (c *OutletClient) Interceptors() []Interceptor {
+	return c.inters.Outlet
+}
+
+func (c *OutletClient) mutate(ctx context.Context, m *OutletMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&OutletCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&OutletUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&OutletUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&OutletDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Outlet mutation op: %q", m.Op())
 	}
 }
 
@@ -4848,7 +4989,7 @@ type (
 	hooks struct {
 		BillingEvent, CarrierJob, CarrierPartner, EarningsStatement, Fleet, FleetMember,
 		GeoFence, IntegrationSetting, LogisticsPermission, LogisticsRole, OutboxEvent,
-		PricingRule, ProofOfDelivery, RateLimitConfig, RiderRating, RiderShift,
+		Outlet, PricingRule, ProofOfDelivery, RateLimitConfig, RiderRating, RiderShift,
 		RolePermission, ServiceConfig, Task, TaskAssignment, TaskEvent, TaskStep,
 		TelemetryPoint, TelemetryStream, Tenant, TenantSyncEvent, User,
 		UserRoleAssignment, Vehicle []ent.Hook
@@ -4856,7 +4997,7 @@ type (
 	inters struct {
 		BillingEvent, CarrierJob, CarrierPartner, EarningsStatement, Fleet, FleetMember,
 		GeoFence, IntegrationSetting, LogisticsPermission, LogisticsRole, OutboxEvent,
-		PricingRule, ProofOfDelivery, RateLimitConfig, RiderRating, RiderShift,
+		Outlet, PricingRule, ProofOfDelivery, RateLimitConfig, RiderRating, RiderShift,
 		RolePermission, ServiceConfig, Task, TaskAssignment, TaskEvent, TaskStep,
 		TelemetryPoint, TelemetryStream, Tenant, TenantSyncEvent, User,
 		UserRoleAssignment, Vehicle []ent.Interceptor

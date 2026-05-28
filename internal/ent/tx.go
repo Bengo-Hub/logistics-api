@@ -34,6 +34,8 @@ type Tx struct {
 	LogisticsRole *LogisticsRoleClient
 	// OutboxEvent is the client for interacting with the OutboxEvent builders.
 	OutboxEvent *OutboxEventClient
+	// Outlet is the client for interacting with the Outlet builders.
+	Outlet *OutletClient
 	// PricingRule is the client for interacting with the PricingRule builders.
 	PricingRule *PricingRuleClient
 	// ProofOfDelivery is the client for interacting with the ProofOfDelivery builders.
@@ -212,6 +214,7 @@ func (tx *Tx) init() {
 	tx.LogisticsPermission = NewLogisticsPermissionClient(tx.config)
 	tx.LogisticsRole = NewLogisticsRoleClient(tx.config)
 	tx.OutboxEvent = NewOutboxEventClient(tx.config)
+	tx.Outlet = NewOutletClient(tx.config)
 	tx.PricingRule = NewPricingRuleClient(tx.config)
 	tx.ProofOfDelivery = NewProofOfDeliveryClient(tx.config)
 	tx.RateLimitConfig = NewRateLimitConfigClient(tx.config)
