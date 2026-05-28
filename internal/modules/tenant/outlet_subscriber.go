@@ -102,8 +102,18 @@ func (s *OutletSubscriber) Start(nc *nats.Conn) error {
 	return nil
 }
 
+// logisticsUseCases are the outlet use_case values that logistics-api manages.
+// Auth-api may tag outlets with any of these depending on the tenant's business model.
+var logisticsUseCases = map[string]bool{
+	"logistics":    true,
+	"courier":      true,
+	"distribution": true,
+	"delivery":     true,
+	"fleet":        true,
+}
+
 // handleUpsert creates or updates a local outlet mirror from auth.outlet.created/updated.
-// Only outlets with use_case="logistics" are stored; all others are skipped.
+// Accepts any logistics-adjacent use_case; skips POS/retail/hospitality outlets.
 func (s *OutletSubscriber) handleUpsert(ctx context.Context, evt *sharedevents.Event) error {
 	outletIDStr, _ := evt.Payload["outlet_id"].(string)
 	code, _ := evt.Payload["code"].(string)
@@ -116,8 +126,9 @@ func (s *OutletSubscriber) handleUpsert(ctx context.Context, evt *sharedevents.E
 		status = "active"
 	}
 
-	// Logistics-api only manages logistics dispatch hubs.
-	if useCase != "logistics" {
+	// Accept any logistics-adjacent use_case; skip POS/retail/hospitality outlets.
+	// Empty use_case is also accepted (backwards compat with tenants that haven't set it).
+	if useCase != "" && !logisticsUseCases[useCase] {
 		s.logger.Debug("skipping outlet: not a logistics hub",
 			zap.String("outlet_id", outletIDStr),
 			zap.String("use_case", useCase))

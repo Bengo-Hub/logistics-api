@@ -155,6 +155,13 @@ func New(ctx context.Context) (*App, error) {
 			log.Warn("app: failed to start outlet event subscriber", zap.Error(err))
 		}
 
+		// Tenant sync: mirrors auth.tenant.created/updated events into the local
+		// tenants table so tenant metadata stays current without HTTP round-trips.
+		tenantEventSub := tenant.NewTenantEventSubscriber(entClient, log)
+		if err := tenantEventSub.Start(natsConn); err != nil {
+			log.Warn("app: failed to start tenant event subscriber", zap.Error(err))
+		}
+
 		subCacheSub := subscriptions.NewCacheSubscriber(redisClient, log)
 		if err := subCacheSub.Start(natsConn); err != nil {
 			log.Warn("app: failed to start subscription cache subscriber", zap.Error(err))
