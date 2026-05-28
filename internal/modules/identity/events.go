@@ -15,6 +15,7 @@ import (
 	sharedevents "github.com/Bengo-Hub/shared-events"
 
 	"github.com/bengobox/logistics-service/internal/ent"
+	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
 	"github.com/bengobox/logistics-service/internal/ent/user"
 )
 
@@ -143,9 +144,75 @@ func (h *EventHandler) SubscribeToAuthEvents(nc *nats.Conn) error {
 		return fmt.Errorf("identity: consume log-auth-user-updated: %w", err)
 	}
 
+	// --- auth.user.deactivated ---
+	deactivatedCons, err := js.CreateOrUpdateConsumer(ctx, authStream, jetstream.ConsumerConfig{
+		Durable:       "log-auth-user-deactivated",
+		FilterSubject: "auth.user.deactivated",
+		AckPolicy:     jetstream.AckExplicitPolicy,
+		AckWait:       30 * time.Second,
+		MaxDeliver:    5,
+		DeliverPolicy: jetstream.DeliverAllPolicy,
+	})
+	if err != nil {
+		return fmt.Errorf("identity: create consumer log-auth-user-deactivated: %w", err)
+	}
+
+	_, err = deactivatedCons.Consume(func(msg jetstream.Msg) {
+		evt, parseErr := sharedevents.FromJSON(msg.Data())
+		if parseErr != nil {
+			h.logger.Error("failed to parse auth.user.deactivated envelope", zap.Error(parseErr))
+			_ = msg.Nak()
+			return
+		}
+		if handleErr := h.handleUserDeactivated(context.Background(), evt); handleErr != nil {
+			h.logger.Error("failed to handle auth.user.deactivated event", zap.Error(handleErr))
+			_ = msg.Nak()
+			return
+		}
+		_ = msg.Ack()
+	})
+	if err != nil {
+		return fmt.Errorf("identity: consume log-auth-user-deactivated: %w", err)
+	}
+
 	h.logger.Info("auth JetStream durable consumers active",
 		zap.String("stream", authStream),
-		zap.Strings("consumers", []string{"log-auth-user-created", "log-auth-user-updated"}))
+		zap.Strings("consumers", []string{"log-auth-user-created", "log-auth-user-updated", "log-auth-user-deactivated"}))
+	return nil
+}
+
+// handleUserDeactivated sets a user's status to "inactive" and deactivates their fleet memberships.
+func (h *EventHandler) handleUserDeactivated(ctx context.Context, evt *sharedevents.Event) error {
+	userIDStr, _ := evt.Payload["user_id"].(string)
+	authUserID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return fmt.Errorf("invalid user_id in deactivated event: %w", err)
+	}
+
+	existing, _ := h.service.client.User.Query().
+		Where(user.AuthServiceUserID(authUserID)).
+		First(ctx)
+	if existing == nil {
+		return nil // not a logistics user, ignore
+	}
+
+	if _, err := h.service.client.User.UpdateOne(existing).
+		SetStatus("inactive").
+		SetSyncStatus("synced").
+		SetSyncAt(time.Now()).
+		Save(ctx); err != nil {
+		return fmt.Errorf("deactivate user: %w", err)
+	}
+
+	// Also deactivate any active fleet memberships so they stop appearing in dispatch
+	if _, err := h.service.client.FleetMember.Update().
+		Where(fleetmember.UserID(existing.ID), fleetmember.StatusEQ("active")).
+		SetStatus("inactive").
+		Save(ctx); err != nil {
+		h.logger.Warn("deactivate fleet memberships failed", zap.String("user_id", userIDStr), zap.Error(err))
+	}
+
+	log.Printf("[identity-event] deactivated user %s (auth=%s)", existing.Email, authUserID)
 	return nil
 }
 
