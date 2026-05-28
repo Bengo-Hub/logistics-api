@@ -323,7 +323,7 @@ func (h *LogisticsHandler) ListMembers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondJSON(w, http.StatusOK, pagination.NewResponse(members, total, p))
+	respondJSON(w, http.StatusOK, pagination.NewResponse(toFleetMemberResponses(members), total, p))
 }
 
 // GetMember handles GET /api/v1/{tenant}/fleet/members/{memberId}
@@ -346,7 +346,7 @@ func (h *LogisticsHandler) GetMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondJSON(w, http.StatusOK, m)
+	respondJSON(w, http.StatusOK, toFleetMemberResponse(m))
 }
 
 // InviteMember handles POST /api/v1/{tenant}/fleet/members

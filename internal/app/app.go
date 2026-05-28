@@ -244,13 +244,22 @@ func New(ctx context.Context) (*App, error) {
 	// Initialize service config handler for platform admin + tenant settings
 	serviceConfigHandler := handlers.NewServiceConfigHandler(entClient, log)
 
+	// Distribution / KEMSA shipments
+	shipmentHandler := handlers.NewShipmentHandler(entClient, log)
+
+	// Rider shift scheduling
+	shiftHandler := handlers.NewShiftHandler(entClient, log)
+
+	// Analytics KPI endpoint
+	analyticsHandler := handlers.NewAnalyticsHandler(entClient, log)
+
 	earningsHandler := handlers.NewEarningsHandler(log, entClient, earningsSvc)
 
 	// Wire treasury S2S client for rider payout disbursement
 	treasuryClient := earnings.NewTreasuryClient(cfg.Treasury.ServiceURL, cfg.Treasury.InternalServiceKey)
 	earningsHandler.SetTreasuryClient(treasuryClient)
 
-	chiRouter := router.New(log, healthHandler, authMiddleware, identitySvc, logisticsHandler, routingHandler, trackingHandler, zonesHandler, rbacHandler, redisClient, cfg, cfg.HTTP.AllowedOrigins, serviceConfigHandler, earningsHandler, sseHandler, rbacSvc, telemetryHandler)
+	chiRouter := router.New(log, healthHandler, authMiddleware, identitySvc, logisticsHandler, routingHandler, trackingHandler, zonesHandler, rbacHandler, redisClient, cfg, cfg.HTTP.AllowedOrigins, serviceConfigHandler, earningsHandler, sseHandler, rbacSvc, telemetryHandler, shipmentHandler, shiftHandler, analyticsHandler)
 
 	httpServer := &http.Server{
 		Addr:              fmt.Sprintf("%s:%d", cfg.HTTP.Host, cfg.HTTP.Port),

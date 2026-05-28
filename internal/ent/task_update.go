@@ -398,6 +398,46 @@ func (_u *TaskUpdate) ClearCarrierID() *TaskUpdate {
 	return _u
 }
 
+// SetShipmentID sets the "shipment_id" field.
+func (_u *TaskUpdate) SetShipmentID(v uuid.UUID) *TaskUpdate {
+	_u.mutation.SetShipmentID(v)
+	return _u
+}
+
+// SetNillableShipmentID sets the "shipment_id" field if the given value is not nil.
+func (_u *TaskUpdate) SetNillableShipmentID(v *uuid.UUID) *TaskUpdate {
+	if v != nil {
+		_u.SetShipmentID(*v)
+	}
+	return _u
+}
+
+// ClearShipmentID clears the value of the "shipment_id" field.
+func (_u *TaskUpdate) ClearShipmentID() *TaskUpdate {
+	_u.mutation.ClearShipmentID()
+	return _u
+}
+
+// SetSealNumber sets the "seal_number" field.
+func (_u *TaskUpdate) SetSealNumber(v string) *TaskUpdate {
+	_u.mutation.SetSealNumber(v)
+	return _u
+}
+
+// SetNillableSealNumber sets the "seal_number" field if the given value is not nil.
+func (_u *TaskUpdate) SetNillableSealNumber(v *string) *TaskUpdate {
+	if v != nil {
+		_u.SetSealNumber(*v)
+	}
+	return _u
+}
+
+// ClearSealNumber clears the value of the "seal_number" field.
+func (_u *TaskUpdate) ClearSealNumber() *TaskUpdate {
+	_u.mutation.ClearSealNumber()
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *TaskUpdate) SetUpdatedAt(v time.Time) *TaskUpdate {
 	_u.mutation.SetUpdatedAt(v)
@@ -704,6 +744,18 @@ func (_u *TaskUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.CarrierIDCleared() {
 		_spec.ClearField(task.FieldCarrierID, field.TypeString)
+	}
+	if value, ok := _u.mutation.ShipmentID(); ok {
+		_spec.SetField(task.FieldShipmentID, field.TypeUUID, value)
+	}
+	if _u.mutation.ShipmentIDCleared() {
+		_spec.ClearField(task.FieldShipmentID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.SealNumber(); ok {
+		_spec.SetField(task.FieldSealNumber, field.TypeString, value)
+	}
+	if _u.mutation.SealNumberCleared() {
+		_spec.ClearField(task.FieldSealNumber, field.TypeString)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(task.FieldUpdatedAt, field.TypeTime, value)
@@ -1257,6 +1309,46 @@ func (_u *TaskUpdateOne) ClearCarrierID() *TaskUpdateOne {
 	return _u
 }
 
+// SetShipmentID sets the "shipment_id" field.
+func (_u *TaskUpdateOne) SetShipmentID(v uuid.UUID) *TaskUpdateOne {
+	_u.mutation.SetShipmentID(v)
+	return _u
+}
+
+// SetNillableShipmentID sets the "shipment_id" field if the given value is not nil.
+func (_u *TaskUpdateOne) SetNillableShipmentID(v *uuid.UUID) *TaskUpdateOne {
+	if v != nil {
+		_u.SetShipmentID(*v)
+	}
+	return _u
+}
+
+// ClearShipmentID clears the value of the "shipment_id" field.
+func (_u *TaskUpdateOne) ClearShipmentID() *TaskUpdateOne {
+	_u.mutation.ClearShipmentID()
+	return _u
+}
+
+// SetSealNumber sets the "seal_number" field.
+func (_u *TaskUpdateOne) SetSealNumber(v string) *TaskUpdateOne {
+	_u.mutation.SetSealNumber(v)
+	return _u
+}
+
+// SetNillableSealNumber sets the "seal_number" field if the given value is not nil.
+func (_u *TaskUpdateOne) SetNillableSealNumber(v *string) *TaskUpdateOne {
+	if v != nil {
+		_u.SetSealNumber(*v)
+	}
+	return _u
+}
+
+// ClearSealNumber clears the value of the "seal_number" field.
+func (_u *TaskUpdateOne) ClearSealNumber() *TaskUpdateOne {
+	_u.mutation.ClearSealNumber()
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *TaskUpdateOne) SetUpdatedAt(v time.Time) *TaskUpdateOne {
 	_u.mutation.SetUpdatedAt(v)
@@ -1593,6 +1685,18 @@ func (_u *TaskUpdateOne) sqlSave(ctx context.Context) (_node *Task, err error) {
 	}
 	if _u.mutation.CarrierIDCleared() {
 		_spec.ClearField(task.FieldCarrierID, field.TypeString)
+	}
+	if value, ok := _u.mutation.ShipmentID(); ok {
+		_spec.SetField(task.FieldShipmentID, field.TypeUUID, value)
+	}
+	if _u.mutation.ShipmentIDCleared() {
+		_spec.ClearField(task.FieldShipmentID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.SealNumber(); ok {
+		_spec.SetField(task.FieldSealNumber, field.TypeString, value)
+	}
+	if _u.mutation.SealNumberCleared() {
+		_spec.ClearField(task.FieldSealNumber, field.TypeString)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(task.FieldUpdatedAt, field.TypeTime, value)

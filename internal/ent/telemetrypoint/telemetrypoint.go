@@ -29,6 +29,8 @@ const (
 	FieldAltitudeM = "altitude_m"
 	// FieldBatteryPct holds the string denoting the battery_pct field in the database.
 	FieldBatteryPct = "battery_pct"
+	// FieldTemperatureCelsius holds the string denoting the temperature_celsius field in the database.
+	FieldTemperatureCelsius = "temperature_celsius"
 	// FieldMetadata holds the string denoting the metadata field in the database.
 	FieldMetadata = "metadata"
 	// EdgeStream holds the string denoting the stream edge name in mutations.
@@ -54,6 +56,7 @@ var Columns = []string{
 	FieldAccuracyM,
 	FieldAltitudeM,
 	FieldBatteryPct,
+	FieldTemperatureCelsius,
 	FieldMetadata,
 }
 
@@ -117,6 +120,11 @@ func ByAltitudeM(opts ...sql.OrderTermOption) OrderOption {
 // ByBatteryPct orders the results by the battery_pct field.
 func ByBatteryPct(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldBatteryPct, opts...).ToFunc()
+}
+
+// ByTemperatureCelsius orders the results by the temperature_celsius field.
+func ByTemperatureCelsius(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTemperatureCelsius, opts...).ToFunc()
 }
 
 // ByStreamField orders the results by stream field.

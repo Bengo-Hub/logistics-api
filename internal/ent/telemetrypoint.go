@@ -34,6 +34,8 @@ type TelemetryPoint struct {
 	AltitudeM float64 `json:"altitude_m,omitempty"`
 	// BatteryPct holds the value of the "battery_pct" field.
 	BatteryPct float64 `json:"battery_pct,omitempty"`
+	// Temperature reading from IoT sensor (°C) — used for cold chain monitoring
+	TemperatureCelsius *float64 `json:"temperature_celsius,omitempty"`
 	// Metadata holds the value of the "metadata" field.
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -69,7 +71,7 @@ func (*TelemetryPoint) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case telemetrypoint.FieldMetadata:
 			values[i] = new([]byte)
-		case telemetrypoint.FieldSpeedKph, telemetrypoint.FieldBearingDeg, telemetrypoint.FieldAccuracyM, telemetrypoint.FieldAltitudeM, telemetrypoint.FieldBatteryPct:
+		case telemetrypoint.FieldSpeedKph, telemetrypoint.FieldBearingDeg, telemetrypoint.FieldAccuracyM, telemetrypoint.FieldAltitudeM, telemetrypoint.FieldBatteryPct, telemetrypoint.FieldTemperatureCelsius:
 			values[i] = new(sql.NullFloat64)
 		case telemetrypoint.FieldCapturedAt:
 			values[i] = new(sql.NullTime)
@@ -137,6 +139,13 @@ func (_m *TelemetryPoint) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field battery_pct", values[i])
 			} else if value.Valid {
 				_m.BatteryPct = value.Float64
+			}
+		case telemetrypoint.FieldTemperatureCelsius:
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
+				return fmt.Errorf("unexpected type %T for field temperature_celsius", values[i])
+			} else if value.Valid {
+				_m.TemperatureCelsius = new(float64)
+				*_m.TemperatureCelsius = value.Float64
 			}
 		case telemetrypoint.FieldMetadata:
 			if value, ok := values[i].(*[]byte); !ok {
@@ -207,6 +216,11 @@ func (_m *TelemetryPoint) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("battery_pct=")
 	builder.WriteString(fmt.Sprintf("%v", _m.BatteryPct))
+	builder.WriteString(", ")
+	if v := _m.TemperatureCelsius; v != nil {
+		builder.WriteString("temperature_celsius=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("metadata=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Metadata))

@@ -33,6 +33,16 @@ const (
 	FieldCollectionMethod = "collection_method"
 	// FieldCapturedAt holds the string denoting the captured_at field in the database.
 	FieldCapturedAt = "captured_at"
+	// FieldReceivingStaffName holds the string denoting the receiving_staff_name field in the database.
+	FieldReceivingStaffName = "receiving_staff_name"
+	// FieldReceivingStaffSignatureURL holds the string denoting the receiving_staff_signature_url field in the database.
+	FieldReceivingStaffSignatureURL = "receiving_staff_signature_url"
+	// FieldConditionOnArrival holds the string denoting the condition_on_arrival field in the database.
+	FieldConditionOnArrival = "condition_on_arrival"
+	// FieldReceivedQuantity holds the string denoting the received_quantity field in the database.
+	FieldReceivedQuantity = "received_quantity"
+	// FieldBatchReference holds the string denoting the batch_reference field in the database.
+	FieldBatchReference = "batch_reference"
 	// FieldMetadata holds the string denoting the metadata field in the database.
 	FieldMetadata = "metadata"
 	// EdgeTask holds the string denoting the task edge name in mutations.
@@ -60,6 +70,11 @@ var Columns = []string{
 	FieldAmountCollected,
 	FieldCollectionMethod,
 	FieldCapturedAt,
+	FieldReceivingStaffName,
+	FieldReceivingStaffSignatureURL,
+	FieldConditionOnArrival,
+	FieldReceivedQuantity,
+	FieldBatchReference,
 	FieldMetadata,
 }
 
@@ -135,6 +150,31 @@ func ByCollectionMethod(opts ...sql.OrderTermOption) OrderOption {
 // ByCapturedAt orders the results by the captured_at field.
 func ByCapturedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCapturedAt, opts...).ToFunc()
+}
+
+// ByReceivingStaffName orders the results by the receiving_staff_name field.
+func ByReceivingStaffName(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldReceivingStaffName, opts...).ToFunc()
+}
+
+// ByReceivingStaffSignatureURL orders the results by the receiving_staff_signature_url field.
+func ByReceivingStaffSignatureURL(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldReceivingStaffSignatureURL, opts...).ToFunc()
+}
+
+// ByConditionOnArrival orders the results by the condition_on_arrival field.
+func ByConditionOnArrival(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldConditionOnArrival, opts...).ToFunc()
+}
+
+// ByReceivedQuantity orders the results by the received_quantity field.
+func ByReceivedQuantity(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldReceivedQuantity, opts...).ToFunc()
+}
+
+// ByBatchReference orders the results by the batch_reference field.
+func ByBatchReference(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBatchReference, opts...).ToFunc()
 }
 
 // ByTaskField orders the results by task field.

@@ -127,6 +127,76 @@ func (_c *ProofOfDeliveryCreate) SetNillableCapturedAt(v *time.Time) *ProofOfDel
 	return _c
 }
 
+// SetReceivingStaffName sets the "receiving_staff_name" field.
+func (_c *ProofOfDeliveryCreate) SetReceivingStaffName(v string) *ProofOfDeliveryCreate {
+	_c.mutation.SetReceivingStaffName(v)
+	return _c
+}
+
+// SetNillableReceivingStaffName sets the "receiving_staff_name" field if the given value is not nil.
+func (_c *ProofOfDeliveryCreate) SetNillableReceivingStaffName(v *string) *ProofOfDeliveryCreate {
+	if v != nil {
+		_c.SetReceivingStaffName(*v)
+	}
+	return _c
+}
+
+// SetReceivingStaffSignatureURL sets the "receiving_staff_signature_url" field.
+func (_c *ProofOfDeliveryCreate) SetReceivingStaffSignatureURL(v string) *ProofOfDeliveryCreate {
+	_c.mutation.SetReceivingStaffSignatureURL(v)
+	return _c
+}
+
+// SetNillableReceivingStaffSignatureURL sets the "receiving_staff_signature_url" field if the given value is not nil.
+func (_c *ProofOfDeliveryCreate) SetNillableReceivingStaffSignatureURL(v *string) *ProofOfDeliveryCreate {
+	if v != nil {
+		_c.SetReceivingStaffSignatureURL(*v)
+	}
+	return _c
+}
+
+// SetConditionOnArrival sets the "condition_on_arrival" field.
+func (_c *ProofOfDeliveryCreate) SetConditionOnArrival(v string) *ProofOfDeliveryCreate {
+	_c.mutation.SetConditionOnArrival(v)
+	return _c
+}
+
+// SetNillableConditionOnArrival sets the "condition_on_arrival" field if the given value is not nil.
+func (_c *ProofOfDeliveryCreate) SetNillableConditionOnArrival(v *string) *ProofOfDeliveryCreate {
+	if v != nil {
+		_c.SetConditionOnArrival(*v)
+	}
+	return _c
+}
+
+// SetReceivedQuantity sets the "received_quantity" field.
+func (_c *ProofOfDeliveryCreate) SetReceivedQuantity(v int) *ProofOfDeliveryCreate {
+	_c.mutation.SetReceivedQuantity(v)
+	return _c
+}
+
+// SetNillableReceivedQuantity sets the "received_quantity" field if the given value is not nil.
+func (_c *ProofOfDeliveryCreate) SetNillableReceivedQuantity(v *int) *ProofOfDeliveryCreate {
+	if v != nil {
+		_c.SetReceivedQuantity(*v)
+	}
+	return _c
+}
+
+// SetBatchReference sets the "batch_reference" field.
+func (_c *ProofOfDeliveryCreate) SetBatchReference(v string) *ProofOfDeliveryCreate {
+	_c.mutation.SetBatchReference(v)
+	return _c
+}
+
+// SetNillableBatchReference sets the "batch_reference" field if the given value is not nil.
+func (_c *ProofOfDeliveryCreate) SetNillableBatchReference(v *string) *ProofOfDeliveryCreate {
+	if v != nil {
+		_c.SetBatchReference(*v)
+	}
+	return _c
+}
+
 // SetMetadata sets the "metadata" field.
 func (_c *ProofOfDeliveryCreate) SetMetadata(v map[string]interface{}) *ProofOfDeliveryCreate {
 	_c.mutation.SetMetadata(v)
@@ -295,6 +365,26 @@ func (_c *ProofOfDeliveryCreate) createSpec() (*ProofOfDelivery, *sqlgraph.Creat
 	if value, ok := _c.mutation.CapturedAt(); ok {
 		_spec.SetField(proofofdelivery.FieldCapturedAt, field.TypeTime, value)
 		_node.CapturedAt = value
+	}
+	if value, ok := _c.mutation.ReceivingStaffName(); ok {
+		_spec.SetField(proofofdelivery.FieldReceivingStaffName, field.TypeString, value)
+		_node.ReceivingStaffName = value
+	}
+	if value, ok := _c.mutation.ReceivingStaffSignatureURL(); ok {
+		_spec.SetField(proofofdelivery.FieldReceivingStaffSignatureURL, field.TypeString, value)
+		_node.ReceivingStaffSignatureURL = value
+	}
+	if value, ok := _c.mutation.ConditionOnArrival(); ok {
+		_spec.SetField(proofofdelivery.FieldConditionOnArrival, field.TypeString, value)
+		_node.ConditionOnArrival = value
+	}
+	if value, ok := _c.mutation.ReceivedQuantity(); ok {
+		_spec.SetField(proofofdelivery.FieldReceivedQuantity, field.TypeInt, value)
+		_node.ReceivedQuantity = &value
+	}
+	if value, ok := _c.mutation.BatchReference(); ok {
+		_spec.SetField(proofofdelivery.FieldBatchReference, field.TypeString, value)
+		_node.BatchReference = value
 	}
 	if value, ok := _c.mutation.Metadata(); ok {
 		_spec.SetField(proofofdelivery.FieldMetadata, field.TypeJSON, value)
@@ -504,6 +594,102 @@ func (u *ProofOfDeliveryUpsert) SetCapturedAt(v time.Time) *ProofOfDeliveryUpser
 // UpdateCapturedAt sets the "captured_at" field to the value that was provided on create.
 func (u *ProofOfDeliveryUpsert) UpdateCapturedAt() *ProofOfDeliveryUpsert {
 	u.SetExcluded(proofofdelivery.FieldCapturedAt)
+	return u
+}
+
+// SetReceivingStaffName sets the "receiving_staff_name" field.
+func (u *ProofOfDeliveryUpsert) SetReceivingStaffName(v string) *ProofOfDeliveryUpsert {
+	u.Set(proofofdelivery.FieldReceivingStaffName, v)
+	return u
+}
+
+// UpdateReceivingStaffName sets the "receiving_staff_name" field to the value that was provided on create.
+func (u *ProofOfDeliveryUpsert) UpdateReceivingStaffName() *ProofOfDeliveryUpsert {
+	u.SetExcluded(proofofdelivery.FieldReceivingStaffName)
+	return u
+}
+
+// ClearReceivingStaffName clears the value of the "receiving_staff_name" field.
+func (u *ProofOfDeliveryUpsert) ClearReceivingStaffName() *ProofOfDeliveryUpsert {
+	u.SetNull(proofofdelivery.FieldReceivingStaffName)
+	return u
+}
+
+// SetReceivingStaffSignatureURL sets the "receiving_staff_signature_url" field.
+func (u *ProofOfDeliveryUpsert) SetReceivingStaffSignatureURL(v string) *ProofOfDeliveryUpsert {
+	u.Set(proofofdelivery.FieldReceivingStaffSignatureURL, v)
+	return u
+}
+
+// UpdateReceivingStaffSignatureURL sets the "receiving_staff_signature_url" field to the value that was provided on create.
+func (u *ProofOfDeliveryUpsert) UpdateReceivingStaffSignatureURL() *ProofOfDeliveryUpsert {
+	u.SetExcluded(proofofdelivery.FieldReceivingStaffSignatureURL)
+	return u
+}
+
+// ClearReceivingStaffSignatureURL clears the value of the "receiving_staff_signature_url" field.
+func (u *ProofOfDeliveryUpsert) ClearReceivingStaffSignatureURL() *ProofOfDeliveryUpsert {
+	u.SetNull(proofofdelivery.FieldReceivingStaffSignatureURL)
+	return u
+}
+
+// SetConditionOnArrival sets the "condition_on_arrival" field.
+func (u *ProofOfDeliveryUpsert) SetConditionOnArrival(v string) *ProofOfDeliveryUpsert {
+	u.Set(proofofdelivery.FieldConditionOnArrival, v)
+	return u
+}
+
+// UpdateConditionOnArrival sets the "condition_on_arrival" field to the value that was provided on create.
+func (u *ProofOfDeliveryUpsert) UpdateConditionOnArrival() *ProofOfDeliveryUpsert {
+	u.SetExcluded(proofofdelivery.FieldConditionOnArrival)
+	return u
+}
+
+// ClearConditionOnArrival clears the value of the "condition_on_arrival" field.
+func (u *ProofOfDeliveryUpsert) ClearConditionOnArrival() *ProofOfDeliveryUpsert {
+	u.SetNull(proofofdelivery.FieldConditionOnArrival)
+	return u
+}
+
+// SetReceivedQuantity sets the "received_quantity" field.
+func (u *ProofOfDeliveryUpsert) SetReceivedQuantity(v int) *ProofOfDeliveryUpsert {
+	u.Set(proofofdelivery.FieldReceivedQuantity, v)
+	return u
+}
+
+// UpdateReceivedQuantity sets the "received_quantity" field to the value that was provided on create.
+func (u *ProofOfDeliveryUpsert) UpdateReceivedQuantity() *ProofOfDeliveryUpsert {
+	u.SetExcluded(proofofdelivery.FieldReceivedQuantity)
+	return u
+}
+
+// AddReceivedQuantity adds v to the "received_quantity" field.
+func (u *ProofOfDeliveryUpsert) AddReceivedQuantity(v int) *ProofOfDeliveryUpsert {
+	u.Add(proofofdelivery.FieldReceivedQuantity, v)
+	return u
+}
+
+// ClearReceivedQuantity clears the value of the "received_quantity" field.
+func (u *ProofOfDeliveryUpsert) ClearReceivedQuantity() *ProofOfDeliveryUpsert {
+	u.SetNull(proofofdelivery.FieldReceivedQuantity)
+	return u
+}
+
+// SetBatchReference sets the "batch_reference" field.
+func (u *ProofOfDeliveryUpsert) SetBatchReference(v string) *ProofOfDeliveryUpsert {
+	u.Set(proofofdelivery.FieldBatchReference, v)
+	return u
+}
+
+// UpdateBatchReference sets the "batch_reference" field to the value that was provided on create.
+func (u *ProofOfDeliveryUpsert) UpdateBatchReference() *ProofOfDeliveryUpsert {
+	u.SetExcluded(proofofdelivery.FieldBatchReference)
+	return u
+}
+
+// ClearBatchReference clears the value of the "batch_reference" field.
+func (u *ProofOfDeliveryUpsert) ClearBatchReference() *ProofOfDeliveryUpsert {
+	u.SetNull(proofofdelivery.FieldBatchReference)
 	return u
 }
 
@@ -725,6 +911,118 @@ func (u *ProofOfDeliveryUpsertOne) SetCapturedAt(v time.Time) *ProofOfDeliveryUp
 func (u *ProofOfDeliveryUpsertOne) UpdateCapturedAt() *ProofOfDeliveryUpsertOne {
 	return u.Update(func(s *ProofOfDeliveryUpsert) {
 		s.UpdateCapturedAt()
+	})
+}
+
+// SetReceivingStaffName sets the "receiving_staff_name" field.
+func (u *ProofOfDeliveryUpsertOne) SetReceivingStaffName(v string) *ProofOfDeliveryUpsertOne {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.SetReceivingStaffName(v)
+	})
+}
+
+// UpdateReceivingStaffName sets the "receiving_staff_name" field to the value that was provided on create.
+func (u *ProofOfDeliveryUpsertOne) UpdateReceivingStaffName() *ProofOfDeliveryUpsertOne {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.UpdateReceivingStaffName()
+	})
+}
+
+// ClearReceivingStaffName clears the value of the "receiving_staff_name" field.
+func (u *ProofOfDeliveryUpsertOne) ClearReceivingStaffName() *ProofOfDeliveryUpsertOne {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.ClearReceivingStaffName()
+	})
+}
+
+// SetReceivingStaffSignatureURL sets the "receiving_staff_signature_url" field.
+func (u *ProofOfDeliveryUpsertOne) SetReceivingStaffSignatureURL(v string) *ProofOfDeliveryUpsertOne {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.SetReceivingStaffSignatureURL(v)
+	})
+}
+
+// UpdateReceivingStaffSignatureURL sets the "receiving_staff_signature_url" field to the value that was provided on create.
+func (u *ProofOfDeliveryUpsertOne) UpdateReceivingStaffSignatureURL() *ProofOfDeliveryUpsertOne {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.UpdateReceivingStaffSignatureURL()
+	})
+}
+
+// ClearReceivingStaffSignatureURL clears the value of the "receiving_staff_signature_url" field.
+func (u *ProofOfDeliveryUpsertOne) ClearReceivingStaffSignatureURL() *ProofOfDeliveryUpsertOne {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.ClearReceivingStaffSignatureURL()
+	})
+}
+
+// SetConditionOnArrival sets the "condition_on_arrival" field.
+func (u *ProofOfDeliveryUpsertOne) SetConditionOnArrival(v string) *ProofOfDeliveryUpsertOne {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.SetConditionOnArrival(v)
+	})
+}
+
+// UpdateConditionOnArrival sets the "condition_on_arrival" field to the value that was provided on create.
+func (u *ProofOfDeliveryUpsertOne) UpdateConditionOnArrival() *ProofOfDeliveryUpsertOne {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.UpdateConditionOnArrival()
+	})
+}
+
+// ClearConditionOnArrival clears the value of the "condition_on_arrival" field.
+func (u *ProofOfDeliveryUpsertOne) ClearConditionOnArrival() *ProofOfDeliveryUpsertOne {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.ClearConditionOnArrival()
+	})
+}
+
+// SetReceivedQuantity sets the "received_quantity" field.
+func (u *ProofOfDeliveryUpsertOne) SetReceivedQuantity(v int) *ProofOfDeliveryUpsertOne {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.SetReceivedQuantity(v)
+	})
+}
+
+// AddReceivedQuantity adds v to the "received_quantity" field.
+func (u *ProofOfDeliveryUpsertOne) AddReceivedQuantity(v int) *ProofOfDeliveryUpsertOne {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.AddReceivedQuantity(v)
+	})
+}
+
+// UpdateReceivedQuantity sets the "received_quantity" field to the value that was provided on create.
+func (u *ProofOfDeliveryUpsertOne) UpdateReceivedQuantity() *ProofOfDeliveryUpsertOne {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.UpdateReceivedQuantity()
+	})
+}
+
+// ClearReceivedQuantity clears the value of the "received_quantity" field.
+func (u *ProofOfDeliveryUpsertOne) ClearReceivedQuantity() *ProofOfDeliveryUpsertOne {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.ClearReceivedQuantity()
+	})
+}
+
+// SetBatchReference sets the "batch_reference" field.
+func (u *ProofOfDeliveryUpsertOne) SetBatchReference(v string) *ProofOfDeliveryUpsertOne {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.SetBatchReference(v)
+	})
+}
+
+// UpdateBatchReference sets the "batch_reference" field to the value that was provided on create.
+func (u *ProofOfDeliveryUpsertOne) UpdateBatchReference() *ProofOfDeliveryUpsertOne {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.UpdateBatchReference()
+	})
+}
+
+// ClearBatchReference clears the value of the "batch_reference" field.
+func (u *ProofOfDeliveryUpsertOne) ClearBatchReference() *ProofOfDeliveryUpsertOne {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.ClearBatchReference()
 	})
 }
 
@@ -1115,6 +1413,118 @@ func (u *ProofOfDeliveryUpsertBulk) SetCapturedAt(v time.Time) *ProofOfDeliveryU
 func (u *ProofOfDeliveryUpsertBulk) UpdateCapturedAt() *ProofOfDeliveryUpsertBulk {
 	return u.Update(func(s *ProofOfDeliveryUpsert) {
 		s.UpdateCapturedAt()
+	})
+}
+
+// SetReceivingStaffName sets the "receiving_staff_name" field.
+func (u *ProofOfDeliveryUpsertBulk) SetReceivingStaffName(v string) *ProofOfDeliveryUpsertBulk {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.SetReceivingStaffName(v)
+	})
+}
+
+// UpdateReceivingStaffName sets the "receiving_staff_name" field to the value that was provided on create.
+func (u *ProofOfDeliveryUpsertBulk) UpdateReceivingStaffName() *ProofOfDeliveryUpsertBulk {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.UpdateReceivingStaffName()
+	})
+}
+
+// ClearReceivingStaffName clears the value of the "receiving_staff_name" field.
+func (u *ProofOfDeliveryUpsertBulk) ClearReceivingStaffName() *ProofOfDeliveryUpsertBulk {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.ClearReceivingStaffName()
+	})
+}
+
+// SetReceivingStaffSignatureURL sets the "receiving_staff_signature_url" field.
+func (u *ProofOfDeliveryUpsertBulk) SetReceivingStaffSignatureURL(v string) *ProofOfDeliveryUpsertBulk {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.SetReceivingStaffSignatureURL(v)
+	})
+}
+
+// UpdateReceivingStaffSignatureURL sets the "receiving_staff_signature_url" field to the value that was provided on create.
+func (u *ProofOfDeliveryUpsertBulk) UpdateReceivingStaffSignatureURL() *ProofOfDeliveryUpsertBulk {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.UpdateReceivingStaffSignatureURL()
+	})
+}
+
+// ClearReceivingStaffSignatureURL clears the value of the "receiving_staff_signature_url" field.
+func (u *ProofOfDeliveryUpsertBulk) ClearReceivingStaffSignatureURL() *ProofOfDeliveryUpsertBulk {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.ClearReceivingStaffSignatureURL()
+	})
+}
+
+// SetConditionOnArrival sets the "condition_on_arrival" field.
+func (u *ProofOfDeliveryUpsertBulk) SetConditionOnArrival(v string) *ProofOfDeliveryUpsertBulk {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.SetConditionOnArrival(v)
+	})
+}
+
+// UpdateConditionOnArrival sets the "condition_on_arrival" field to the value that was provided on create.
+func (u *ProofOfDeliveryUpsertBulk) UpdateConditionOnArrival() *ProofOfDeliveryUpsertBulk {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.UpdateConditionOnArrival()
+	})
+}
+
+// ClearConditionOnArrival clears the value of the "condition_on_arrival" field.
+func (u *ProofOfDeliveryUpsertBulk) ClearConditionOnArrival() *ProofOfDeliveryUpsertBulk {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.ClearConditionOnArrival()
+	})
+}
+
+// SetReceivedQuantity sets the "received_quantity" field.
+func (u *ProofOfDeliveryUpsertBulk) SetReceivedQuantity(v int) *ProofOfDeliveryUpsertBulk {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.SetReceivedQuantity(v)
+	})
+}
+
+// AddReceivedQuantity adds v to the "received_quantity" field.
+func (u *ProofOfDeliveryUpsertBulk) AddReceivedQuantity(v int) *ProofOfDeliveryUpsertBulk {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.AddReceivedQuantity(v)
+	})
+}
+
+// UpdateReceivedQuantity sets the "received_quantity" field to the value that was provided on create.
+func (u *ProofOfDeliveryUpsertBulk) UpdateReceivedQuantity() *ProofOfDeliveryUpsertBulk {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.UpdateReceivedQuantity()
+	})
+}
+
+// ClearReceivedQuantity clears the value of the "received_quantity" field.
+func (u *ProofOfDeliveryUpsertBulk) ClearReceivedQuantity() *ProofOfDeliveryUpsertBulk {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.ClearReceivedQuantity()
+	})
+}
+
+// SetBatchReference sets the "batch_reference" field.
+func (u *ProofOfDeliveryUpsertBulk) SetBatchReference(v string) *ProofOfDeliveryUpsertBulk {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.SetBatchReference(v)
+	})
+}
+
+// UpdateBatchReference sets the "batch_reference" field to the value that was provided on create.
+func (u *ProofOfDeliveryUpsertBulk) UpdateBatchReference() *ProofOfDeliveryUpsertBulk {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.UpdateBatchReference()
+	})
+}
+
+// ClearBatchReference clears the value of the "batch_reference" field.
+func (u *ProofOfDeliveryUpsertBulk) ClearBatchReference() *ProofOfDeliveryUpsertBulk {
+	return u.Update(func(s *ProofOfDeliveryUpsert) {
+		s.ClearBatchReference()
 	})
 }
 

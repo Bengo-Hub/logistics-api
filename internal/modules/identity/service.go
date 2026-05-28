@@ -2,6 +2,7 @@ package identity
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"time"
@@ -9,9 +10,12 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
+	"github.com/bengobox/logistics-service/internal/consts"
 	"github.com/bengobox/logistics-service/internal/ent"
-	"github.com/bengobox/logistics-service/internal/ent/user"
 	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
+	enttenant "github.com/bengobox/logistics-service/internal/ent/tenant"
+	"github.com/bengobox/logistics-service/internal/ent/serviceconfig"
+	"github.com/bengobox/logistics-service/internal/ent/user"
 	"github.com/bengobox/logistics-service/internal/modules/tenant"
 	"github.com/bengobox/logistics-service/internal/platform/events"
 )
@@ -287,4 +291,30 @@ func (s *Service) UpdateRiderProfile(ctx context.Context, authServiceID, tenantI
 	}
 
 	return s.GetRiderProfile(ctx, authServiceID, tenantID)
+}
+
+// ResolveEnabledModules returns the enabled modules and use_case for a tenant.
+// Resolution: explicit ServiceConfig override → use_case defaults → AllModules.
+func (s *Service) ResolveEnabledModules(ctx context.Context, tenantID uuid.UUID) (modules []string, useCase string) {
+	// 1. Look up tenant's use_case
+	t, err := s.client.Tenant.Query().Where(enttenant.IDEQ(tenantID)).Only(ctx)
+	if err == nil && t.UseCase != nil {
+		useCase = *t.UseCase
+	}
+
+	// 2. Check for explicit ServiceConfig override (key: logistics.enabled_modules)
+	sc, err := s.client.ServiceConfig.Query().
+		Where(
+			serviceconfig.ConfigKey("logistics.enabled_modules"),
+			serviceconfig.TenantID(tenantID),
+		).
+		First(ctx)
+	if err == nil && sc != nil && sc.ConfigValue != "" {
+		var override []string
+		if jsonErr := json.Unmarshal([]byte(sc.ConfigValue), &override); jsonErr == nil && len(override) > 0 {
+			return override, useCase
+		}
+	}
+
+	return consts.ResolveModules(useCase, nil), useCase
 }

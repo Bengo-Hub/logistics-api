@@ -91,6 +91,11 @@ func BatteryPct(v float64) predicate.TelemetryPoint {
 	return predicate.TelemetryPoint(sql.FieldEQ(FieldBatteryPct, v))
 }
 
+// TemperatureCelsius applies equality check predicate on the "temperature_celsius" field. It's identical to TemperatureCelsiusEQ.
+func TemperatureCelsius(v float64) predicate.TelemetryPoint {
+	return predicate.TelemetryPoint(sql.FieldEQ(FieldTemperatureCelsius, v))
+}
+
 // StreamIDEQ applies the EQ predicate on the "stream_id" field.
 func StreamIDEQ(v uuid.UUID) predicate.TelemetryPoint {
 	return predicate.TelemetryPoint(sql.FieldEQ(FieldStreamID, v))
@@ -399,6 +404,56 @@ func BatteryPctIsNil() predicate.TelemetryPoint {
 // BatteryPctNotNil applies the NotNil predicate on the "battery_pct" field.
 func BatteryPctNotNil() predicate.TelemetryPoint {
 	return predicate.TelemetryPoint(sql.FieldNotNull(FieldBatteryPct))
+}
+
+// TemperatureCelsiusEQ applies the EQ predicate on the "temperature_celsius" field.
+func TemperatureCelsiusEQ(v float64) predicate.TelemetryPoint {
+	return predicate.TelemetryPoint(sql.FieldEQ(FieldTemperatureCelsius, v))
+}
+
+// TemperatureCelsiusNEQ applies the NEQ predicate on the "temperature_celsius" field.
+func TemperatureCelsiusNEQ(v float64) predicate.TelemetryPoint {
+	return predicate.TelemetryPoint(sql.FieldNEQ(FieldTemperatureCelsius, v))
+}
+
+// TemperatureCelsiusIn applies the In predicate on the "temperature_celsius" field.
+func TemperatureCelsiusIn(vs ...float64) predicate.TelemetryPoint {
+	return predicate.TelemetryPoint(sql.FieldIn(FieldTemperatureCelsius, vs...))
+}
+
+// TemperatureCelsiusNotIn applies the NotIn predicate on the "temperature_celsius" field.
+func TemperatureCelsiusNotIn(vs ...float64) predicate.TelemetryPoint {
+	return predicate.TelemetryPoint(sql.FieldNotIn(FieldTemperatureCelsius, vs...))
+}
+
+// TemperatureCelsiusGT applies the GT predicate on the "temperature_celsius" field.
+func TemperatureCelsiusGT(v float64) predicate.TelemetryPoint {
+	return predicate.TelemetryPoint(sql.FieldGT(FieldTemperatureCelsius, v))
+}
+
+// TemperatureCelsiusGTE applies the GTE predicate on the "temperature_celsius" field.
+func TemperatureCelsiusGTE(v float64) predicate.TelemetryPoint {
+	return predicate.TelemetryPoint(sql.FieldGTE(FieldTemperatureCelsius, v))
+}
+
+// TemperatureCelsiusLT applies the LT predicate on the "temperature_celsius" field.
+func TemperatureCelsiusLT(v float64) predicate.TelemetryPoint {
+	return predicate.TelemetryPoint(sql.FieldLT(FieldTemperatureCelsius, v))
+}
+
+// TemperatureCelsiusLTE applies the LTE predicate on the "temperature_celsius" field.
+func TemperatureCelsiusLTE(v float64) predicate.TelemetryPoint {
+	return predicate.TelemetryPoint(sql.FieldLTE(FieldTemperatureCelsius, v))
+}
+
+// TemperatureCelsiusIsNil applies the IsNil predicate on the "temperature_celsius" field.
+func TemperatureCelsiusIsNil() predicate.TelemetryPoint {
+	return predicate.TelemetryPoint(sql.FieldIsNull(FieldTemperatureCelsius))
+}
+
+// TemperatureCelsiusNotNil applies the NotNil predicate on the "temperature_celsius" field.
+func TemperatureCelsiusNotNil() predicate.TelemetryPoint {
+	return predicate.TelemetryPoint(sql.FieldNotNull(FieldTemperatureCelsius))
 }
 
 // HasStream applies the HasEdge predicate on the "stream" edge.

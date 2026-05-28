@@ -45,6 +45,18 @@ func (f CarrierPartnerFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Val
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.CarrierPartnerMutation", m)
 }
 
+// The ChainOfCustodyFunc type is an adapter to allow the use of ordinary
+// function as ChainOfCustody mutator.
+type ChainOfCustodyFunc func(context.Context, *ent.ChainOfCustodyMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ChainOfCustodyFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ChainOfCustodyMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ChainOfCustodyMutation", m)
+}
+
 // The EarningsStatementFunc type is an adapter to allow the use of ordinary
 // function as EarningsStatement mutator.
 type EarningsStatementFunc func(context.Context, *ent.EarningsStatementMutation) (ent.Value, error)
@@ -235,6 +247,18 @@ func (f ServiceConfigFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Valu
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ServiceConfigMutation", m)
+}
+
+// The ShipmentFunc type is an adapter to allow the use of ordinary
+// function as Shipment mutator.
+type ShipmentFunc func(context.Context, *ent.ShipmentMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ShipmentFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ShipmentMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ShipmentMutation", m)
 }
 
 // The TaskFunc type is an adapter to allow the use of ordinary

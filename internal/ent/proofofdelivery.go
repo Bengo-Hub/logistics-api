@@ -38,6 +38,16 @@ type ProofOfDelivery struct {
 	CollectionMethod string `json:"collection_method,omitempty"`
 	// CapturedAt holds the value of the "captured_at" field.
 	CapturedAt time.Time `json:"captured_at,omitempty"`
+	// Name of hospital/facility staff who received the delivery
+	ReceivingStaffName string `json:"receiving_staff_name,omitempty"`
+	// Digital signature of receiving staff
+	ReceivingStaffSignatureURL string `json:"receiving_staff_signature_url,omitempty"`
+	// good | damaged | temperature_breach
+	ConditionOnArrival string `json:"condition_on_arrival,omitempty"`
+	// Quantity verified at destination (for distribution deliveries)
+	ReceivedQuantity *int `json:"received_quantity,omitempty"`
+	// Links to shipment_code for KEMSA batch tracking
+	BatchReference string `json:"batch_reference,omitempty"`
 	// Metadata holds the value of the "metadata" field.
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -75,7 +85,9 @@ func (*ProofOfDelivery) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case proofofdelivery.FieldAmountCollected:
 			values[i] = new(sql.NullFloat64)
-		case proofofdelivery.FieldSignatureURL, proofofdelivery.FieldPhotoURL, proofofdelivery.FieldOtpCode, proofofdelivery.FieldCollectionMethod:
+		case proofofdelivery.FieldReceivedQuantity:
+			values[i] = new(sql.NullInt64)
+		case proofofdelivery.FieldSignatureURL, proofofdelivery.FieldPhotoURL, proofofdelivery.FieldOtpCode, proofofdelivery.FieldCollectionMethod, proofofdelivery.FieldReceivingStaffName, proofofdelivery.FieldReceivingStaffSignatureURL, proofofdelivery.FieldConditionOnArrival, proofofdelivery.FieldBatchReference:
 			values[i] = new(sql.NullString)
 		case proofofdelivery.FieldCapturedAt:
 			values[i] = new(sql.NullTime)
@@ -156,6 +168,37 @@ func (_m *ProofOfDelivery) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.CapturedAt = value.Time
 			}
+		case proofofdelivery.FieldReceivingStaffName:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field receiving_staff_name", values[i])
+			} else if value.Valid {
+				_m.ReceivingStaffName = value.String
+			}
+		case proofofdelivery.FieldReceivingStaffSignatureURL:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field receiving_staff_signature_url", values[i])
+			} else if value.Valid {
+				_m.ReceivingStaffSignatureURL = value.String
+			}
+		case proofofdelivery.FieldConditionOnArrival:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field condition_on_arrival", values[i])
+			} else if value.Valid {
+				_m.ConditionOnArrival = value.String
+			}
+		case proofofdelivery.FieldReceivedQuantity:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field received_quantity", values[i])
+			} else if value.Valid {
+				_m.ReceivedQuantity = new(int)
+				*_m.ReceivedQuantity = int(value.Int64)
+			}
+		case proofofdelivery.FieldBatchReference:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field batch_reference", values[i])
+			} else if value.Valid {
+				_m.BatchReference = value.String
+			}
 		case proofofdelivery.FieldMetadata:
 			if value, ok := values[i].(*[]byte); !ok {
 				return fmt.Errorf("unexpected type %T for field metadata", values[i])
@@ -231,6 +274,23 @@ func (_m *ProofOfDelivery) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("captured_at=")
 	builder.WriteString(_m.CapturedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	builder.WriteString("receiving_staff_name=")
+	builder.WriteString(_m.ReceivingStaffName)
+	builder.WriteString(", ")
+	builder.WriteString("receiving_staff_signature_url=")
+	builder.WriteString(_m.ReceivingStaffSignatureURL)
+	builder.WriteString(", ")
+	builder.WriteString("condition_on_arrival=")
+	builder.WriteString(_m.ConditionOnArrival)
+	builder.WriteString(", ")
+	if v := _m.ReceivedQuantity; v != nil {
+		builder.WriteString("received_quantity=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	builder.WriteString("batch_reference=")
+	builder.WriteString(_m.BatchReference)
 	builder.WriteString(", ")
 	builder.WriteString("metadata=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Metadata))

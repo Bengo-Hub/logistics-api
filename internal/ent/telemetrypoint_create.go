@@ -115,6 +115,20 @@ func (_c *TelemetryPointCreate) SetNillableBatteryPct(v *float64) *TelemetryPoin
 	return _c
 }
 
+// SetTemperatureCelsius sets the "temperature_celsius" field.
+func (_c *TelemetryPointCreate) SetTemperatureCelsius(v float64) *TelemetryPointCreate {
+	_c.mutation.SetTemperatureCelsius(v)
+	return _c
+}
+
+// SetNillableTemperatureCelsius sets the "temperature_celsius" field if the given value is not nil.
+func (_c *TelemetryPointCreate) SetNillableTemperatureCelsius(v *float64) *TelemetryPointCreate {
+	if v != nil {
+		_c.SetTemperatureCelsius(*v)
+	}
+	return _c
+}
+
 // SetMetadata sets the "metadata" field.
 func (_c *TelemetryPointCreate) SetMetadata(v map[string]interface{}) *TelemetryPointCreate {
 	_c.mutation.SetMetadata(v)
@@ -262,6 +276,10 @@ func (_c *TelemetryPointCreate) createSpec() (*TelemetryPoint, *sqlgraph.CreateS
 	if value, ok := _c.mutation.BatteryPct(); ok {
 		_spec.SetField(telemetrypoint.FieldBatteryPct, field.TypeFloat64, value)
 		_node.BatteryPct = value
+	}
+	if value, ok := _c.mutation.TemperatureCelsius(); ok {
+		_spec.SetField(telemetrypoint.FieldTemperatureCelsius, field.TypeFloat64, value)
+		_node.TemperatureCelsius = &value
 	}
 	if value, ok := _c.mutation.Metadata(); ok {
 		_spec.SetField(telemetrypoint.FieldMetadata, field.TypeJSON, value)
@@ -477,6 +495,30 @@ func (u *TelemetryPointUpsert) AddBatteryPct(v float64) *TelemetryPointUpsert {
 // ClearBatteryPct clears the value of the "battery_pct" field.
 func (u *TelemetryPointUpsert) ClearBatteryPct() *TelemetryPointUpsert {
 	u.SetNull(telemetrypoint.FieldBatteryPct)
+	return u
+}
+
+// SetTemperatureCelsius sets the "temperature_celsius" field.
+func (u *TelemetryPointUpsert) SetTemperatureCelsius(v float64) *TelemetryPointUpsert {
+	u.Set(telemetrypoint.FieldTemperatureCelsius, v)
+	return u
+}
+
+// UpdateTemperatureCelsius sets the "temperature_celsius" field to the value that was provided on create.
+func (u *TelemetryPointUpsert) UpdateTemperatureCelsius() *TelemetryPointUpsert {
+	u.SetExcluded(telemetrypoint.FieldTemperatureCelsius)
+	return u
+}
+
+// AddTemperatureCelsius adds v to the "temperature_celsius" field.
+func (u *TelemetryPointUpsert) AddTemperatureCelsius(v float64) *TelemetryPointUpsert {
+	u.Add(telemetrypoint.FieldTemperatureCelsius, v)
+	return u
+}
+
+// ClearTemperatureCelsius clears the value of the "temperature_celsius" field.
+func (u *TelemetryPointUpsert) ClearTemperatureCelsius() *TelemetryPointUpsert {
+	u.SetNull(telemetrypoint.FieldTemperatureCelsius)
 	return u
 }
 
@@ -705,6 +747,34 @@ func (u *TelemetryPointUpsertOne) UpdateBatteryPct() *TelemetryPointUpsertOne {
 func (u *TelemetryPointUpsertOne) ClearBatteryPct() *TelemetryPointUpsertOne {
 	return u.Update(func(s *TelemetryPointUpsert) {
 		s.ClearBatteryPct()
+	})
+}
+
+// SetTemperatureCelsius sets the "temperature_celsius" field.
+func (u *TelemetryPointUpsertOne) SetTemperatureCelsius(v float64) *TelemetryPointUpsertOne {
+	return u.Update(func(s *TelemetryPointUpsert) {
+		s.SetTemperatureCelsius(v)
+	})
+}
+
+// AddTemperatureCelsius adds v to the "temperature_celsius" field.
+func (u *TelemetryPointUpsertOne) AddTemperatureCelsius(v float64) *TelemetryPointUpsertOne {
+	return u.Update(func(s *TelemetryPointUpsert) {
+		s.AddTemperatureCelsius(v)
+	})
+}
+
+// UpdateTemperatureCelsius sets the "temperature_celsius" field to the value that was provided on create.
+func (u *TelemetryPointUpsertOne) UpdateTemperatureCelsius() *TelemetryPointUpsertOne {
+	return u.Update(func(s *TelemetryPointUpsert) {
+		s.UpdateTemperatureCelsius()
+	})
+}
+
+// ClearTemperatureCelsius clears the value of the "temperature_celsius" field.
+func (u *TelemetryPointUpsertOne) ClearTemperatureCelsius() *TelemetryPointUpsertOne {
+	return u.Update(func(s *TelemetryPointUpsert) {
+		s.ClearTemperatureCelsius()
 	})
 }
 
@@ -1102,6 +1172,34 @@ func (u *TelemetryPointUpsertBulk) UpdateBatteryPct() *TelemetryPointUpsertBulk 
 func (u *TelemetryPointUpsertBulk) ClearBatteryPct() *TelemetryPointUpsertBulk {
 	return u.Update(func(s *TelemetryPointUpsert) {
 		s.ClearBatteryPct()
+	})
+}
+
+// SetTemperatureCelsius sets the "temperature_celsius" field.
+func (u *TelemetryPointUpsertBulk) SetTemperatureCelsius(v float64) *TelemetryPointUpsertBulk {
+	return u.Update(func(s *TelemetryPointUpsert) {
+		s.SetTemperatureCelsius(v)
+	})
+}
+
+// AddTemperatureCelsius adds v to the "temperature_celsius" field.
+func (u *TelemetryPointUpsertBulk) AddTemperatureCelsius(v float64) *TelemetryPointUpsertBulk {
+	return u.Update(func(s *TelemetryPointUpsert) {
+		s.AddTemperatureCelsius(v)
+	})
+}
+
+// UpdateTemperatureCelsius sets the "temperature_celsius" field to the value that was provided on create.
+func (u *TelemetryPointUpsertBulk) UpdateTemperatureCelsius() *TelemetryPointUpsertBulk {
+	return u.Update(func(s *TelemetryPointUpsert) {
+		s.UpdateTemperatureCelsius()
+	})
+}
+
+// ClearTemperatureCelsius clears the value of the "temperature_celsius" field.
+func (u *TelemetryPointUpsertBulk) ClearTemperatureCelsius() *TelemetryPointUpsertBulk {
+	return u.Update(func(s *TelemetryPointUpsert) {
+		s.ClearTemperatureCelsius()
 	})
 }
 

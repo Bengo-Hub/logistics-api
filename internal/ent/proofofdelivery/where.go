@@ -101,6 +101,31 @@ func CapturedAt(v time.Time) predicate.ProofOfDelivery {
 	return predicate.ProofOfDelivery(sql.FieldEQ(FieldCapturedAt, v))
 }
 
+// ReceivingStaffName applies equality check predicate on the "receiving_staff_name" field. It's identical to ReceivingStaffNameEQ.
+func ReceivingStaffName(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldEQ(FieldReceivingStaffName, v))
+}
+
+// ReceivingStaffSignatureURL applies equality check predicate on the "receiving_staff_signature_url" field. It's identical to ReceivingStaffSignatureURLEQ.
+func ReceivingStaffSignatureURL(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldEQ(FieldReceivingStaffSignatureURL, v))
+}
+
+// ConditionOnArrival applies equality check predicate on the "condition_on_arrival" field. It's identical to ConditionOnArrivalEQ.
+func ConditionOnArrival(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldEQ(FieldConditionOnArrival, v))
+}
+
+// ReceivedQuantity applies equality check predicate on the "received_quantity" field. It's identical to ReceivedQuantityEQ.
+func ReceivedQuantity(v int) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldEQ(FieldReceivedQuantity, v))
+}
+
+// BatchReference applies equality check predicate on the "batch_reference" field. It's identical to BatchReferenceEQ.
+func BatchReference(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldEQ(FieldBatchReference, v))
+}
+
 // TenantIDEQ applies the EQ predicate on the "tenant_id" field.
 func TenantIDEQ(v uuid.UUID) predicate.ProofOfDelivery {
 	return predicate.ProofOfDelivery(sql.FieldEQ(FieldTenantID, v))
@@ -579,6 +604,356 @@ func CapturedAtLT(v time.Time) predicate.ProofOfDelivery {
 // CapturedAtLTE applies the LTE predicate on the "captured_at" field.
 func CapturedAtLTE(v time.Time) predicate.ProofOfDelivery {
 	return predicate.ProofOfDelivery(sql.FieldLTE(FieldCapturedAt, v))
+}
+
+// ReceivingStaffNameEQ applies the EQ predicate on the "receiving_staff_name" field.
+func ReceivingStaffNameEQ(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldEQ(FieldReceivingStaffName, v))
+}
+
+// ReceivingStaffNameNEQ applies the NEQ predicate on the "receiving_staff_name" field.
+func ReceivingStaffNameNEQ(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldNEQ(FieldReceivingStaffName, v))
+}
+
+// ReceivingStaffNameIn applies the In predicate on the "receiving_staff_name" field.
+func ReceivingStaffNameIn(vs ...string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldIn(FieldReceivingStaffName, vs...))
+}
+
+// ReceivingStaffNameNotIn applies the NotIn predicate on the "receiving_staff_name" field.
+func ReceivingStaffNameNotIn(vs ...string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldNotIn(FieldReceivingStaffName, vs...))
+}
+
+// ReceivingStaffNameGT applies the GT predicate on the "receiving_staff_name" field.
+func ReceivingStaffNameGT(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldGT(FieldReceivingStaffName, v))
+}
+
+// ReceivingStaffNameGTE applies the GTE predicate on the "receiving_staff_name" field.
+func ReceivingStaffNameGTE(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldGTE(FieldReceivingStaffName, v))
+}
+
+// ReceivingStaffNameLT applies the LT predicate on the "receiving_staff_name" field.
+func ReceivingStaffNameLT(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldLT(FieldReceivingStaffName, v))
+}
+
+// ReceivingStaffNameLTE applies the LTE predicate on the "receiving_staff_name" field.
+func ReceivingStaffNameLTE(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldLTE(FieldReceivingStaffName, v))
+}
+
+// ReceivingStaffNameContains applies the Contains predicate on the "receiving_staff_name" field.
+func ReceivingStaffNameContains(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldContains(FieldReceivingStaffName, v))
+}
+
+// ReceivingStaffNameHasPrefix applies the HasPrefix predicate on the "receiving_staff_name" field.
+func ReceivingStaffNameHasPrefix(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldHasPrefix(FieldReceivingStaffName, v))
+}
+
+// ReceivingStaffNameHasSuffix applies the HasSuffix predicate on the "receiving_staff_name" field.
+func ReceivingStaffNameHasSuffix(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldHasSuffix(FieldReceivingStaffName, v))
+}
+
+// ReceivingStaffNameIsNil applies the IsNil predicate on the "receiving_staff_name" field.
+func ReceivingStaffNameIsNil() predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldIsNull(FieldReceivingStaffName))
+}
+
+// ReceivingStaffNameNotNil applies the NotNil predicate on the "receiving_staff_name" field.
+func ReceivingStaffNameNotNil() predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldNotNull(FieldReceivingStaffName))
+}
+
+// ReceivingStaffNameEqualFold applies the EqualFold predicate on the "receiving_staff_name" field.
+func ReceivingStaffNameEqualFold(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldEqualFold(FieldReceivingStaffName, v))
+}
+
+// ReceivingStaffNameContainsFold applies the ContainsFold predicate on the "receiving_staff_name" field.
+func ReceivingStaffNameContainsFold(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldContainsFold(FieldReceivingStaffName, v))
+}
+
+// ReceivingStaffSignatureURLEQ applies the EQ predicate on the "receiving_staff_signature_url" field.
+func ReceivingStaffSignatureURLEQ(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldEQ(FieldReceivingStaffSignatureURL, v))
+}
+
+// ReceivingStaffSignatureURLNEQ applies the NEQ predicate on the "receiving_staff_signature_url" field.
+func ReceivingStaffSignatureURLNEQ(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldNEQ(FieldReceivingStaffSignatureURL, v))
+}
+
+// ReceivingStaffSignatureURLIn applies the In predicate on the "receiving_staff_signature_url" field.
+func ReceivingStaffSignatureURLIn(vs ...string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldIn(FieldReceivingStaffSignatureURL, vs...))
+}
+
+// ReceivingStaffSignatureURLNotIn applies the NotIn predicate on the "receiving_staff_signature_url" field.
+func ReceivingStaffSignatureURLNotIn(vs ...string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldNotIn(FieldReceivingStaffSignatureURL, vs...))
+}
+
+// ReceivingStaffSignatureURLGT applies the GT predicate on the "receiving_staff_signature_url" field.
+func ReceivingStaffSignatureURLGT(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldGT(FieldReceivingStaffSignatureURL, v))
+}
+
+// ReceivingStaffSignatureURLGTE applies the GTE predicate on the "receiving_staff_signature_url" field.
+func ReceivingStaffSignatureURLGTE(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldGTE(FieldReceivingStaffSignatureURL, v))
+}
+
+// ReceivingStaffSignatureURLLT applies the LT predicate on the "receiving_staff_signature_url" field.
+func ReceivingStaffSignatureURLLT(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldLT(FieldReceivingStaffSignatureURL, v))
+}
+
+// ReceivingStaffSignatureURLLTE applies the LTE predicate on the "receiving_staff_signature_url" field.
+func ReceivingStaffSignatureURLLTE(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldLTE(FieldReceivingStaffSignatureURL, v))
+}
+
+// ReceivingStaffSignatureURLContains applies the Contains predicate on the "receiving_staff_signature_url" field.
+func ReceivingStaffSignatureURLContains(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldContains(FieldReceivingStaffSignatureURL, v))
+}
+
+// ReceivingStaffSignatureURLHasPrefix applies the HasPrefix predicate on the "receiving_staff_signature_url" field.
+func ReceivingStaffSignatureURLHasPrefix(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldHasPrefix(FieldReceivingStaffSignatureURL, v))
+}
+
+// ReceivingStaffSignatureURLHasSuffix applies the HasSuffix predicate on the "receiving_staff_signature_url" field.
+func ReceivingStaffSignatureURLHasSuffix(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldHasSuffix(FieldReceivingStaffSignatureURL, v))
+}
+
+// ReceivingStaffSignatureURLIsNil applies the IsNil predicate on the "receiving_staff_signature_url" field.
+func ReceivingStaffSignatureURLIsNil() predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldIsNull(FieldReceivingStaffSignatureURL))
+}
+
+// ReceivingStaffSignatureURLNotNil applies the NotNil predicate on the "receiving_staff_signature_url" field.
+func ReceivingStaffSignatureURLNotNil() predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldNotNull(FieldReceivingStaffSignatureURL))
+}
+
+// ReceivingStaffSignatureURLEqualFold applies the EqualFold predicate on the "receiving_staff_signature_url" field.
+func ReceivingStaffSignatureURLEqualFold(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldEqualFold(FieldReceivingStaffSignatureURL, v))
+}
+
+// ReceivingStaffSignatureURLContainsFold applies the ContainsFold predicate on the "receiving_staff_signature_url" field.
+func ReceivingStaffSignatureURLContainsFold(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldContainsFold(FieldReceivingStaffSignatureURL, v))
+}
+
+// ConditionOnArrivalEQ applies the EQ predicate on the "condition_on_arrival" field.
+func ConditionOnArrivalEQ(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldEQ(FieldConditionOnArrival, v))
+}
+
+// ConditionOnArrivalNEQ applies the NEQ predicate on the "condition_on_arrival" field.
+func ConditionOnArrivalNEQ(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldNEQ(FieldConditionOnArrival, v))
+}
+
+// ConditionOnArrivalIn applies the In predicate on the "condition_on_arrival" field.
+func ConditionOnArrivalIn(vs ...string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldIn(FieldConditionOnArrival, vs...))
+}
+
+// ConditionOnArrivalNotIn applies the NotIn predicate on the "condition_on_arrival" field.
+func ConditionOnArrivalNotIn(vs ...string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldNotIn(FieldConditionOnArrival, vs...))
+}
+
+// ConditionOnArrivalGT applies the GT predicate on the "condition_on_arrival" field.
+func ConditionOnArrivalGT(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldGT(FieldConditionOnArrival, v))
+}
+
+// ConditionOnArrivalGTE applies the GTE predicate on the "condition_on_arrival" field.
+func ConditionOnArrivalGTE(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldGTE(FieldConditionOnArrival, v))
+}
+
+// ConditionOnArrivalLT applies the LT predicate on the "condition_on_arrival" field.
+func ConditionOnArrivalLT(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldLT(FieldConditionOnArrival, v))
+}
+
+// ConditionOnArrivalLTE applies the LTE predicate on the "condition_on_arrival" field.
+func ConditionOnArrivalLTE(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldLTE(FieldConditionOnArrival, v))
+}
+
+// ConditionOnArrivalContains applies the Contains predicate on the "condition_on_arrival" field.
+func ConditionOnArrivalContains(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldContains(FieldConditionOnArrival, v))
+}
+
+// ConditionOnArrivalHasPrefix applies the HasPrefix predicate on the "condition_on_arrival" field.
+func ConditionOnArrivalHasPrefix(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldHasPrefix(FieldConditionOnArrival, v))
+}
+
+// ConditionOnArrivalHasSuffix applies the HasSuffix predicate on the "condition_on_arrival" field.
+func ConditionOnArrivalHasSuffix(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldHasSuffix(FieldConditionOnArrival, v))
+}
+
+// ConditionOnArrivalIsNil applies the IsNil predicate on the "condition_on_arrival" field.
+func ConditionOnArrivalIsNil() predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldIsNull(FieldConditionOnArrival))
+}
+
+// ConditionOnArrivalNotNil applies the NotNil predicate on the "condition_on_arrival" field.
+func ConditionOnArrivalNotNil() predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldNotNull(FieldConditionOnArrival))
+}
+
+// ConditionOnArrivalEqualFold applies the EqualFold predicate on the "condition_on_arrival" field.
+func ConditionOnArrivalEqualFold(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldEqualFold(FieldConditionOnArrival, v))
+}
+
+// ConditionOnArrivalContainsFold applies the ContainsFold predicate on the "condition_on_arrival" field.
+func ConditionOnArrivalContainsFold(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldContainsFold(FieldConditionOnArrival, v))
+}
+
+// ReceivedQuantityEQ applies the EQ predicate on the "received_quantity" field.
+func ReceivedQuantityEQ(v int) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldEQ(FieldReceivedQuantity, v))
+}
+
+// ReceivedQuantityNEQ applies the NEQ predicate on the "received_quantity" field.
+func ReceivedQuantityNEQ(v int) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldNEQ(FieldReceivedQuantity, v))
+}
+
+// ReceivedQuantityIn applies the In predicate on the "received_quantity" field.
+func ReceivedQuantityIn(vs ...int) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldIn(FieldReceivedQuantity, vs...))
+}
+
+// ReceivedQuantityNotIn applies the NotIn predicate on the "received_quantity" field.
+func ReceivedQuantityNotIn(vs ...int) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldNotIn(FieldReceivedQuantity, vs...))
+}
+
+// ReceivedQuantityGT applies the GT predicate on the "received_quantity" field.
+func ReceivedQuantityGT(v int) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldGT(FieldReceivedQuantity, v))
+}
+
+// ReceivedQuantityGTE applies the GTE predicate on the "received_quantity" field.
+func ReceivedQuantityGTE(v int) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldGTE(FieldReceivedQuantity, v))
+}
+
+// ReceivedQuantityLT applies the LT predicate on the "received_quantity" field.
+func ReceivedQuantityLT(v int) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldLT(FieldReceivedQuantity, v))
+}
+
+// ReceivedQuantityLTE applies the LTE predicate on the "received_quantity" field.
+func ReceivedQuantityLTE(v int) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldLTE(FieldReceivedQuantity, v))
+}
+
+// ReceivedQuantityIsNil applies the IsNil predicate on the "received_quantity" field.
+func ReceivedQuantityIsNil() predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldIsNull(FieldReceivedQuantity))
+}
+
+// ReceivedQuantityNotNil applies the NotNil predicate on the "received_quantity" field.
+func ReceivedQuantityNotNil() predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldNotNull(FieldReceivedQuantity))
+}
+
+// BatchReferenceEQ applies the EQ predicate on the "batch_reference" field.
+func BatchReferenceEQ(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldEQ(FieldBatchReference, v))
+}
+
+// BatchReferenceNEQ applies the NEQ predicate on the "batch_reference" field.
+func BatchReferenceNEQ(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldNEQ(FieldBatchReference, v))
+}
+
+// BatchReferenceIn applies the In predicate on the "batch_reference" field.
+func BatchReferenceIn(vs ...string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldIn(FieldBatchReference, vs...))
+}
+
+// BatchReferenceNotIn applies the NotIn predicate on the "batch_reference" field.
+func BatchReferenceNotIn(vs ...string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldNotIn(FieldBatchReference, vs...))
+}
+
+// BatchReferenceGT applies the GT predicate on the "batch_reference" field.
+func BatchReferenceGT(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldGT(FieldBatchReference, v))
+}
+
+// BatchReferenceGTE applies the GTE predicate on the "batch_reference" field.
+func BatchReferenceGTE(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldGTE(FieldBatchReference, v))
+}
+
+// BatchReferenceLT applies the LT predicate on the "batch_reference" field.
+func BatchReferenceLT(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldLT(FieldBatchReference, v))
+}
+
+// BatchReferenceLTE applies the LTE predicate on the "batch_reference" field.
+func BatchReferenceLTE(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldLTE(FieldBatchReference, v))
+}
+
+// BatchReferenceContains applies the Contains predicate on the "batch_reference" field.
+func BatchReferenceContains(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldContains(FieldBatchReference, v))
+}
+
+// BatchReferenceHasPrefix applies the HasPrefix predicate on the "batch_reference" field.
+func BatchReferenceHasPrefix(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldHasPrefix(FieldBatchReference, v))
+}
+
+// BatchReferenceHasSuffix applies the HasSuffix predicate on the "batch_reference" field.
+func BatchReferenceHasSuffix(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldHasSuffix(FieldBatchReference, v))
+}
+
+// BatchReferenceIsNil applies the IsNil predicate on the "batch_reference" field.
+func BatchReferenceIsNil() predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldIsNull(FieldBatchReference))
+}
+
+// BatchReferenceNotNil applies the NotNil predicate on the "batch_reference" field.
+func BatchReferenceNotNil() predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldNotNull(FieldBatchReference))
+}
+
+// BatchReferenceEqualFold applies the EqualFold predicate on the "batch_reference" field.
+func BatchReferenceEqualFold(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldEqualFold(FieldBatchReference, v))
+}
+
+// BatchReferenceContainsFold applies the ContainsFold predicate on the "batch_reference" field.
+func BatchReferenceContainsFold(v string) predicate.ProofOfDelivery {
+	return predicate.ProofOfDelivery(sql.FieldContainsFold(FieldBatchReference, v))
 }
 
 // HasTask applies the HasEdge predicate on the "task" edge.

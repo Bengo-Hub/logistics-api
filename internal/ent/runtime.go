@@ -8,6 +8,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/billingevent"
 	"github.com/bengobox/logistics-service/internal/ent/carrierjob"
 	"github.com/bengobox/logistics-service/internal/ent/carrierpartner"
+	"github.com/bengobox/logistics-service/internal/ent/chainofcustody"
 	"github.com/bengobox/logistics-service/internal/ent/earningsstatement"
 	"github.com/bengobox/logistics-service/internal/ent/fleet"
 	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
@@ -24,6 +25,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/ridershift"
 	"github.com/bengobox/logistics-service/internal/ent/schema"
 	"github.com/bengobox/logistics-service/internal/ent/serviceconfig"
+	"github.com/bengobox/logistics-service/internal/ent/shipment"
 	"github.com/bengobox/logistics-service/internal/ent/task"
 	"github.com/bengobox/logistics-service/internal/ent/taskassignment"
 	"github.com/bengobox/logistics-service/internal/ent/taskevent"
@@ -118,6 +120,16 @@ func init() {
 	carrierpartnerDescID := carrierpartnerFields[0].Descriptor()
 	// carrierpartner.DefaultID holds the default value on creation for the id field.
 	carrierpartner.DefaultID = carrierpartnerDescID.Default.(func() uuid.UUID)
+	chainofcustodyFields := schema.ChainOfCustody{}.Fields()
+	_ = chainofcustodyFields
+	// chainofcustodyDescOccurredAt is the schema descriptor for occurred_at field.
+	chainofcustodyDescOccurredAt := chainofcustodyFields[15].Descriptor()
+	// chainofcustody.DefaultOccurredAt holds the default value on creation for the occurred_at field.
+	chainofcustody.DefaultOccurredAt = chainofcustodyDescOccurredAt.Default.(func() time.Time)
+	// chainofcustodyDescID is the schema descriptor for id field.
+	chainofcustodyDescID := chainofcustodyFields[0].Descriptor()
+	// chainofcustody.DefaultID holds the default value on creation for the id field.
+	chainofcustody.DefaultID = chainofcustodyDescID.Default.(func() uuid.UUID)
 	earningsstatementFields := schema.EarningsStatement{}.Fields()
 	_ = earningsstatementFields
 	// earningsstatementDescBonusAmount is the schema descriptor for bonus_amount field.
@@ -467,7 +479,7 @@ func init() {
 	// proofofdelivery.DefaultCapturedAt holds the default value on creation for the captured_at field.
 	proofofdelivery.DefaultCapturedAt = proofofdeliveryDescCapturedAt.Default.(func() time.Time)
 	// proofofdeliveryDescMetadata is the schema descriptor for metadata field.
-	proofofdeliveryDescMetadata := proofofdeliveryFields[10].Descriptor()
+	proofofdeliveryDescMetadata := proofofdeliveryFields[15].Descriptor()
 	// proofofdelivery.DefaultMetadata holds the default value on creation for the metadata field.
 	proofofdelivery.DefaultMetadata = proofofdeliveryDescMetadata.Default.(map[string]interface{})
 	// proofofdeliveryDescID is the schema descriptor for id field.
@@ -598,6 +610,38 @@ func init() {
 	serviceconfigDescID := serviceconfigFields[0].Descriptor()
 	// serviceconfig.DefaultID holds the default value on creation for the id field.
 	serviceconfig.DefaultID = serviceconfigDescID.Default.(func() uuid.UUID)
+	shipmentFields := schema.Shipment{}.Fields()
+	_ = shipmentFields
+	// shipmentDescShipmentType is the schema descriptor for shipment_type field.
+	shipmentDescShipmentType := shipmentFields[3].Descriptor()
+	// shipment.DefaultShipmentType holds the default value on creation for the shipment_type field.
+	shipment.DefaultShipmentType = shipmentDescShipmentType.Default.(string)
+	// shipmentDescStatus is the schema descriptor for status field.
+	shipmentDescStatus := shipmentFields[4].Descriptor()
+	// shipment.DefaultStatus holds the default value on creation for the status field.
+	shipment.DefaultStatus = shipmentDescStatus.Default.(string)
+	// shipmentDescFleetType is the schema descriptor for fleet_type field.
+	shipmentDescFleetType := shipmentFields[5].Descriptor()
+	// shipment.DefaultFleetType holds the default value on creation for the fleet_type field.
+	shipment.DefaultFleetType = shipmentDescFleetType.Default.(string)
+	// shipmentDescMetadata is the schema descriptor for metadata field.
+	shipmentDescMetadata := shipmentFields[18].Descriptor()
+	// shipment.DefaultMetadata holds the default value on creation for the metadata field.
+	shipment.DefaultMetadata = shipmentDescMetadata.Default.(map[string]interface{})
+	// shipmentDescCreatedAt is the schema descriptor for created_at field.
+	shipmentDescCreatedAt := shipmentFields[19].Descriptor()
+	// shipment.DefaultCreatedAt holds the default value on creation for the created_at field.
+	shipment.DefaultCreatedAt = shipmentDescCreatedAt.Default.(func() time.Time)
+	// shipmentDescUpdatedAt is the schema descriptor for updated_at field.
+	shipmentDescUpdatedAt := shipmentFields[20].Descriptor()
+	// shipment.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	shipment.DefaultUpdatedAt = shipmentDescUpdatedAt.Default.(func() time.Time)
+	// shipment.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	shipment.UpdateDefaultUpdatedAt = shipmentDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// shipmentDescID is the schema descriptor for id field.
+	shipmentDescID := shipmentFields[0].Descriptor()
+	// shipment.DefaultID holds the default value on creation for the id field.
+	shipment.DefaultID = shipmentDescID.Default.(func() uuid.UUID)
 	taskFields := schema.Task{}.Fields()
 	_ = taskFields
 	// taskDescTrackingCode is the schema descriptor for tracking_code field.
@@ -641,11 +685,11 @@ func init() {
 	// task.DefaultCashCollected holds the default value on creation for the cash_collected field.
 	task.DefaultCashCollected = taskDescCashCollected.Default.(bool)
 	// taskDescCreatedAt is the schema descriptor for created_at field.
-	taskDescCreatedAt := taskFields[22].Descriptor()
+	taskDescCreatedAt := taskFields[24].Descriptor()
 	// task.DefaultCreatedAt holds the default value on creation for the created_at field.
 	task.DefaultCreatedAt = taskDescCreatedAt.Default.(func() time.Time)
 	// taskDescUpdatedAt is the schema descriptor for updated_at field.
-	taskDescUpdatedAt := taskFields[23].Descriptor()
+	taskDescUpdatedAt := taskFields[25].Descriptor()
 	// task.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	task.DefaultUpdatedAt = taskDescUpdatedAt.Default.(func() time.Time)
 	// task.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -715,7 +759,7 @@ func init() {
 	// telemetrypoint.DefaultCapturedAt holds the default value on creation for the captured_at field.
 	telemetrypoint.DefaultCapturedAt = telemetrypointDescCapturedAt.Default.(func() time.Time)
 	// telemetrypointDescMetadata is the schema descriptor for metadata field.
-	telemetrypointDescMetadata := telemetrypointFields[8].Descriptor()
+	telemetrypointDescMetadata := telemetrypointFields[9].Descriptor()
 	// telemetrypoint.DefaultMetadata holds the default value on creation for the metadata field.
 	telemetrypoint.DefaultMetadata = telemetrypointDescMetadata.Default.(map[string]interface{})
 	// telemetrypointDescID is the schema descriptor for id field.

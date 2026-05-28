@@ -57,6 +57,10 @@ const (
 	FieldOutletID = "outlet_id"
 	// FieldCarrierID holds the string denoting the carrier_id field in the database.
 	FieldCarrierID = "carrier_id"
+	// FieldShipmentID holds the string denoting the shipment_id field in the database.
+	FieldShipmentID = "shipment_id"
+	// FieldSealNumber holds the string denoting the seal_number field in the database.
+	FieldSealNumber = "seal_number"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
@@ -125,6 +129,8 @@ var Columns = []string{
 	FieldCashCollected,
 	FieldOutletID,
 	FieldCarrierID,
+	FieldShipmentID,
+	FieldSealNumber,
 	FieldCreatedAt,
 	FieldUpdatedAt,
 }
@@ -282,6 +288,16 @@ func ByOutletID(opts ...sql.OrderTermOption) OrderOption {
 // ByCarrierID orders the results by the carrier_id field.
 func ByCarrierID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCarrierID, opts...).ToFunc()
+}
+
+// ByShipmentID orders the results by the shipment_id field.
+func ByShipmentID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldShipmentID, opts...).ToFunc()
+}
+
+// BySealNumber orders the results by the seal_number field.
+func BySealNumber(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSealNumber, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.

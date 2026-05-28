@@ -62,6 +62,10 @@ type Task struct {
 	OutletID *uuid.UUID `json:"outlet_id,omitempty"`
 	// External carrier reference if outsourced to 3rd party
 	CarrierID string `json:"carrier_id,omitempty"`
+	// Shipment batch this task belongs to (KEMSA distribution)
+	ShipmentID *uuid.UUID `json:"shipment_id,omitempty"`
+	// Physical seal/lock number applied at dispatch — for KEMSA chain-of-custody
+	SealNumber string `json:"seal_number,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
@@ -131,7 +135,7 @@ func (*Task) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case task.FieldOutletID:
+		case task.FieldOutletID, task.FieldShipmentID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case task.FieldMetadata, task.FieldPackageDimensionsCm:
 			values[i] = new([]byte)
@@ -141,7 +145,7 @@ func (*Task) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullFloat64)
 		case task.FieldPriority:
 			values[i] = new(sql.NullInt64)
-		case task.FieldTrackingCode, task.FieldExternalReference, task.FieldSourceService, task.FieldTaskType, task.FieldStatus, task.FieldTemperatureRange, task.FieldCarrierID:
+		case task.FieldTrackingCode, task.FieldExternalReference, task.FieldSourceService, task.FieldTaskType, task.FieldStatus, task.FieldTemperatureRange, task.FieldCarrierID, task.FieldSealNumber:
 			values[i] = new(sql.NullString)
 		case task.FieldSLADueAt, task.FieldRequestedPickupAt, task.FieldRequestedDropoffAt, task.FieldCreatedAt, task.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -305,6 +309,19 @@ func (_m *Task) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.CarrierID = value.String
 			}
+		case task.FieldShipmentID:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field shipment_id", values[i])
+			} else if value.Valid {
+				_m.ShipmentID = new(uuid.UUID)
+				*_m.ShipmentID = *value.S.(*uuid.UUID)
+			}
+		case task.FieldSealNumber:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field seal_number", values[i])
+			} else if value.Valid {
+				_m.SealNumber = value.String
+			}
 		case task.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
@@ -452,6 +469,14 @@ func (_m *Task) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("carrier_id=")
 	builder.WriteString(_m.CarrierID)
+	builder.WriteString(", ")
+	if v := _m.ShipmentID; v != nil {
+		builder.WriteString("shipment_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	builder.WriteString("seal_number=")
+	builder.WriteString(_m.SealNumber)
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))

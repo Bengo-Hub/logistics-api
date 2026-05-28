@@ -187,6 +187,113 @@ func (_u *ProofOfDeliveryUpdate) SetNillableCapturedAt(v *time.Time) *ProofOfDel
 	return _u
 }
 
+// SetReceivingStaffName sets the "receiving_staff_name" field.
+func (_u *ProofOfDeliveryUpdate) SetReceivingStaffName(v string) *ProofOfDeliveryUpdate {
+	_u.mutation.SetReceivingStaffName(v)
+	return _u
+}
+
+// SetNillableReceivingStaffName sets the "receiving_staff_name" field if the given value is not nil.
+func (_u *ProofOfDeliveryUpdate) SetNillableReceivingStaffName(v *string) *ProofOfDeliveryUpdate {
+	if v != nil {
+		_u.SetReceivingStaffName(*v)
+	}
+	return _u
+}
+
+// ClearReceivingStaffName clears the value of the "receiving_staff_name" field.
+func (_u *ProofOfDeliveryUpdate) ClearReceivingStaffName() *ProofOfDeliveryUpdate {
+	_u.mutation.ClearReceivingStaffName()
+	return _u
+}
+
+// SetReceivingStaffSignatureURL sets the "receiving_staff_signature_url" field.
+func (_u *ProofOfDeliveryUpdate) SetReceivingStaffSignatureURL(v string) *ProofOfDeliveryUpdate {
+	_u.mutation.SetReceivingStaffSignatureURL(v)
+	return _u
+}
+
+// SetNillableReceivingStaffSignatureURL sets the "receiving_staff_signature_url" field if the given value is not nil.
+func (_u *ProofOfDeliveryUpdate) SetNillableReceivingStaffSignatureURL(v *string) *ProofOfDeliveryUpdate {
+	if v != nil {
+		_u.SetReceivingStaffSignatureURL(*v)
+	}
+	return _u
+}
+
+// ClearReceivingStaffSignatureURL clears the value of the "receiving_staff_signature_url" field.
+func (_u *ProofOfDeliveryUpdate) ClearReceivingStaffSignatureURL() *ProofOfDeliveryUpdate {
+	_u.mutation.ClearReceivingStaffSignatureURL()
+	return _u
+}
+
+// SetConditionOnArrival sets the "condition_on_arrival" field.
+func (_u *ProofOfDeliveryUpdate) SetConditionOnArrival(v string) *ProofOfDeliveryUpdate {
+	_u.mutation.SetConditionOnArrival(v)
+	return _u
+}
+
+// SetNillableConditionOnArrival sets the "condition_on_arrival" field if the given value is not nil.
+func (_u *ProofOfDeliveryUpdate) SetNillableConditionOnArrival(v *string) *ProofOfDeliveryUpdate {
+	if v != nil {
+		_u.SetConditionOnArrival(*v)
+	}
+	return _u
+}
+
+// ClearConditionOnArrival clears the value of the "condition_on_arrival" field.
+func (_u *ProofOfDeliveryUpdate) ClearConditionOnArrival() *ProofOfDeliveryUpdate {
+	_u.mutation.ClearConditionOnArrival()
+	return _u
+}
+
+// SetReceivedQuantity sets the "received_quantity" field.
+func (_u *ProofOfDeliveryUpdate) SetReceivedQuantity(v int) *ProofOfDeliveryUpdate {
+	_u.mutation.ResetReceivedQuantity()
+	_u.mutation.SetReceivedQuantity(v)
+	return _u
+}
+
+// SetNillableReceivedQuantity sets the "received_quantity" field if the given value is not nil.
+func (_u *ProofOfDeliveryUpdate) SetNillableReceivedQuantity(v *int) *ProofOfDeliveryUpdate {
+	if v != nil {
+		_u.SetReceivedQuantity(*v)
+	}
+	return _u
+}
+
+// AddReceivedQuantity adds value to the "received_quantity" field.
+func (_u *ProofOfDeliveryUpdate) AddReceivedQuantity(v int) *ProofOfDeliveryUpdate {
+	_u.mutation.AddReceivedQuantity(v)
+	return _u
+}
+
+// ClearReceivedQuantity clears the value of the "received_quantity" field.
+func (_u *ProofOfDeliveryUpdate) ClearReceivedQuantity() *ProofOfDeliveryUpdate {
+	_u.mutation.ClearReceivedQuantity()
+	return _u
+}
+
+// SetBatchReference sets the "batch_reference" field.
+func (_u *ProofOfDeliveryUpdate) SetBatchReference(v string) *ProofOfDeliveryUpdate {
+	_u.mutation.SetBatchReference(v)
+	return _u
+}
+
+// SetNillableBatchReference sets the "batch_reference" field if the given value is not nil.
+func (_u *ProofOfDeliveryUpdate) SetNillableBatchReference(v *string) *ProofOfDeliveryUpdate {
+	if v != nil {
+		_u.SetBatchReference(*v)
+	}
+	return _u
+}
+
+// ClearBatchReference clears the value of the "batch_reference" field.
+func (_u *ProofOfDeliveryUpdate) ClearBatchReference() *ProofOfDeliveryUpdate {
+	_u.mutation.ClearBatchReference()
+	return _u
+}
+
 // SetMetadata sets the "metadata" field.
 func (_u *ProofOfDeliveryUpdate) SetMetadata(v map[string]interface{}) *ProofOfDeliveryUpdate {
 	_u.mutation.SetMetadata(v)
@@ -294,6 +401,39 @@ func (_u *ProofOfDeliveryUpdate) sqlSave(ctx context.Context) (_node int, err er
 	}
 	if value, ok := _u.mutation.CapturedAt(); ok {
 		_spec.SetField(proofofdelivery.FieldCapturedAt, field.TypeTime, value)
+	}
+	if value, ok := _u.mutation.ReceivingStaffName(); ok {
+		_spec.SetField(proofofdelivery.FieldReceivingStaffName, field.TypeString, value)
+	}
+	if _u.mutation.ReceivingStaffNameCleared() {
+		_spec.ClearField(proofofdelivery.FieldReceivingStaffName, field.TypeString)
+	}
+	if value, ok := _u.mutation.ReceivingStaffSignatureURL(); ok {
+		_spec.SetField(proofofdelivery.FieldReceivingStaffSignatureURL, field.TypeString, value)
+	}
+	if _u.mutation.ReceivingStaffSignatureURLCleared() {
+		_spec.ClearField(proofofdelivery.FieldReceivingStaffSignatureURL, field.TypeString)
+	}
+	if value, ok := _u.mutation.ConditionOnArrival(); ok {
+		_spec.SetField(proofofdelivery.FieldConditionOnArrival, field.TypeString, value)
+	}
+	if _u.mutation.ConditionOnArrivalCleared() {
+		_spec.ClearField(proofofdelivery.FieldConditionOnArrival, field.TypeString)
+	}
+	if value, ok := _u.mutation.ReceivedQuantity(); ok {
+		_spec.SetField(proofofdelivery.FieldReceivedQuantity, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedReceivedQuantity(); ok {
+		_spec.AddField(proofofdelivery.FieldReceivedQuantity, field.TypeInt, value)
+	}
+	if _u.mutation.ReceivedQuantityCleared() {
+		_spec.ClearField(proofofdelivery.FieldReceivedQuantity, field.TypeInt)
+	}
+	if value, ok := _u.mutation.BatchReference(); ok {
+		_spec.SetField(proofofdelivery.FieldBatchReference, field.TypeString, value)
+	}
+	if _u.mutation.BatchReferenceCleared() {
+		_spec.ClearField(proofofdelivery.FieldBatchReference, field.TypeString)
 	}
 	if value, ok := _u.mutation.Metadata(); ok {
 		_spec.SetField(proofofdelivery.FieldMetadata, field.TypeJSON, value)
@@ -504,6 +644,113 @@ func (_u *ProofOfDeliveryUpdateOne) SetNillableCapturedAt(v *time.Time) *ProofOf
 	return _u
 }
 
+// SetReceivingStaffName sets the "receiving_staff_name" field.
+func (_u *ProofOfDeliveryUpdateOne) SetReceivingStaffName(v string) *ProofOfDeliveryUpdateOne {
+	_u.mutation.SetReceivingStaffName(v)
+	return _u
+}
+
+// SetNillableReceivingStaffName sets the "receiving_staff_name" field if the given value is not nil.
+func (_u *ProofOfDeliveryUpdateOne) SetNillableReceivingStaffName(v *string) *ProofOfDeliveryUpdateOne {
+	if v != nil {
+		_u.SetReceivingStaffName(*v)
+	}
+	return _u
+}
+
+// ClearReceivingStaffName clears the value of the "receiving_staff_name" field.
+func (_u *ProofOfDeliveryUpdateOne) ClearReceivingStaffName() *ProofOfDeliveryUpdateOne {
+	_u.mutation.ClearReceivingStaffName()
+	return _u
+}
+
+// SetReceivingStaffSignatureURL sets the "receiving_staff_signature_url" field.
+func (_u *ProofOfDeliveryUpdateOne) SetReceivingStaffSignatureURL(v string) *ProofOfDeliveryUpdateOne {
+	_u.mutation.SetReceivingStaffSignatureURL(v)
+	return _u
+}
+
+// SetNillableReceivingStaffSignatureURL sets the "receiving_staff_signature_url" field if the given value is not nil.
+func (_u *ProofOfDeliveryUpdateOne) SetNillableReceivingStaffSignatureURL(v *string) *ProofOfDeliveryUpdateOne {
+	if v != nil {
+		_u.SetReceivingStaffSignatureURL(*v)
+	}
+	return _u
+}
+
+// ClearReceivingStaffSignatureURL clears the value of the "receiving_staff_signature_url" field.
+func (_u *ProofOfDeliveryUpdateOne) ClearReceivingStaffSignatureURL() *ProofOfDeliveryUpdateOne {
+	_u.mutation.ClearReceivingStaffSignatureURL()
+	return _u
+}
+
+// SetConditionOnArrival sets the "condition_on_arrival" field.
+func (_u *ProofOfDeliveryUpdateOne) SetConditionOnArrival(v string) *ProofOfDeliveryUpdateOne {
+	_u.mutation.SetConditionOnArrival(v)
+	return _u
+}
+
+// SetNillableConditionOnArrival sets the "condition_on_arrival" field if the given value is not nil.
+func (_u *ProofOfDeliveryUpdateOne) SetNillableConditionOnArrival(v *string) *ProofOfDeliveryUpdateOne {
+	if v != nil {
+		_u.SetConditionOnArrival(*v)
+	}
+	return _u
+}
+
+// ClearConditionOnArrival clears the value of the "condition_on_arrival" field.
+func (_u *ProofOfDeliveryUpdateOne) ClearConditionOnArrival() *ProofOfDeliveryUpdateOne {
+	_u.mutation.ClearConditionOnArrival()
+	return _u
+}
+
+// SetReceivedQuantity sets the "received_quantity" field.
+func (_u *ProofOfDeliveryUpdateOne) SetReceivedQuantity(v int) *ProofOfDeliveryUpdateOne {
+	_u.mutation.ResetReceivedQuantity()
+	_u.mutation.SetReceivedQuantity(v)
+	return _u
+}
+
+// SetNillableReceivedQuantity sets the "received_quantity" field if the given value is not nil.
+func (_u *ProofOfDeliveryUpdateOne) SetNillableReceivedQuantity(v *int) *ProofOfDeliveryUpdateOne {
+	if v != nil {
+		_u.SetReceivedQuantity(*v)
+	}
+	return _u
+}
+
+// AddReceivedQuantity adds value to the "received_quantity" field.
+func (_u *ProofOfDeliveryUpdateOne) AddReceivedQuantity(v int) *ProofOfDeliveryUpdateOne {
+	_u.mutation.AddReceivedQuantity(v)
+	return _u
+}
+
+// ClearReceivedQuantity clears the value of the "received_quantity" field.
+func (_u *ProofOfDeliveryUpdateOne) ClearReceivedQuantity() *ProofOfDeliveryUpdateOne {
+	_u.mutation.ClearReceivedQuantity()
+	return _u
+}
+
+// SetBatchReference sets the "batch_reference" field.
+func (_u *ProofOfDeliveryUpdateOne) SetBatchReference(v string) *ProofOfDeliveryUpdateOne {
+	_u.mutation.SetBatchReference(v)
+	return _u
+}
+
+// SetNillableBatchReference sets the "batch_reference" field if the given value is not nil.
+func (_u *ProofOfDeliveryUpdateOne) SetNillableBatchReference(v *string) *ProofOfDeliveryUpdateOne {
+	if v != nil {
+		_u.SetBatchReference(*v)
+	}
+	return _u
+}
+
+// ClearBatchReference clears the value of the "batch_reference" field.
+func (_u *ProofOfDeliveryUpdateOne) ClearBatchReference() *ProofOfDeliveryUpdateOne {
+	_u.mutation.ClearBatchReference()
+	return _u
+}
+
 // SetMetadata sets the "metadata" field.
 func (_u *ProofOfDeliveryUpdateOne) SetMetadata(v map[string]interface{}) *ProofOfDeliveryUpdateOne {
 	_u.mutation.SetMetadata(v)
@@ -641,6 +888,39 @@ func (_u *ProofOfDeliveryUpdateOne) sqlSave(ctx context.Context) (_node *ProofOf
 	}
 	if value, ok := _u.mutation.CapturedAt(); ok {
 		_spec.SetField(proofofdelivery.FieldCapturedAt, field.TypeTime, value)
+	}
+	if value, ok := _u.mutation.ReceivingStaffName(); ok {
+		_spec.SetField(proofofdelivery.FieldReceivingStaffName, field.TypeString, value)
+	}
+	if _u.mutation.ReceivingStaffNameCleared() {
+		_spec.ClearField(proofofdelivery.FieldReceivingStaffName, field.TypeString)
+	}
+	if value, ok := _u.mutation.ReceivingStaffSignatureURL(); ok {
+		_spec.SetField(proofofdelivery.FieldReceivingStaffSignatureURL, field.TypeString, value)
+	}
+	if _u.mutation.ReceivingStaffSignatureURLCleared() {
+		_spec.ClearField(proofofdelivery.FieldReceivingStaffSignatureURL, field.TypeString)
+	}
+	if value, ok := _u.mutation.ConditionOnArrival(); ok {
+		_spec.SetField(proofofdelivery.FieldConditionOnArrival, field.TypeString, value)
+	}
+	if _u.mutation.ConditionOnArrivalCleared() {
+		_spec.ClearField(proofofdelivery.FieldConditionOnArrival, field.TypeString)
+	}
+	if value, ok := _u.mutation.ReceivedQuantity(); ok {
+		_spec.SetField(proofofdelivery.FieldReceivedQuantity, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedReceivedQuantity(); ok {
+		_spec.AddField(proofofdelivery.FieldReceivedQuantity, field.TypeInt, value)
+	}
+	if _u.mutation.ReceivedQuantityCleared() {
+		_spec.ClearField(proofofdelivery.FieldReceivedQuantity, field.TypeInt)
+	}
+	if value, ok := _u.mutation.BatchReference(); ok {
+		_spec.SetField(proofofdelivery.FieldBatchReference, field.TypeString, value)
+	}
+	if _u.mutation.BatchReferenceCleared() {
+		_spec.ClearField(proofofdelivery.FieldBatchReference, field.TypeString)
 	}
 	if value, ok := _u.mutation.Metadata(); ok {
 		_spec.SetField(proofofdelivery.FieldMetadata, field.TypeJSON, value)

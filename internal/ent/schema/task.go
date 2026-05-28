@@ -83,6 +83,13 @@ func (Task) Fields() []ent.Field {
 		field.String("carrier_id").
 			Optional().
 			Comment("External carrier reference if outsourced to 3rd party"),
+		field.UUID("shipment_id", uuid.UUID{}).
+			Optional().
+			Nillable().
+			Comment("Shipment batch this task belongs to (KEMSA distribution)"),
+		field.String("seal_number").
+			Optional().
+			Comment("Physical seal/lock number applied at dispatch — for KEMSA chain-of-custody"),
 		field.Time("created_at").
 			Default(time.Now).
 			Immutable(),
