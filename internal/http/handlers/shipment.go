@@ -42,9 +42,9 @@ func (h *ShipmentHandler) RegisterRoutes(r chi.Router) {
 // ListShipments returns paginated shipments for a tenant.
 // GET /api/v1/{tenant}/shipments
 func (h *ShipmentHandler) ListShipments(w http.ResponseWriter, r *http.Request) {
-	tenantID, ok := parseTenantID(r)
-	if !ok {
-		respondJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid tenant"})
+	tenantID := tenantIDFromClaims(r)
+	if tenantID == uuid.Nil {
+		respondJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 		return
 	}
 
@@ -82,9 +82,9 @@ type createShipmentReq struct {
 // CreateShipment creates a new distribution shipment batch.
 // POST /api/v1/{tenant}/shipments
 func (h *ShipmentHandler) CreateShipment(w http.ResponseWriter, r *http.Request) {
-	tenantID, ok := parseTenantID(r)
-	if !ok {
-		respondJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid tenant"})
+	tenantID := tenantIDFromClaims(r)
+	if tenantID == uuid.Nil {
+		respondJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 		return
 	}
 
@@ -331,12 +331,6 @@ func (h *ShipmentHandler) AddCustodyEvent(w http.ResponseWriter, r *http.Request
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-func parseTenantID(r *http.Request) (uuid.UUID, bool) {
-	s := chi.URLParam(r, "tenant")
-	id, err := uuid.Parse(s)
-	return id, err == nil
-}
 
 func generateShipmentCode() string {
 	return fmt.Sprintf("SHIP-%d-%s", time.Now().Year(), uuid.New().String()[:6])
