@@ -36,10 +36,9 @@ type AssignRoleRequest struct {
 
 // AssignRole assigns a role to a user.
 func (h *RBACHandler) AssignRole(w http.ResponseWriter, r *http.Request) {
-	tenantIDStr := chi.URLParam(r, "tenant")
-	tenantID, err := uuid.Parse(tenantIDStr)
-	if err != nil {
-		respondJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid tenant ID"})
+	tenantID := tenantIDFromClaims(r)
+	if tenantID == uuid.Nil {
+		respondJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 		return
 	}
 
@@ -72,10 +71,9 @@ func (h *RBACHandler) AssignRole(w http.ResponseWriter, r *http.Request) {
 
 // RevokeRole revokes a role from a user.
 func (h *RBACHandler) RevokeRole(w http.ResponseWriter, r *http.Request) {
-	tenantIDStr := chi.URLParam(r, "tenant")
-	tenantID, err := uuid.Parse(tenantIDStr)
-	if err != nil {
-		respondJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid tenant ID"})
+	tenantID := tenantIDFromClaims(r)
+	if tenantID == uuid.Nil {
+		respondJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 		return
 	}
 
@@ -117,10 +115,9 @@ func (h *RBACHandler) RevokeRole(w http.ResponseWriter, r *http.Request) {
 
 // ListAssignments lists all role assignments.
 func (h *RBACHandler) ListAssignments(w http.ResponseWriter, r *http.Request) {
-	tenantIDStr := chi.URLParam(r, "tenant")
-	tenantID, err := uuid.Parse(tenantIDStr)
-	if err != nil {
-		respondJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid tenant ID"})
+	tenantID := tenantIDFromClaims(r)
+	if tenantID == uuid.Nil {
+		respondJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 		return
 	}
 
@@ -136,10 +133,9 @@ func (h *RBACHandler) ListAssignments(w http.ResponseWriter, r *http.Request) {
 
 // ListRoles lists all roles.
 func (h *RBACHandler) ListRoles(w http.ResponseWriter, r *http.Request) {
-	tenantIDStr := chi.URLParam(r, "tenant")
-	tenantID, err := uuid.Parse(tenantIDStr)
-	if err != nil {
-		respondJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid tenant ID"})
+	tenantID := tenantIDFromClaims(r)
+	if tenantID == uuid.Nil {
+		respondJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 		return
 	}
 
@@ -170,6 +166,9 @@ func (h *RBACHandler) RegisterRoutes(r chi.Router) {
 	r.Post("/rbac/assignments", h.AssignRole)
 	r.Get("/rbac/assignments", h.ListAssignments)
 	r.Delete("/rbac/assignments/{id}", h.RevokeRole)
+	// /roles and /rbac/roles both work — frontend may use either path
 	r.Get("/roles", h.ListRoles)
+	r.Get("/rbac/roles", h.ListRoles)
 	r.Get("/permissions", h.ListPermissions)
+	r.Get("/rbac/permissions", h.ListPermissions)
 }

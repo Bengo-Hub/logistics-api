@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -113,6 +114,15 @@ func (s *Service) EnsureUserFromToken(ctx context.Context, authServiceID uuid.UU
 
 	// 4. Create user; use auth-service UUID as primary key for cross-service consistency.
 	fullName, _ := claims["name"].(string)
+	// Fallback: Ent requires non-empty full_name — use email prefix when claim is absent.
+	if strings.TrimSpace(fullName) == "" {
+		if email != "" {
+			fullName = strings.SplitN(email, "@", 2)[0]
+		}
+		if strings.TrimSpace(fullName) == "" {
+			fullName = "User"
+		}
+	}
 	role := roleFromClaims(tenantSlug, claims)
 
 	newUsr, err := s.client.User.Create().
