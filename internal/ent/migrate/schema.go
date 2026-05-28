@@ -363,6 +363,40 @@ var (
 			},
 		},
 	}
+	// OutletsColumns holds the columns for the "outlets" table.
+	OutletsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID},
+		{Name: "code", Type: field.TypeString},
+		{Name: "name", Type: field.TypeString},
+		{Name: "use_case", Type: field.TypeString, Default: "logistics"},
+		{Name: "address", Type: field.TypeString, Nullable: true},
+		{Name: "latitude", Type: field.TypeFloat64, Nullable: true},
+		{Name: "longitude", Type: field.TypeFloat64, Nullable: true},
+		{Name: "timezone", Type: field.TypeString, Nullable: true, Default: "Africa/Nairobi"},
+		{Name: "is_hq", Type: field.TypeBool, Default: false},
+		{Name: "status", Type: field.TypeString, Default: "active"},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// OutletsTable holds the schema information for the "outlets" table.
+	OutletsTable = &schema.Table{
+		Name:       "outlets",
+		Columns:    OutletsColumns,
+		PrimaryKey: []*schema.Column{OutletsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "outlet_tenant_id_code",
+				Unique:  true,
+				Columns: []*schema.Column{OutletsColumns[1], OutletsColumns[2]},
+			},
+			{
+				Name:    "outlet_tenant_id_status",
+				Unique:  false,
+				Columns: []*schema.Column{OutletsColumns[1], OutletsColumns[10]},
+			},
+		},
+	}
 	// PricingRulesColumns holds the columns for the "pricing_rules" table.
 	PricingRulesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -1036,6 +1070,7 @@ var (
 		LogisticsPermissionsTable,
 		LogisticsRolesTable,
 		OutboxEventsTable,
+		OutletsTable,
 		PricingRulesTable,
 		ProofOfDeliveriesTable,
 		RateLimitConfigsTable,

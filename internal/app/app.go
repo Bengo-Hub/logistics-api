@@ -141,11 +141,18 @@ func New(ctx context.Context) (*App, error) {
 	// Publisher will be set after NATS initialization
 	identitySvc := identity.NewService(entClient, tenantSyncer, nil, log)
 
-	// Subscribe to auth-service events for identity sync
+	// Subscribe to auth-service events for identity sync and outlet sync
 	if natsConn != nil {
 		identityEventHandler := identity.NewEventHandler(identitySvc, log)
 		if err := identityEventHandler.SubscribeToAuthEvents(natsConn); err != nil {
 			log.Warn("app: failed to subscribe to auth events", zap.Error(err))
+		}
+
+		// Outlet sync: mirrors auth.outlet.* events where use_case="logistics" into
+		// the local outlets table so dispatch tasks can reference hub locations.
+		outletSub := tenant.NewOutletSubscriber(entClient, log)
+		if err := outletSub.Start(natsConn); err != nil {
+			log.Warn("app: failed to start outlet event subscriber", zap.Error(err))
 		}
 
 		subCacheSub := subscriptions.NewCacheSubscriber(redisClient, log)

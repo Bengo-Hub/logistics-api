@@ -141,6 +141,18 @@ func (f OutboxEventFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value,
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.OutboxEventMutation", m)
 }
 
+// The OutletFunc type is an adapter to allow the use of ordinary
+// function as Outlet mutator.
+type OutletFunc func(context.Context, *ent.OutletMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f OutletFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.OutletMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.OutletMutation", m)
+}
+
 // The PricingRuleFunc type is an adapter to allow the use of ordinary
 // function as PricingRule mutator.
 type PricingRuleFunc func(context.Context, *ent.PricingRuleMutation) (ent.Value, error)

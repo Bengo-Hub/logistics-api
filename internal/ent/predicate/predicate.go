@@ -39,6 +39,9 @@ type LogisticsRole func(*sql.Selector)
 // OutboxEvent is the predicate function for outboxevent builders.
 type OutboxEvent func(*sql.Selector)
 
+// Outlet is the predicate function for outlet builders.
+type Outlet func(*sql.Selector)
+
 // PricingRule is the predicate function for pricingrule builders.
 type PricingRule func(*sql.Selector)
 
