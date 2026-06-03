@@ -1,6 +1,6 @@
 module github.com/bengobox/logistics-service
 
-go 1.24.11
+go 1.26.0
 
 require (
 	ariga.io/atlas v1.1.0
