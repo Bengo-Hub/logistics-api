@@ -16,6 +16,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
 	"github.com/bengobox/logistics-service/internal/ent/task"
 	"github.com/bengobox/logistics-service/internal/ent/taskassignment"
+	entuser "github.com/bengobox/logistics-service/internal/ent/user"
 	"github.com/bengobox/logistics-service/internal/platform/events"
 )
 
@@ -368,7 +369,7 @@ func (s *Service) UpdateStatus(ctx context.Context, tenantID, taskID uuid.UUID, 
 // AssignTask assigns a task to a fleet member.
 func (s *Service) AssignTask(ctx context.Context, tenantID, taskID uuid.UUID, req AssignTaskRequest) (*ent.TaskAssignment, error) {
 	// Verify member belongs to tenant
-	_, err := s.client.FleetMember.Query().
+	member, err := s.client.FleetMember.Query().
 		Where(fleetmember.ID(req.FleetMemberID), fleetmember.TenantID(tenantID)).
 		Only(ctx)
 	if err != nil {
@@ -410,16 +411,24 @@ func (s *Service) AssignTask(ctx context.Context, tenantID, taskID uuid.UUID, re
 		zap.String("member_id", req.FleetMemberID.String()),
 	)
 
-	// Publish task assigned event
+	// Publish task assigned event, enriched with the rider's contact (resolved from the local user
+	// table synced from auth) so notifications-api can alert the rider of the new task.
 	if s.publisher != nil {
 		t, _ := s.client.Task.Query().Where(task.ID(taskID)).Only(ctx)
 		if t != nil {
+			riderEmail, riderName := "", ""
+			if ru, uerr := s.client.User.Query().Where(entuser.ID(member.UserID)).Only(ctx); uerr == nil && ru != nil {
+				riderEmail = ru.Email
+				riderName = ru.FullName
+			}
 			_ = s.publisher.PublishTaskAssigned(ctx, tenantID, events.TaskEventData{
 				TaskID:            taskID.String(),
 				TrackingCode:      t.TrackingCode,
 				ExternalReference: t.ExternalReference,
 				Status:            "assigned",
 				FleetMemberID:     req.FleetMemberID.String(),
+				RiderEmail:        riderEmail,
+				RiderName:         riderName,
 				SourceService:     t.SourceService,
 			})
 		}

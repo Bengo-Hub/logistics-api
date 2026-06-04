@@ -133,6 +133,8 @@ type TaskEventData struct {
 	Status            string  `json:"status"`
 	PreviousStatus    string  `json:"previous_status,omitempty"`
 	FleetMemberID     string  `json:"fleet_member_id,omitempty"`
+	RiderEmail        string  `json:"rider_email,omitempty"`
+	RiderName         string  `json:"rider_name,omitempty"`
 	SourceService     string  `json:"source_service,omitempty"`
 	CashOnDelivery    float64 `json:"cash_on_delivery,omitempty"`
 	CashCollected     bool    `json:"cash_collected,omitempty"`
@@ -156,6 +158,12 @@ func (d TaskEventData) toMap() map[string]interface{} {
 	}
 	if d.FleetMemberID != "" {
 		m["fleet_member_id"] = d.FleetMemberID
+	}
+	if d.RiderEmail != "" {
+		m["rider_email"] = d.RiderEmail
+	}
+	if d.RiderName != "" {
+		m["rider_name"] = d.RiderName
 	}
 	if d.SourceService != "" {
 		m["source_service"] = d.SourceService
