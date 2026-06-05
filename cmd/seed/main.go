@@ -10,13 +10,17 @@ import (
 
 	"entgo.io/ent/dialect"
 	entsql "entgo.io/ent/dialect/sql"
+	"github.com/google/uuid"
 	_ "github.com/jackc/pgx/v5/stdlib"
 
 	"github.com/bengobox/logistics-service/internal/config"
 	"github.com/bengobox/logistics-service/internal/ent"
 	"github.com/bengobox/logistics-service/internal/ent/logisticspermission"
+	"github.com/bengobox/logistics-service/internal/ent/logisticsrole"
 	"github.com/bengobox/logistics-service/internal/ent/ratelimitconfig"
 	"github.com/bengobox/logistics-service/internal/ent/serviceconfig"
+	"github.com/bengobox/logistics-service/internal/ent/user"
+	"github.com/bengobox/logistics-service/internal/ent/userroleassignment"
 	"github.com/bengobox/logistics-service/internal/modules/tenant"
 )
 
@@ -46,10 +50,14 @@ func main() {
 	// Outlets are synced automatically at runtime via auth.outlet.* JetStream events.
 	syncer := tenant.NewSyncer(client, cfg.Auth.ServiceURL)
 	for _, slug := range []string{"codevertex-demo", "urban-loft", "kura"} {
-		if _, err := syncer.SyncTenant(ctx, slug); err != nil {
+		tenantID, err := syncer.SyncTenant(ctx, slug)
+		if err != nil {
 			log.Printf("  [SKIP] sync tenant %s: %v", slug, err)
-		} else {
-			log.Printf("  ✓ Tenant synced: %s", slug)
+			continue
+		}
+		log.Printf("  ✓ Tenant synced: %s", slug)
+		if err := seedTenantAdminRole(ctx, client, tenantID, slug); err != nil {
+			log.Printf("  [WARN] seed admin role for %s: %v", slug, err)
 		}
 	}
 
@@ -222,5 +230,96 @@ func seedServiceConfigs(ctx context.Context, client *ent.Client) error {
 	}
 
 	log.Printf("seeded %d new service configs (skipped existing)", count)
+	return nil
+}
+
+// seedTenantAdminRole ensures a tenant has an "admin" logistics role granting ALL
+// permissions, and (for the demo tenant) assigns it to the demo admin user. Without an
+// assigned role a tenant admin's HasPermission() always returns false → 403 on fleet
+// management (this blocked rider onboarding for codevertex-demo). Idempotent.
+func seedTenantAdminRole(ctx context.Context, client *ent.Client, tenantID uuid.UUID, slug string) error {
+	permIDs, err := client.LogisticsPermission.Query().IDs(ctx)
+	if err != nil {
+		return fmt.Errorf("list permissions: %w", err)
+	}
+	if len(permIDs) == 0 {
+		return nil
+	}
+
+	role, err := client.LogisticsRole.Query().
+		Where(logisticsrole.TenantID(tenantID), logisticsrole.RoleCode("admin")).
+		Only(ctx)
+	switch {
+	case ent.IsNotFound(err):
+		role, err = client.LogisticsRole.Create().
+			SetTenantID(tenantID).
+			SetRoleCode("admin").
+			SetName("Administrator").
+			SetDescription("Full logistics access for tenant administrators").
+			SetIsSystemRole(true).
+			AddPermissionIDs(permIDs...).
+			Save(ctx)
+		if err != nil {
+			return fmt.Errorf("create admin role: %w", err)
+		}
+		log.Printf("    ✓ admin role created for %s (%d permissions)", slug, len(permIDs))
+	case err != nil:
+		return fmt.Errorf("query admin role: %w", err)
+	default:
+		// Role exists — attach any permissions it is missing (handles newly-added perms).
+		existing, qerr := role.QueryPermissions().IDs(ctx)
+		if qerr != nil {
+			return fmt.Errorf("query role permissions: %w", qerr)
+		}
+		have := make(map[uuid.UUID]bool, len(existing))
+		for _, id := range existing {
+			have[id] = true
+		}
+		var missing []uuid.UUID
+		for _, id := range permIDs {
+			if !have[id] {
+				missing = append(missing, id)
+			}
+		}
+		if len(missing) > 0 {
+			if _, uerr := role.Update().AddPermissionIDs(missing...).Save(ctx); uerr != nil {
+				return fmt.Errorf("attach missing permissions: %w", uerr)
+			}
+			log.Printf("    ✓ admin role for %s topped up with %d permissions", slug, len(missing))
+		}
+	}
+
+	// Demo provisioning: assign the canonical demo admin to the admin role so fleet
+	// management works out of the box — only once the user has synced into logistics.
+	if slug == "codevertex-demo" {
+		adminUser, uerr := client.User.Query().
+			Where(user.TenantID(tenantID), user.EmailEQ("admin@demo.codevertexitsolutions.com")).
+			Only(ctx)
+		if uerr != nil {
+			log.Printf("    [SKIP] demo admin not yet synced into logistics users: %v", uerr)
+			return nil
+		}
+		assigned, aerr := client.UserRoleAssignment.Query().
+			Where(
+				userroleassignment.TenantID(tenantID),
+				userroleassignment.UserID(adminUser.ID),
+				userroleassignment.RoleID(role.ID),
+			).Exist(ctx)
+		if aerr != nil {
+			return fmt.Errorf("check assignment: %w", aerr)
+		}
+		if !assigned {
+			if _, cerr := client.UserRoleAssignment.Create().
+				SetTenantID(tenantID).
+				SetUserID(adminUser.ID).
+				SetRoleID(role.ID).
+				SetAssignedBy(adminUser.ID).
+				Save(ctx); cerr != nil {
+				return fmt.Errorf("assign admin role to demo admin: %w", cerr)
+			}
+			log.Printf("    ✓ demo admin assigned the admin role")
+		}
+	}
+
 	return nil
 }
