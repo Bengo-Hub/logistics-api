@@ -8,12 +8,12 @@ RUN apk add --no-cache git ca-certificates
 
 COPY go.mod go.sum ./
 
-RUN go mod download
+RUN GOTOOLCHAIN=auto go mod download
 COPY . .
 
-RUN CGO_ENABLED=0 go build -o /out/logistics-api ./cmd/api
-RUN CGO_ENABLED=0 go build -o /out/logistics-migrate ./cmd/migrate
-RUN CGO_ENABLED=0 go build -o /out/logistics-seed ./cmd/seed
+RUN GOTOOLCHAIN=auto CGO_ENABLED=0 go build -o /out/logistics-api ./cmd/api
+RUN GOTOOLCHAIN=auto CGO_ENABLED=0 go build -o /out/logistics-migrate ./cmd/migrate
+RUN GOTOOLCHAIN=auto CGO_ENABLED=0 go build -o /out/logistics-seed ./cmd/seed
 
 FROM alpine:3.20
 RUN apk add --no-cache ca-certificates
