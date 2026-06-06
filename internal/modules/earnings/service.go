@@ -39,21 +39,11 @@ func (s *Service) RecordEarning(ctx context.Context, tenantID, taskID, memberID 
 	}
 
 	// Create billing event (fleet_member_id stored in metadata since schema uses generic metadata JSON)
-	_, err = s.client.BillingEvent.Create().
-		SetTenantID(tenantID).
-		SetTaskID(taskID).
-		SetEventType("delivery_earning").
-		SetAmount(fee).
-		SetCurrency("KES").
-		SetOccurredAt(time.Now()).
-		SetMetadata(map[string]any{
-			"fleet_member_id": memberID.String(),
-			"distance_km":    distanceKm,
-			"description":    fmt.Sprintf("Delivery earning for task (%.1f km)", distanceKm),
-		}).
-		Save(ctx)
-	if err != nil {
-		return fmt.Errorf("earnings: create billing event: %w", err)
+	if err := s.createEarningEvent(ctx, tenantID, taskID, memberID, fee, map[string]any{
+		"distance_km": distanceKm,
+		"description": fmt.Sprintf("Delivery earning for task (%.1f km)", distanceKm),
+	}); err != nil {
+		return err
 	}
 
 	s.log.Info("delivery earning recorded",
@@ -63,6 +53,55 @@ func (s *Service) RecordEarning(ctx context.Context, tenantID, taskID, memberID 
 		zap.Float64("distance_km", distanceKm),
 	)
 
+	return nil
+}
+
+// RecordEarningWithAmount records a delivery earning using an explicit, known
+// amount (e.g. the order's actual delivery fee) instead of recomputing the fee
+// from distance and pricing rules. Used when ordering-backend propagates the
+// real delivery_fee onto the task metadata.
+func (s *Service) RecordEarningWithAmount(ctx context.Context, tenantID, taskID, memberID uuid.UUID, amount float64) error {
+	fee := roundCents(amount)
+	if err := s.createEarningEvent(ctx, tenantID, taskID, memberID, fee, map[string]any{
+		"source":      "delivery_fee",
+		"description": "Delivery earning for task (order delivery fee)",
+	}); err != nil {
+		return err
+	}
+
+	s.log.Info("delivery earning recorded",
+		zap.String("task_id", taskID.String()),
+		zap.String("member_id", memberID.String()),
+		zap.Float64("amount", fee),
+		zap.String("source", "delivery_fee"),
+	)
+
+	return nil
+}
+
+// createEarningEvent persists a delivery_earning BillingEvent. The fleet member
+// id is always stored in metadata under "fleet_member_id" (the schema uses a
+// generic metadata JSON), since GetMyEarnings resolves riders by that key.
+func (s *Service) createEarningEvent(ctx context.Context, tenantID, taskID, memberID uuid.UUID, fee float64, extra map[string]any) error {
+	meta := map[string]any{
+		"fleet_member_id": memberID.String(),
+	}
+	for k, v := range extra {
+		meta[k] = v
+	}
+
+	_, err := s.client.BillingEvent.Create().
+		SetTenantID(tenantID).
+		SetTaskID(taskID).
+		SetEventType("delivery_earning").
+		SetAmount(fee).
+		SetCurrency("KES").
+		SetOccurredAt(time.Now()).
+		SetMetadata(meta).
+		Save(ctx)
+	if err != nil {
+		return fmt.Errorf("earnings: create billing event: %w", err)
+	}
 	return nil
 }
 
