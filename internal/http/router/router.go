@@ -258,6 +258,10 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 			}
 
 			if lh != nil {
+				// Rider self-service: JWT-resolved tasks for the current fleet member.
+				// Registered next to the other /riders/me/* routes (earnings).
+				tenant.Get("/riders/me/tasks", lh.ListMyTasks)
+
 				tenant.Route("/tasks", func(taskR chi.Router) {
 					// Read-only task access
 					taskR.Get("/", lh.ListTasks)
