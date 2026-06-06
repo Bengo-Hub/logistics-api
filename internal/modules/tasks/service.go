@@ -3,8 +3,10 @@ package tasks
 import (
 	"context"
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
 	"math/big"
+	"strconv"
 	"strings"
 	"time"
 
@@ -101,6 +103,33 @@ type ListTasksFilter struct {
 // EarningsRecorder is the interface for recording delivery earnings.
 type EarningsRecorder interface {
 	RecordEarning(ctx context.Context, tenantID, taskID, memberID uuid.UUID, distanceKm float64) error
+	// RecordEarningWithAmount records an earning using an explicit, known amount
+	// (e.g. the order's actual delivery fee) rather than recomputing from distance.
+	RecordEarningWithAmount(ctx context.Context, tenantID, taskID, memberID uuid.UUID, amount float64) error
+}
+
+// metadataNumber coerces a JSON-decoded metadata value into a float64.
+// Task metadata round-trips through JSON, so numbers may arrive as float64,
+// json.Number, or string depending on the source.
+func metadataNumber(v any) float64 {
+	switch n := v.(type) {
+	case float64:
+		return n
+	case float32:
+		return float64(n)
+	case int:
+		return float64(n)
+	case int64:
+		return float64(n)
+	case json.Number:
+		f, _ := n.Float64()
+		return f
+	case string:
+		f, _ := strconv.ParseFloat(n, 64)
+		return f
+	default:
+		return 0
+	}
 }
 
 // ETATrigger is the interface for triggering an ETA recalculation on a task.
@@ -479,10 +508,24 @@ func (s *Service) SubmitPoD(ctx context.Context, tenantID, taskID uuid.UUID, req
 		meta = map[string]any{}
 	}
 
+	// Resolve the fleet member from the task's active assignment rather than
+	// trusting the client-supplied req.FleetMemberID (the rider-app PoD payload
+	// does not send it, so it arrives as uuid.Nil). The assignment-derived id
+	// always wins when present; req.FleetMemberID is only a fallback.
+	memberID := req.FleetMemberID
+	if activeAssignments, aerr := s.client.TaskAssignment.Query().
+		Where(
+			taskassignment.TaskID(taskID),
+			taskassignment.StatusIn("assigned", "accepted"),
+		).
+		All(ctx); aerr == nil && len(activeAssignments) > 0 {
+		memberID = activeAssignments[0].FleetMemberID
+	}
+
 	builder := s.client.ProofOfDelivery.Create().
 		SetTenantID(tenantID).
 		SetTaskID(taskID).
-		SetFleetMemberID(req.FleetMemberID).
+		SetFleetMemberID(memberID).
 		SetCapturedAt(time.Now()).
 		SetAmountCollected(req.AmountCollected).
 		SetMetadata(meta)
@@ -518,7 +561,7 @@ func (s *Service) SubmitPoD(ctx context.Context, tenantID, taskID uuid.UUID, req
 	assignments, _ := s.client.TaskAssignment.Query().
 		Where(
 			taskassignment.TaskID(taskID),
-			taskassignment.FleetMemberID(req.FleetMemberID),
+			taskassignment.FleetMemberID(memberID),
 			taskassignment.StatusIn("assigned", "accepted"),
 		).
 		All(ctx)
@@ -542,7 +585,7 @@ func (s *Service) SubmitPoD(ctx context.Context, tenantID, taskID uuid.UUID, req
 			TrackingCode:      t.TrackingCode,
 			ExternalReference: t.ExternalReference,
 			Status:            "delivered",
-			FleetMemberID:     req.FleetMemberID.String(),
+			FleetMemberID:     memberID.String(),
 			SourceService:     t.SourceService,
 			CashOnDelivery:    t.CashOnDelivery,
 			CashCollected:     t.CashOnDelivery > 0 && req.AmountCollected >= t.CashOnDelivery,
@@ -550,13 +593,29 @@ func (s *Service) SubmitPoD(ctx context.Context, tenantID, taskID uuid.UUID, req
 		})
 	}
 
-	// Record rider earning asynchronously
+	// Record rider earning asynchronously, attributed to the resolved member.
 	if s.earningsSvc != nil {
+		// Prefer the task's actual delivery fee (set by ordering-backend in the
+		// task metadata) as the rider earning. Fall back to the distance-based
+		// PricingRule path for legacy tasks that carry no delivery_fee.
+		var deliveryFee float64
+		if t.Metadata != nil {
+			if raw, ok := t.Metadata["delivery_fee"]; ok {
+				deliveryFee = metadataNumber(raw)
+			}
+		}
+		earnMemberID := memberID
 		go func() {
 			earnCtx := context.Background()
+			if deliveryFee > 0 {
+				if earnErr := s.earningsSvc.RecordEarningWithAmount(earnCtx, tenantID, taskID, earnMemberID, deliveryFee); earnErr != nil {
+					s.log.Warn("failed to record delivery earning", zap.Error(earnErr))
+				}
+				return
+			}
 			// TODO: Calculate actual distance from task steps once routing is integrated
 			var distanceKm float64 = 5.0 // default fallback
-			if earnErr := s.earningsSvc.RecordEarning(earnCtx, tenantID, taskID, req.FleetMemberID, distanceKm); earnErr != nil {
+			if earnErr := s.earningsSvc.RecordEarning(earnCtx, tenantID, taskID, earnMemberID, distanceKm); earnErr != nil {
 				s.log.Warn("failed to record delivery earning", zap.Error(earnErr))
 			}
 		}()
