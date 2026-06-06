@@ -58,6 +58,7 @@ func (h *EarningsHandler) RegisterRoutes(r chi.Router) {
 
 	// Rider self-service earnings
 	r.Get("/riders/me/earnings", h.GetMyEarnings)
+	r.Get("/riders/me/earnings/events", h.ListMyBillingEvents)
 	r.Get("/riders/me/earnings/statements", h.ListMyStatements)
 
 	// Rider payout method management
@@ -463,6 +464,82 @@ func (h *EarningsHandler) ListMyStatements(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	respondJSON(w, http.StatusOK, stmts)
+}
+
+// ListMyBillingEvents handles GET /api/v1/{tenant}/riders/me/earnings/events
+// Returns billing events scoped to the authenticated rider only.
+// Query params: task_id, from, to
+func (h *EarningsHandler) ListMyBillingEvents(w http.ResponseWriter, r *http.Request) {
+	tenantID := tenantIDFromClaims(r)
+	if tenantID == uuid.Nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Resolve fleet member from the JWT subject (auth user ID)
+	claims, ok := authclient.ClaimsFromContext(r.Context())
+	if !ok || claims.Subject == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	authUserID, err := uuid.Parse(claims.Subject)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	member, err := h.client.FleetMember.Query().
+		Where(
+			fleetmember.UserID(authUserID),
+			fleetmember.TenantID(tenantID),
+		).Only(r.Context())
+	if err != nil {
+		if ent.IsNotFound(err) {
+			http.Error(w, "rider not found in fleet", http.StatusNotFound)
+			return
+		}
+		h.log.Error("resolve fleet member for billing events", zap.Error(err))
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	q := h.client.BillingEvent.Query().
+		Where(billingevent.TenantID(tenantID)).
+		Order(ent.Desc(billingevent.FieldOccurredAt))
+
+	if taskIDStr := r.URL.Query().Get("task_id"); taskIDStr != "" {
+		if taskID, err := uuid.Parse(taskIDStr); err == nil {
+			q = q.Where(billingevent.TaskID(taskID))
+		}
+	}
+	if fromStr := r.URL.Query().Get("from"); fromStr != "" {
+		if t, err := time.Parse(time.RFC3339, fromStr); err == nil {
+			q = q.Where(billingevent.OccurredAtGTE(t))
+		}
+	}
+	if toStr := r.URL.Query().Get("to"); toStr != "" {
+		if t, err := time.Parse(time.RFC3339, toStr); err == nil {
+			q = q.Where(billingevent.OccurredAtLTE(t))
+		}
+	}
+
+	events, err := q.Limit(200).All(r.Context())
+	if err != nil {
+		h.log.Error("list my billing events", zap.Error(err))
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	// Filter to the current rider's events only (mirrors GetMyEarnings).
+	memberIDStr := member.ID.String()
+	mine := make([]*ent.BillingEvent, 0, len(events))
+	for _, e := range events {
+		if mid, ok := e.Metadata["fleet_member_id"].(string); ok && mid == memberIDStr {
+			mine = append(mine, e)
+		}
+	}
+
+	respondJSON(w, http.StatusOK, mine)
 }
 
 type createPricingRuleRequest struct {
