@@ -11,7 +11,9 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent"
 	entfleet "github.com/bengobox/logistics-service/internal/ent/fleet"
 	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
+	"github.com/bengobox/logistics-service/internal/ent/logisticsrole"
 	entuser "github.com/bengobox/logistics-service/internal/ent/user"
+	"github.com/bengobox/logistics-service/internal/ent/userroleassignment"
 	"github.com/bengobox/logistics-service/internal/platform/events"
 )
 
@@ -258,6 +260,10 @@ func (s *Service) ApproveMember(ctx context.Context, tenantID, memberID uuid.UUI
 		return nil, fmt.Errorf("fleet: approve: %w", err)
 	}
 
+	// Grant the rider the tenant's "driver" role so RBAC permits task status/POD
+	// updates. Idempotent + non-fatal: never block onboarding on an RBAC hiccup.
+	s.ensureDriverRole(ctx, tenantID, m.UserID)
+
 	// Publish fleet member approved event
 	if s.publisher != nil {
 		email, name := s.resolveUserInfo(ctx, m.UserID)
@@ -273,6 +279,55 @@ func (s *Service) ApproveMember(ctx context.Context, tenantID, memberID uuid.UUI
 	}
 
 	return updated, nil
+}
+
+// ensureDriverRole assigns the tenant's "driver" logistics role to a user if they
+// don't already have it. This is what gives newly-activated riders the permissions
+// (notably logistics.tasks.manage) they need for task status/POD updates. The driver
+// role is seeded per-tenant by cmd/seed (seedTenantDriverRole). Idempotent and
+// non-fatal: any failure is logged but does not block fleet onboarding.
+func (s *Service) ensureDriverRole(ctx context.Context, tenantID, userID uuid.UUID) {
+	role, err := s.client.LogisticsRole.Query().
+		Where(logisticsrole.TenantID(tenantID), logisticsrole.RoleCode("driver")).
+		Only(ctx)
+	if err != nil {
+		s.log.Warn("could not resolve driver role for rider; skipping role assignment",
+			zap.String("tenant_id", tenantID.String()),
+			zap.String("user_id", userID.String()),
+			zap.Error(err))
+		return
+	}
+
+	assigned, err := s.client.UserRoleAssignment.Query().
+		Where(
+			userroleassignment.TenantID(tenantID),
+			userroleassignment.UserID(userID),
+			userroleassignment.RoleID(role.ID),
+		).Exist(ctx)
+	if err != nil {
+		s.log.Warn("could not check existing driver role assignment",
+			zap.String("user_id", userID.String()), zap.Error(err))
+		return
+	}
+	if assigned {
+		return
+	}
+
+	if _, err := s.client.UserRoleAssignment.Create().
+		SetTenantID(tenantID).
+		SetUserID(userID).
+		SetRoleID(role.ID).
+		SetAssignedBy(userID). // self-assigned at onboarding; no acting admin in context
+		Save(ctx); err != nil {
+		s.log.Warn("failed to assign driver role to rider",
+			zap.String("user_id", userID.String()), zap.Error(err))
+		return
+	}
+
+	s.log.Info("driver role assigned to rider",
+		zap.String("tenant_id", tenantID.String()),
+		zap.String("user_id", userID.String()),
+		zap.String("role_id", role.ID.String()))
 }
 
 // SuspendMember transitions a member to suspended status.
