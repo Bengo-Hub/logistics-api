@@ -83,6 +83,7 @@ type SubmitPoDRequest struct {
 	SignatureURL     string         `json:"signature_url,omitempty"`
 	PhotoURL         string         `json:"photo_url,omitempty"`
 	OTPCode          string         `json:"otp_code,omitempty"`
+	ConfirmationCode string         `json:"confirmation_code,omitempty"`
 	AmountCollected  float64        `json:"amount_collected,omitempty"`
 	CollectionMethod string         `json:"collection_method,omitempty"`
 	Metadata         map[string]any `json:"metadata,omitempty"`
@@ -453,6 +454,24 @@ func (s *Service) SubmitPoD(ctx context.Context, tenantID, taskID uuid.UUID, req
 	// Validate COD: if task requires cash collection, ensure amount was collected
 	if t.CashOnDelivery > 0 && req.AmountCollected < t.CashOnDelivery {
 		return nil, fmt.Errorf("tasks: COD amount collected (%.2f) is less than required (%.2f)", req.AmountCollected, t.CashOnDelivery)
+	}
+
+	// Validate proof-of-delivery confirmation code. ordering-backend stores a
+	// 6-digit code in the task metadata under "pod_code"; the customer relays
+	// it to the rider on delivery. When present and non-empty it MUST match the
+	// confirmation_code supplied by the rider. Tasks without a pod_code (legacy
+	// or non-delivery tasks) remain fully backward-compatible.
+	if t.Metadata != nil {
+		if raw, ok := t.Metadata["pod_code"]; ok {
+			if podCode, ok := raw.(string); ok && podCode != "" {
+				if req.ConfirmationCode == "" {
+					return nil, fmt.Errorf("tasks: delivery confirmation code required")
+				}
+				if req.ConfirmationCode != podCode {
+					return nil, fmt.Errorf("tasks: incorrect delivery confirmation code")
+				}
+			}
+		}
 	}
 
 	meta := req.Metadata
