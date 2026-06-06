@@ -59,6 +59,9 @@ func main() {
 		if err := seedTenantAdminRole(ctx, client, tenantID, slug); err != nil {
 			log.Printf("  [WARN] seed admin role for %s: %v", slug, err)
 		}
+		if err := seedTenantDriverRole(ctx, client, tenantID, slug); err != nil {
+			log.Printf("  [WARN] seed driver role for %s: %v", slug, err)
+		}
 	}
 
 	log.Println("database seed completed successfully")
@@ -318,6 +321,93 @@ func seedTenantAdminRole(ctx context.Context, client *ent.Client, tenantID uuid.
 				return fmt.Errorf("assign admin role to demo admin: %w", cerr)
 			}
 			log.Printf("    ✓ demo admin assigned the admin role")
+		}
+	}
+
+	return nil
+}
+
+// driverPermissionCodes is the curated permission set granted to the "driver"
+// (rider) role. Unlike the admin role, drivers get only what they need to operate:
+// view/work their own tasks, view fleet/vehicle/zone/geofence/routing reference
+// data, report telemetry, and view their earnings. PermTaskManage in this set is
+// what unblocks PATCH /tasks/{id}/status and POST /tasks/{id}/pod for riders.
+var driverPermissionCodes = []string{
+	"logistics.tasks.view",
+	"logistics.tasks.view_own",
+	"logistics.tasks.change",
+	"logistics.tasks.change_own",
+	"logistics.tasks.manage",
+	"logistics.tasks.manage_own",
+	"logistics.fleet.view",
+	"logistics.vehicles.view",
+	"logistics.zones.view",
+	"logistics.geofences.view",
+	"logistics.routing.view",
+	"logistics.telemetry.add",
+	"logistics.telemetry.view",
+	"logistics.telemetry.manage_own",
+	"logistics.earnings.view",
+	"logistics.earnings.view_own",
+}
+
+// seedTenantDriverRole ensures a tenant has a "driver" logistics role granting the
+// curated driverPermissionCodes set. Riders map to RoleDriver ("driver") but no such
+// role existed, so rbac.GetUserPermissions returned 0 perms → 403 on task status/POD
+// updates. Mirrors seedTenantAdminRole: create if missing, else top-up missing perms.
+// Idempotent.
+func seedTenantDriverRole(ctx context.Context, client *ent.Client, tenantID uuid.UUID, slug string) error {
+	permIDs, err := client.LogisticsPermission.Query().
+		Where(logisticspermission.PermissionCodeIn(driverPermissionCodes...)).
+		IDs(ctx)
+	if err != nil {
+		return fmt.Errorf("list driver permissions: %w", err)
+	}
+	if len(permIDs) == 0 {
+		log.Printf("    [SKIP] no driver permissions found for %s (run seedPermissions first)", slug)
+		return nil
+	}
+
+	role, err := client.LogisticsRole.Query().
+		Where(logisticsrole.TenantID(tenantID), logisticsrole.RoleCode("driver")).
+		Only(ctx)
+	switch {
+	case ent.IsNotFound(err):
+		_, err = client.LogisticsRole.Create().
+			SetTenantID(tenantID).
+			SetRoleCode("driver").
+			SetName("Driver").
+			SetDescription("Curated logistics access for riders/drivers").
+			SetIsSystemRole(true).
+			AddPermissionIDs(permIDs...).
+			Save(ctx)
+		if err != nil {
+			return fmt.Errorf("create driver role: %w", err)
+		}
+		log.Printf("    ✓ driver role created for %s (%d permissions)", slug, len(permIDs))
+	case err != nil:
+		return fmt.Errorf("query driver role: %w", err)
+	default:
+		// Role exists — attach any curated permissions it is missing.
+		existing, qerr := role.QueryPermissions().IDs(ctx)
+		if qerr != nil {
+			return fmt.Errorf("query driver role permissions: %w", qerr)
+		}
+		have := make(map[uuid.UUID]bool, len(existing))
+		for _, id := range existing {
+			have[id] = true
+		}
+		var missing []uuid.UUID
+		for _, id := range permIDs {
+			if !have[id] {
+				missing = append(missing, id)
+			}
+		}
+		if len(missing) > 0 {
+			if _, uerr := role.Update().AddPermissionIDs(missing...).Save(ctx); uerr != nil {
+				return fmt.Errorf("attach missing driver permissions: %w", uerr)
+			}
+			log.Printf("    ✓ driver role for %s topped up with %d permissions", slug, len(missing))
 		}
 	}
 
