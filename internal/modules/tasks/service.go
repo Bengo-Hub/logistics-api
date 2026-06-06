@@ -315,6 +315,10 @@ func (s *Service) ListTasks(ctx context.Context, tenantID uuid.UUID, f ListTasks
 		q = q.Where(task.OutletIDEQ(*f.OutletID))
 	}
 
+	if f.MemberID != uuid.Nil {
+		q = q.Where(task.HasAssignmentsWith(taskassignment.FleetMemberID(f.MemberID)))
+	}
+
 	total, _ := q.Clone().Count(ctx)
 
 	limit := f.Limit

@@ -13,6 +13,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/bengobox/logistics-service/internal/ent"
+	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
 	"github.com/bengobox/logistics-service/internal/ent/proofofdelivery"
 	"github.com/bengobox/logistics-service/internal/modules/fleet"
 	"github.com/bengobox/logistics-service/internal/modules/tasks"
@@ -92,6 +93,63 @@ func (h *LogisticsHandler) ListTasks(w http.ResponseWriter, r *http.Request) {
 	list, total, err := h.taskSvc.ListTasks(r.Context(), tenantID, filter)
 	if err != nil {
 		h.log.Error("list tasks", zap.Error(err))
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, pagination.NewResponse(list, total, p))
+}
+
+// ListMyTasks handles GET /api/v1/{tenant}/riders/me/tasks
+// It resolves the current rider's fleet member from the JWT subject (auth user ID)
+// + tenant — mirroring GetMyEarnings — and returns ONLY that member's tasks,
+// paginated, in the same envelope as ListTasks ({data, total, limit, page, hasMore}).
+// Supports ?status=, ?limit=, ?offset= / ?page=.
+func (h *LogisticsHandler) ListMyTasks(w http.ResponseWriter, r *http.Request) {
+	tenantID := tenantIDFromClaims(r)
+	if tenantID == uuid.Nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Resolve fleet member from the JWT subject (auth user ID).
+	claims, ok := authclient.ClaimsFromContext(r.Context())
+	if !ok || claims.Subject == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	authUserID, err := uuid.Parse(claims.Subject)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	member, err := h.taskSvc.Client().FleetMember.Query().
+		Where(
+			fleetmember.UserID(authUserID),
+			fleetmember.TenantID(tenantID),
+		).Only(r.Context())
+	if err != nil {
+		if ent.IsNotFound(err) {
+			http.Error(w, "rider not found in fleet", http.StatusNotFound)
+			return
+		}
+		h.log.Error("resolve fleet member for tasks", zap.Error(err))
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	p := pagination.Parse(r)
+	filter := tasks.ListTasksFilter{
+		Status:   r.URL.Query().Get("status"),
+		MemberID: member.ID,
+		Limit:    p.Limit,
+		Offset:   p.Offset,
+	}
+
+	list, total, err := h.taskSvc.ListTasks(r.Context(), tenantID, filter)
+	if err != nil {
+		h.log.Error("list my tasks", zap.Error(err))
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
