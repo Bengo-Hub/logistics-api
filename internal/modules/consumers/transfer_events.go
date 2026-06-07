@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	eventslib "github.com/Bengo-Hub/shared-events"
 	"github.com/google/uuid"
 	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
@@ -42,7 +43,9 @@ func NewTransferReadyConsumer(log *zap.Logger, taskSvc *tasks.Service, dispatche
 // Start begins consuming inventory.transfer.created via JetStream.
 func (c *TransferReadyConsumer) Start(ctx context.Context, js nats.JetStreamContext) error {
 	c.svcCtx = ctx
-	sub, err := js.Subscribe(
+	eventslib.SubscribeWithRebind(
+		c.log,
+		js,
 		"inventory.transfer.created",
 		c.handleMessage,
 		nats.Durable(transferCreatedConsumer),
@@ -51,13 +54,10 @@ func (c *TransferReadyConsumer) Start(ctx context.Context, js nats.JetStreamCont
 		nats.MaxDeliver(transferCreatedMaxDeliver),
 		nats.DeliverAll(),
 	)
-	if err != nil {
-		return fmt.Errorf("transfer ready consumer: subscribe: %w", err)
-	}
 	c.log.Info("transfer ready consumer started", zap.String("durable", transferCreatedConsumer))
 
 	<-ctx.Done()
-	return sub.Unsubscribe()
+	return nil
 }
 
 // transferCreatedEvent is the shared-events envelope for inventory.transfer.created.
