@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	eventslib "github.com/Bengo-Hub/shared-events"
 	"github.com/google/uuid"
 	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
@@ -44,7 +45,9 @@ func NewOrderReadyConsumer(log *zap.Logger, taskSvc *tasks.Service, dispatcher *
 // Start begins consuming ordering.order.ready via JetStream.
 func (c *OrderReadyConsumer) Start(ctx context.Context, js nats.JetStreamContext) error {
 	c.svcCtx = ctx
-	sub, err := js.Subscribe(
+	eventslib.SubscribeWithRebind(
+		c.log,
+		js,
 		"ordering.order.ready",
 		c.handleMessage,
 		nats.Durable(orderReadyConsumer),
@@ -53,13 +56,10 @@ func (c *OrderReadyConsumer) Start(ctx context.Context, js nats.JetStreamContext
 		nats.MaxDeliver(orderReadyMaxDeliver),
 		nats.DeliverAll(),
 	)
-	if err != nil {
-		return fmt.Errorf("order ready consumer: subscribe: %w", err)
-	}
 	c.log.Info("order ready consumer started", zap.String("durable", orderReadyConsumer))
 
 	<-ctx.Done()
-	return sub.Unsubscribe()
+	return nil
 }
 
 // orderReadyEvent represents the full event envelope from ordering.order.ready.
