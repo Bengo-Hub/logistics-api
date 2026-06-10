@@ -77,8 +77,14 @@ func RequireRateLimit(rl *RateLimiter, featureKey string, upgradeURL string) fun
 				return
 			}
 
+			// Exempt tenants bypass metered limits entirely.
+			if claims.IsPlatformOwner || claims.IsSuperuser() || claims.IsDemo || claims.BillingMode == "service_charge" {
+				next.ServeHTTP(w, r)
+				return
+			}
+
 			limit := claims.GetLimit(featureKey)
-			if limit == 0 {
+			if limit <= 0 { // 0 = absent/unlimited, -1 = explicit unlimited
 				next.ServeHTTP(w, r)
 				return
 			}
@@ -97,13 +103,18 @@ func RequireRateLimit(rl *RateLimiter, featureKey string, upgradeURL string) fun
 				w.Header().Set("Content-Type", "application/json")
 				w.Header().Set("Retry-After", "86400")
 				w.WriteHeader(http.StatusTooManyRequests)
+				// Body matches the shared limit-reached modal contract (code, metric, limit,
+				// used, overage_eligible). These metered metrics support pay-as-you-go overage.
 				json.NewEncoder(w).Encode(map[string]any{
-					"error":       "usage_limit_reached",
-					"feature":     result.Feature,
-					"limit":       result.Limit,
-					"used":        result.Used,
-					"upgrade_url": upgradeURL,
-					"message":     fmt.Sprintf("Daily %s limit reached. Upgrade your plan or add overage.", featureKey),
+					"code":             "usage_limit_exceeded",
+					"error":            "usage_limit_exceeded",
+					"feature":          result.Feature,
+					"metric":           result.Feature,
+					"limit":            result.Limit,
+					"used":             result.Used,
+					"overage_eligible": true,
+					"upgrade_url":      upgradeURL,
+					"message":          fmt.Sprintf("Daily %s limit reached. Upgrade your plan or enable extra usage.", featureKey),
 				})
 				return
 			}
