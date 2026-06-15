@@ -6,6 +6,9 @@ import (
 	"entgo.io/ent/dialect/sql"
 )
 
+// Backup is the predicate function for backup builders.
+type Backup func(*sql.Selector)
+
 // BillingEvent is the predicate function for billingevent builders.
 type BillingEvent func(*sql.Selector)
 

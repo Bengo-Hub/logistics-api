@@ -27,6 +27,7 @@ import (
 	router "github.com/bengobox/logistics-service/internal/http/router"
 	"github.com/bengobox/logistics-service/internal/modules/consumers"
 	"github.com/bengobox/logistics-service/internal/modules/dispatch"
+	backupmod "github.com/bengobox/logistics-service/internal/modules/backup"
 	"github.com/bengobox/logistics-service/internal/modules/earnings"
 	fleetmod "github.com/bengobox/logistics-service/internal/modules/fleet"
 	"github.com/bengobox/logistics-service/internal/modules/identity"
@@ -266,7 +267,16 @@ func New(ctx context.Context) (*App, error) {
 	treasuryClient := earnings.NewTreasuryClient(cfg.Treasury.ServiceURL, cfg.Treasury.InternalServiceKey)
 	earningsHandler.SetTreasuryClient(treasuryClient)
 
-	chiRouter := router.New(log, healthHandler, authMiddleware, identitySvc, logisticsHandler, routingHandler, trackingHandler, zonesHandler, rbacHandler, redisClient, cfg, cfg.HTTP.AllowedOrigins, serviceConfigHandler, earningsHandler, sseHandler, rbacSvc, telemetryHandler, shipmentHandler, shiftHandler, analyticsHandler)
+	// Tenant-scoped backups + daily 02:00 auto-backup scheduler + retention churn.
+	backupSvc := backupmod.NewService(sqlDB, entClient, cfg.Backup.Dir, log)
+	backupsHandler := handlers.NewBackupsHandler(log, backupSvc, cfg.Backup.RetentionDays)
+	backupmod.NewScheduler(backupSvc, backupmod.SchedulerConfig{
+		Enabled:       cfg.Backup.ScheduleEnabled,
+		Hour:          cfg.Backup.ScheduleHour,
+		RetentionDays: cfg.Backup.RetentionDays,
+	}, log).Start(ctx)
+
+	chiRouter := router.New(log, healthHandler, authMiddleware, identitySvc, logisticsHandler, routingHandler, trackingHandler, zonesHandler, rbacHandler, redisClient, cfg, cfg.HTTP.AllowedOrigins, serviceConfigHandler, earningsHandler, sseHandler, rbacSvc, telemetryHandler, shipmentHandler, shiftHandler, analyticsHandler, backupsHandler)
 
 	httpServer := &http.Server{
 		Addr:              fmt.Sprintf("%s:%d", cfg.HTTP.Host, cfg.HTTP.Port),
