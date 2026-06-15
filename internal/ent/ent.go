@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"github.com/bengobox/logistics-service/internal/ent/backup"
 	"github.com/bengobox/logistics-service/internal/ent/billingevent"
 	"github.com/bengobox/logistics-service/internal/ent/carrierjob"
 	"github.com/bengobox/logistics-service/internal/ent/carrierpartner"
@@ -104,6 +105,7 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
+			backup.Table:              backup.ValidColumn,
 			billingevent.Table:        billingevent.ValidColumn,
 			carrierjob.Table:          carrierjob.ValidColumn,
 			carrierpartner.Table:      carrierpartner.ValidColumn,
