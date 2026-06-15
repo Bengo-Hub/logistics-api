@@ -11,6 +11,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
 
+	"github.com/bengobox/logistics-service/internal/ent/shipment"
 	"github.com/bengobox/logistics-service/internal/modules/dispatch"
 	"github.com/bengobox/logistics-service/internal/modules/tasks"
 )
@@ -22,7 +23,7 @@ const (
 )
 
 // TransferReadyConsumer subscribes to inventory.transfer.created and creates
-// warehouse-to-warehouse transfer tasks in the logistics service.
+// warehouse-to-warehouse transfer tasks + a distribution Shipment in the logistics service.
 type TransferReadyConsumer struct {
 	log        *zap.Logger
 	taskSvc    *tasks.Service
@@ -60,28 +61,46 @@ func (c *TransferReadyConsumer) Start(ctx context.Context, js nats.JetStreamCont
 	return nil
 }
 
+// warehouseRef mirrors the nested from_warehouse/to_warehouse objects emitted by inventory-api.
+type warehouseRef struct {
+	ID        string   `json:"id"`
+	Name      string   `json:"name"`
+	Code      string   `json:"code"`
+	Address   string   `json:"address"`
+	Latitude  *float64 `json:"latitude"`
+	Longitude *float64 `json:"longitude"`
+}
+
+// transferPayload mirrors the payload of inventory.transfer.created.
+// NOTE: inventory-api emits the warehouses as NESTED objects (from_warehouse / to_warehouse)
+// and the lines as an items[] array — this matches that contract exactly.
+type transferPayload struct {
+	TransferID      string           `json:"transfer_id"`
+	TransferNumber  string           `json:"transfer_number"`
+	ReferenceNo     string           `json:"reference_no"`
+	ShippingCharges float64          `json:"shipping_charges"`
+	Carrier         string           `json:"carrier"`
+	FreightNotes    string           `json:"freight_notes"`
+	Status          string           `json:"status"`
+	Notes           string           `json:"notes"`
+	FromWarehouse   warehouseRef     `json:"from_warehouse"`
+	ToWarehouse     warehouseRef     `json:"to_warehouse"`
+	Items           []map[string]any `json:"items"`
+}
+
 // transferCreatedEvent is the shared-events envelope for inventory.transfer.created.
 type transferCreatedEvent struct {
-	ID            string `json:"id"`
-	EventType     string `json:"event_type"`
-	AggregateType string `json:"aggregate_type"`
-	TenantID      string `json:"tenant_id"`
-	Payload       struct {
-		TransferID      string  `json:"transfer_id"`
-		TransferNumber  string  `json:"transfer_number"`
-		FromWarehouseID string  `json:"from_warehouse_id"`
-		FromWarehouse   string  `json:"from_warehouse_name"`
-		FromAddress     string  `json:"from_warehouse_address"`
-		FromLat         float64 `json:"from_warehouse_lat"`
-		FromLng         float64 `json:"from_warehouse_lng"`
-		ToWarehouseID   string  `json:"to_warehouse_id"`
-		ToWarehouse     string  `json:"to_warehouse_name"`
-		ToAddress       string  `json:"to_warehouse_address"`
-		ToLat           float64 `json:"to_warehouse_lat"`
-		ToLng           float64 `json:"to_warehouse_lng"`
-		ItemCount       int     `json:"item_count"`
-		Notes           string  `json:"notes"`
-	} `json:"payload"`
+	EventType     string          `json:"event_type"`
+	AggregateType string          `json:"aggregate_type"`
+	TenantID      string          `json:"tenant_id"`
+	Payload       transferPayload `json:"payload"`
+}
+
+func derefFloat(p *float64) float64 {
+	if p != nil {
+		return *p
+	}
+	return 0
 }
 
 func (c *TransferReadyConsumer) handleMessage(msg *nats.Msg) {
@@ -101,26 +120,33 @@ func (c *TransferReadyConsumer) handleMessage(msg *nats.Msg) {
 		return
 	}
 
-	transferID := evt.Payload.TransferID
+	p := evt.Payload
+	transferID := p.TransferID
 	if transferID == "" {
 		c.log.Warn("transfer created: missing transfer_id")
 		_ = msg.Ack()
 		return
 	}
 
+	fromLat, fromLng := derefFloat(p.FromWarehouse.Latitude), derefFloat(p.FromWarehouse.Longitude)
+	toLat, toLng := derefFloat(p.ToWarehouse.Latitude), derefFloat(p.ToWarehouse.Longitude)
+	itemCount := len(p.Items)
+
 	// Build metadata with transfer context
 	metadata := map[string]any{
 		"transfer_id":       transferID,
-		"transfer_number":   evt.Payload.TransferNumber,
-		"from_warehouse_id": evt.Payload.FromWarehouseID,
-		"to_warehouse_id":   evt.Payload.ToWarehouseID,
-		"item_count":        evt.Payload.ItemCount,
-		"notes":             evt.Payload.Notes,
+		"transfer_number":   p.TransferNumber,
+		"reference_no":      p.ReferenceNo,
+		"carrier":           p.Carrier,
+		"shipping_charges":  p.ShippingCharges,
+		"from_warehouse_id": p.FromWarehouse.ID,
+		"to_warehouse_id":   p.ToWarehouse.ID,
+		"item_count":        itemCount,
+		"notes":             p.Notes,
 	}
-
-	if evt.Payload.FromLat != 0 {
-		metadata["pickup_lat"] = evt.Payload.FromLat
-		metadata["pickup_lng"] = evt.Payload.FromLng
+	if fromLat != 0 {
+		metadata["pickup_lat"] = fromLat
+		metadata["pickup_lng"] = fromLng
 	}
 
 	// Create transfer task (idempotent via external_reference)
@@ -141,19 +167,19 @@ func (c *TransferReadyConsumer) handleMessage(msg *nats.Msg) {
 	}
 
 	// Create pickup step (source warehouse)
-	if evt.Payload.FromLat != 0 && evt.Payload.FromLng != 0 {
+	if fromLat != 0 && fromLng != 0 {
 		_, stepErr := c.taskSvc.Client().TaskStep.Create().
 			SetTaskID(t.ID).
 			SetStepType("pickup").
 			SetSequence(1).
-			SetLocationName(evt.Payload.FromWarehouse).
+			SetLocationName(p.FromWarehouse.Name).
 			SetAddressJSON(map[string]any{
-				"latitude":  evt.Payload.FromLat,
-				"longitude": evt.Payload.FromLng,
-				"name":      evt.Payload.FromWarehouse,
-				"address":   evt.Payload.FromAddress,
+				"latitude":  fromLat,
+				"longitude": fromLng,
+				"name":      p.FromWarehouse.Name,
+				"address":   p.FromWarehouse.Address,
 			}).
-			SetMetadata(map[string]any{"warehouse_id": evt.Payload.FromWarehouseID}).
+			SetMetadata(map[string]any{"warehouse_id": p.FromWarehouse.ID}).
 			Save(ctx)
 		if stepErr != nil {
 			c.log.Warn("failed to create pickup step for transfer", zap.Error(stepErr))
@@ -161,30 +187,34 @@ func (c *TransferReadyConsumer) handleMessage(msg *nats.Msg) {
 	}
 
 	// Create dropoff step (destination warehouse)
-	if evt.Payload.ToLat != 0 && evt.Payload.ToLng != 0 {
+	if toLat != 0 && toLng != 0 {
 		_, stepErr := c.taskSvc.Client().TaskStep.Create().
 			SetTaskID(t.ID).
 			SetStepType("dropoff").
 			SetSequence(2).
-			SetLocationName(evt.Payload.ToWarehouse).
+			SetLocationName(p.ToWarehouse.Name).
 			SetAddressJSON(map[string]any{
-				"latitude":  evt.Payload.ToLat,
-				"longitude": evt.Payload.ToLng,
-				"name":      evt.Payload.ToWarehouse,
-				"address":   evt.Payload.ToAddress,
+				"latitude":  toLat,
+				"longitude": toLng,
+				"name":      p.ToWarehouse.Name,
+				"address":   p.ToWarehouse.Address,
 			}).
-			SetMetadata(map[string]any{"warehouse_id": evt.Payload.ToWarehouseID}).
+			SetMetadata(map[string]any{"warehouse_id": p.ToWarehouse.ID}).
 			Save(ctx)
 		if stepErr != nil {
 			c.log.Warn("failed to create dropoff step for transfer", zap.Error(stepErr))
 		}
 	}
 
+	// Create the distribution Shipment envelope (batch + seal + chain-of-custody anchor) for the
+	// transfer. Idempotent via external_reference so redelivery never duplicates.
+	c.ensureShipment(ctx, tenantID, &p, externalRef)
+
 	c.log.Info("transfer task created from inventory event",
 		zap.String("task_id", t.ID.String()),
 		zap.String("transfer_id", transferID),
-		zap.String("from", evt.Payload.FromWarehouse),
-		zap.String("to", evt.Payload.ToWarehouse),
+		zap.String("from", p.FromWarehouse.Name),
+		zap.String("to", p.ToWarehouse.Name),
 	)
 
 	// Auto-dispatch if configured — derive from svcCtx (not Background) so the
@@ -203,4 +233,54 @@ func (c *TransferReadyConsumer) handleMessage(msg *nats.Msg) {
 	}
 
 	_ = msg.Ack()
+}
+
+// ensureShipment creates a distribution Shipment for the transfer if one does not already exist
+// (idempotent on external_reference). Best-effort: a failure here never fails the transfer task.
+func (c *TransferReadyConsumer) ensureShipment(ctx context.Context, tenantID uuid.UUID, p *transferPayload, externalRef string) {
+	client := c.taskSvc.Client()
+	exists, err := client.Shipment.Query().
+		Where(shipment.TenantID(tenantID), shipment.ExternalReference(externalRef)).
+		Exist(ctx)
+	if err != nil {
+		c.log.Warn("shipment idempotency check failed", zap.Error(err))
+		return
+	}
+	if exists {
+		return
+	}
+
+	code := fmt.Sprintf("SHIP-%d-%s", time.Now().Year(), uuid.New().String()[:6])
+	create := client.Shipment.Create().
+		SetTenantID(tenantID).
+		SetShipmentCode(code).
+		SetShipmentType("warehouse_transfer").
+		SetStatus("planned").
+		SetExternalReference(externalRef).
+		SetSourceFacilityName(p.FromWarehouse.Name).
+		SetDestFacilityName(p.ToWarehouse.Name).
+		SetMetadata(map[string]any{
+			"transfer_id":      p.TransferID,
+			"transfer_number":  p.TransferNumber,
+			"reference_no":     p.ReferenceNo,
+			"carrier":          p.Carrier,
+			"shipping_charges": p.ShippingCharges,
+			"freight_notes":    p.FreightNotes,
+			"item_count":       len(p.Items),
+		})
+	if id, e := uuid.Parse(p.FromWarehouse.ID); e == nil {
+		create = create.SetSourceFacilityID(id)
+	}
+	if id, e := uuid.Parse(p.ToWarehouse.ID); e == nil {
+		create = create.SetDestFacilityID(id)
+	}
+
+	if _, err := create.Save(ctx); err != nil {
+		c.log.Warn("failed to create shipment for transfer", zap.Error(err), zap.String("transfer_id", p.TransferID))
+		return
+	}
+	c.log.Info("distribution shipment created for transfer",
+		zap.String("shipment_code", code),
+		zap.String("transfer_id", p.TransferID),
+	)
 }
