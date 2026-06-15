@@ -33,7 +33,13 @@ func main() {
 		log.Fatalf("failed to load config: %v", err)
 	}
 
-	db, err := sql.Open("pgx", cfg.Postgres.URL)
+	// Prefer the direct PostgreSQL URL to bypass PgBouncer for seed DDL/DML.
+	dbURL := cfg.Postgres.URL
+	if cfg.Postgres.MigrateURL != "" {
+		dbURL = cfg.Postgres.MigrateURL
+	}
+
+	db, err := sql.Open("pgx", dbURL)
 	if err != nil {
 		log.Fatalf("failed to open database: %v", err)
 	}
