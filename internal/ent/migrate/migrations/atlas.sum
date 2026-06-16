@@ -1,4 +1,4 @@
-h1:Qk2gw31jVvrOnzwURjMsrEwD+/EDYe71VfjszKV8CTM=
+h1:T5Afxccdk/lWw/6nM3+9V2lEhXUcfVdtrnDOym0V1C8=
 20260314184847_initial_schema.sql h1:L0wAADcTDNVU6BeR2ScWX5poErpcRylCO9xWQakqX+M=
 20260320140940_add_tracking_code_and_routing.sql h1:kfFLd/S6aqmD3l6l5aHN+44M18ct8inCdUO/ebQVzPs=
 20260320144356_add_geo_fence_zones.sql h1:DIWWryUDFzragzPYE4N/Qag94zVyu/XejorTCXB5eUc=
@@ -15,3 +15,4 @@ h1:Qk2gw31jVvrOnzwURjMsrEwD+/EDYe71VfjszKV8CTM=
 20260528012352_add_outlet.sql h1:Y4w+zXgHLXDnV6JyqqwS+YSJlXiAU4AR6RUxnc5r5b4=
 20260528180000_shipment_chain_cold_chain.sql h1:OG8ACmfS2/AwVsoXv2GbjOzoNz+78BP22ecjL1hMwlc=
 20260616014900_add_backup_tracking.sql h1:+tDVLlE7TYbIh2nr09GS2D6dOwsf4bI5Afwiv4SduOM=
+20260616083901_add_backup_setting.sql h1:zhlQLeHG+iTufjJv2mh/uRTeUoMKwDrDpf0blXZuQJM=

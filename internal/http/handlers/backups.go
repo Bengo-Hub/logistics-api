@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -34,10 +35,55 @@ func (h *BackupsHandler) RegisterRoutes(r chi.Router) {
 	r.Route("/backups", func(br chi.Router) {
 		br.Get("/", h.List)
 		br.Post("/", h.Create)
+		br.Get("/settings", h.GetSettings)
+		br.Put("/settings", h.UpdateSettings)
 		br.Post("/churn", h.Churn)
 		br.Get("/{name}/download", h.Download)
 		br.Delete("/{name}", h.Delete)
 	})
+}
+
+// GetSettings returns the tenant's auto-backup settings (auto_enabled defaults to false).
+func (h *BackupsHandler) GetSettings(w http.ResponseWriter, r *http.Request) {
+	tenantID, ok := ResolveTenantForRequest(r)
+	if !ok {
+		respondJSON(w, http.StatusBadRequest, map[string]string{"error": "tenant context required"})
+		return
+	}
+	settings, err := h.svc.GetSettings(r.Context(), tenantID)
+	if err != nil {
+		respondJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to load backup settings"})
+		return
+	}
+	respondJSON(w, http.StatusOK, settings)
+}
+
+type backupSettingsBody struct {
+	AutoEnabled   bool `json:"auto_enabled"`
+	ScheduleHour  int  `json:"schedule_hour"`
+	RetentionDays int  `json:"retention_days"`
+}
+
+// UpdateSettings activates/deactivates auto-backup + sets schedule hour + retention.
+func (h *BackupsHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
+	tenantID, ok := ResolveTenantForRequest(r)
+	if !ok {
+		respondJSON(w, http.StatusBadRequest, map[string]string{"error": "tenant context required"})
+		return
+	}
+	var b backupSettingsBody
+	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
+		respondJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON body"})
+		return
+	}
+	settings, err := h.svc.UpsertSettings(r.Context(), tenantID, backup.Settings{
+		AutoEnabled: b.AutoEnabled, ScheduleHour: b.ScheduleHour, RetentionDays: b.RetentionDays,
+	})
+	if err != nil {
+		respondJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to save backup settings"})
+		return
+	}
+	respondJSON(w, http.StatusOK, settings)
 }
 
 func (h *BackupsHandler) List(w http.ResponseWriter, r *http.Request) {
