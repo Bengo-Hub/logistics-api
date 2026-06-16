@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"entgo.io/ent"
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
@@ -24,8 +25,7 @@ func (Shipment) Fields() []ent.Field {
 			Immutable(),
 		field.UUID("tenant_id", uuid.UUID{}),
 		field.String("shipment_code").
-			Unique().
-			Comment("Human-readable code e.g. SHIP-2026-001"),
+			Comment("Human-readable code e.g. SHIP-2026-001 (uniqueness enforced by the shipment_code index)"),
 		field.String("shipment_type").
 			Default("warehouse_transfer").
 			Comment("warehouse_transfer | hospital_delivery | recall"),
@@ -74,7 +74,10 @@ func (Shipment) Fields() []ent.Field {
 			Optional().
 			Comment("inventory_transfer_id or ordering reference"),
 		field.JSON("metadata", map[string]any{}).
-			Default(map[string]any{}),
+			Default(map[string]any{}).
+			// Keep the DB-level DEFAULT '{}' that the original shipments migration created,
+			// so Atlas does not emit a spurious DROP DEFAULT on replay (schema↔DB convergence).
+			Annotations(entsql.Default("{}")),
 		field.Time("created_at").
 			Default(time.Now).
 			Immutable(),
