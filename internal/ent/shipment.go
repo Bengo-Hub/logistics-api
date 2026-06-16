@@ -21,7 +21,7 @@ type Shipment struct {
 	ID uuid.UUID `json:"id,omitempty"`
 	// TenantID holds the value of the "tenant_id" field.
 	TenantID uuid.UUID `json:"tenant_id,omitempty"`
-	// Human-readable code e.g. SHIP-2026-001
+	// Human-readable code e.g. SHIP-2026-001 (uniqueness enforced by the shipment_code index)
 	ShipmentCode string `json:"shipment_code,omitempty"`
 	// warehouse_transfer | hospital_delivery | recall
 	ShipmentType string `json:"shipment_type,omitempty"`

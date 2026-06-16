@@ -753,7 +753,7 @@ var (
 	ShipmentsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "tenant_id", Type: field.TypeUUID},
-		{Name: "shipment_code", Type: field.TypeString, Unique: true},
+		{Name: "shipment_code", Type: field.TypeString},
 		{Name: "shipment_type", Type: field.TypeString, Default: "warehouse_transfer"},
 		{Name: "status", Type: field.TypeString, Default: "planned"},
 		{Name: "fleet_type", Type: field.TypeString, Default: "distribution"},
@@ -769,7 +769,7 @@ var (
 		{Name: "dispatched_at", Type: field.TypeTime, Nullable: true},
 		{Name: "completed_at", Type: field.TypeTime, Nullable: true},
 		{Name: "external_reference", Type: field.TypeString, Nullable: true},
-		{Name: "metadata", Type: field.TypeJSON},
+		{Name: "metadata", Type: field.TypeJSON, Default: "{}"},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 	}
