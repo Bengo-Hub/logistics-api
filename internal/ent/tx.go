@@ -14,6 +14,8 @@ type Tx struct {
 	config
 	// Backup is the client for interacting with the Backup builders.
 	Backup *BackupClient
+	// BackupSetting is the client for interacting with the BackupSetting builders.
+	BackupSetting *BackupSettingClient
 	// BillingEvent is the client for interacting with the BillingEvent builders.
 	BillingEvent *BillingEventClient
 	// CarrierJob is the client for interacting with the CarrierJob builders.
@@ -210,6 +212,7 @@ func (tx *Tx) Client() *Client {
 
 func (tx *Tx) init() {
 	tx.Backup = NewBackupClient(tx.config)
+	tx.BackupSetting = NewBackupSettingClient(tx.config)
 	tx.BillingEvent = NewBillingEventClient(tx.config)
 	tx.CarrierJob = NewCarrierJobClient(tx.config)
 	tx.CarrierPartner = NewCarrierPartnerClient(tx.config)
