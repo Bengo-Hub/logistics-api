@@ -24,7 +24,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/config"
 )
 
-func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authclient.AuthMiddleware, idSvc *identity.Service, lh *handlers.LogisticsHandler, rh *handlers.RoutingHandler, th *handlers.TrackingHandler, zh *handlers.ZonesHandler, rbacH *handlers.RBACHandler, rdb *redis.Client, cfg *config.Config, allowedOrigins []string, serviceConfigH *handlers.ServiceConfigHandler, earningsH *handlers.EarningsHandler, sseH *handlers.SSEHandler, rbacSvc *rbac.Service, telH *handlers.TelemetryHandler, shipmentH *handlers.ShipmentHandler, shiftH *handlers.ShiftHandler, analyticsH *handlers.AnalyticsHandler, backupsH *handlers.BackupsHandler) http.Handler {
+func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authclient.AuthMiddleware, idSvc *identity.Service, lh *handlers.LogisticsHandler, rh *handlers.RoutingHandler, th *handlers.TrackingHandler, zh *handlers.ZonesHandler, rbacH *handlers.RBACHandler, rdb *redis.Client, cfg *config.Config, allowedOrigins []string, serviceConfigH *handlers.ServiceConfigHandler, earningsH *handlers.EarningsHandler, sseH *handlers.SSEHandler, rbacSvc *rbac.Service, telH *handlers.TelemetryHandler, shipmentH *handlers.ShipmentHandler, shiftH *handlers.ShiftHandler, analyticsH *handlers.AnalyticsHandler, backupsH *handlers.BackupsHandler, backupDestH *handlers.BackupDestinationHandler) http.Handler {
 	rl := appmw.NewRateLimiter(rdb)
 	r := chi.NewRouter()
 
@@ -70,6 +70,10 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 		admin.Use(authclient.RequirePlatformOwner())
 		if serviceConfigH != nil {
 			serviceConfigH.RegisterPlatformRoutes(admin)
+		}
+		// Platform-default backup destination (OneDrive/GDrive/S3/WebDAV/SFTP/SMB).
+		if backupDestH != nil {
+			backupDestH.RegisterPlatformRoutes(admin)
 		}
 	})
 
@@ -242,6 +246,15 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 				tenant.Group(func(bg chi.Router) {
 					bg.Use(appmw.RequirePermission(rbacSvc, rbac.PermConfigManage))
 					backupsH.RegisterRoutes(bg)
+				})
+			}
+
+			// Per-tenant backup-destination override (mirrors backups off the PVC)
+			// — same config-manage permission gate as the tenant backups routes.
+			if backupDestH != nil {
+				tenant.Group(func(bg chi.Router) {
+					bg.Use(appmw.RequirePermission(rbacSvc, rbac.PermConfigManage))
+					backupDestH.RegisterRoutes(bg)
 				})
 			}
 

@@ -28,6 +28,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/modules/consumers"
 	"github.com/bengobox/logistics-service/internal/modules/dispatch"
 	backupmod "github.com/bengobox/logistics-service/internal/modules/backup"
+	"github.com/bengobox/logistics-service/internal/modules/backup/destination"
 	"github.com/bengobox/logistics-service/internal/modules/earnings"
 	fleetmod "github.com/bengobox/logistics-service/internal/modules/fleet"
 	"github.com/bengobox/logistics-service/internal/modules/identity"
@@ -267,8 +268,15 @@ func New(ctx context.Context) (*App, error) {
 	treasuryClient := earnings.NewTreasuryClient(cfg.Treasury.ServiceURL, cfg.Treasury.InternalServiceKey)
 	earningsHandler.SetTreasuryClient(treasuryClient)
 
+	// Pluggable backup destination (OneDrive/GDrive/S3/WebDAV/SFTP/SMB) — encrypted
+	// at rest with a SECRET_KEY-derived AES-256-GCM key. The handler owns the
+	// destination Store; its Uploader is attached to the backup service so every
+	// PVC backup is additionally mirrored best-effort.
+	backupDestHandler := handlers.NewBackupDestinationHandler(entClient, destination.NewSecretKeyCipher(), log)
+
 	// Tenant-scoped backups + daily 02:00 auto-backup scheduler + retention churn.
-	backupSvc := backupmod.NewService(sqlDB, entClient, cfg.Backup.Dir, log)
+	backupSvc := backupmod.NewService(sqlDB, entClient, cfg.Backup.Dir, log).
+		WithMirrorer(backupDestHandler.Uploader())
 	backupsHandler := handlers.NewBackupsHandler(log, backupSvc, cfg.Backup.RetentionDays)
 	backupmod.NewScheduler(backupSvc, backupmod.SchedulerConfig{
 		Enabled:       cfg.Backup.ScheduleEnabled,
@@ -276,7 +284,7 @@ func New(ctx context.Context) (*App, error) {
 		RetentionDays: cfg.Backup.RetentionDays,
 	}, log).Start(ctx)
 
-	chiRouter := router.New(log, healthHandler, authMiddleware, identitySvc, logisticsHandler, routingHandler, trackingHandler, zonesHandler, rbacHandler, redisClient, cfg, cfg.HTTP.AllowedOrigins, serviceConfigHandler, earningsHandler, sseHandler, rbacSvc, telemetryHandler, shipmentHandler, shiftHandler, analyticsHandler, backupsHandler)
+	chiRouter := router.New(log, healthHandler, authMiddleware, identitySvc, logisticsHandler, routingHandler, trackingHandler, zonesHandler, rbacHandler, redisClient, cfg, cfg.HTTP.AllowedOrigins, serviceConfigHandler, earningsHandler, sseHandler, rbacSvc, telemetryHandler, shipmentHandler, shiftHandler, analyticsHandler, backupsHandler, backupDestHandler)
 
 	httpServer := &http.Server{
 		Addr:              fmt.Sprintf("%s:%d", cfg.HTTP.Host, cfg.HTTP.Port),
