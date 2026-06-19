@@ -16,7 +16,9 @@ RUN GOTOOLCHAIN=auto CGO_ENABLED=0 go build -o /out/logistics-migrate ./cmd/migr
 RUN GOTOOLCHAIN=auto CGO_ENABLED=0 go build -o /out/logistics-seed ./cmd/seed
 
 FROM alpine:3.20
-RUN apk add --no-cache ca-certificates
+# ca-certificates: TLS trust for HTTPS remotes (S3/OneDrive/GDrive/WebDAV).
+# rclone: powers pluggable backup-destination mirroring off the local PVC.
+RUN apk add --no-cache ca-certificates rclone
 RUN addgroup -S app && adduser -S app -G app
 WORKDIR /app
 
