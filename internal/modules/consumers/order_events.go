@@ -30,6 +30,9 @@ type OrderReadyConsumer struct {
 	// the NATS handler (which has no context parameter) can derive bounded
 	// goroutine contexts that respect service shutdown.
 	svcCtx context.Context //nolint:containedctx
+	// hasFeature gates ordering→logistics delivery sync by subscription entitlement.
+	// Nil → fail open.
+	hasFeature func(ctx context.Context, tenantID, feature string) bool
 }
 
 // NewOrderReadyConsumer creates the consumer.
@@ -40,6 +43,20 @@ func NewOrderReadyConsumer(log *zap.Logger, taskSvc *tasks.Service, dispatcher *
 		dispatcher: dispatcher,
 		svcCtx:     context.Background(), // replaced by Start()
 	}
+}
+
+// SetFeatureGate wires the subscription entitlement check used to gate delivery-task sync.
+func (c *OrderReadyConsumer) SetFeatureGate(fn func(ctx context.Context, tenantID, feature string) bool) {
+	c.hasFeature = fn
+}
+
+// entitled reports whether the tenant may have a delivery task synced. Fails open when no
+// gate is wired or tenantID is empty (never strand a legitimate delivery on a parse miss).
+func (c *OrderReadyConsumer) entitled(ctx context.Context, tenantID, feature string) bool {
+	if c.hasFeature == nil || tenantID == "" {
+		return true
+	}
+	return c.hasFeature(ctx, tenantID, feature)
 }
 
 // Start begins consuming ordering.order.ready via JetStream.
@@ -108,6 +125,16 @@ func (c *OrderReadyConsumer) handleMessage(msg *nats.Msg) {
 
 	orderID := envelope.Data.OrderID
 	if orderID == "" {
+		_ = msg.Ack()
+		return
+	}
+
+	// Gate the cross-service delivery sync on the core logistics entitlement. Fails open on a
+	// subscriptions-api outage so a downtime never strands a legitimate delivery. basic_logistics_access
+	// is auto-injected into ordering plans, so any tenant whose orders reach here is normally entitled.
+	if !c.entitled(ctx, rawTenantID, "basic_logistics_access") {
+		c.log.Debug("order ready: tenant lacks basic_logistics_access — skipping delivery task sync",
+			zap.String("tenant_id", rawTenantID), zap.String("order_id", orderID))
 		_ = msg.Ack()
 		return
 	}

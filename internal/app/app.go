@@ -132,11 +132,19 @@ func New(ctx context.Context) (*App, error) {
 	}
 	log.Info("versioned migrations completed - run 'go run cmd/seed/main.go' to seed initial data (idempotent)")
 
-	_ = subscriptions.NewClient(subscriptions.Config{
+	subsClient := subscriptions.NewClient(subscriptions.Config{
 		ServiceURL:     cfg.Subscriptions.ServiceURL,
 		RequestTimeout: cfg.Subscriptions.RequestTimeout,
 		APIKey:         cfg.Subscriptions.APIKey,
 	})
+
+	// consumerFeatureGate restricts cross-service data sync (ordering→delivery tasks,
+	// inventory→transfer tasks) to tenants entitled to the corresponding logistics feature,
+	// mirroring the HTTP-layer gating contract. Cached per tenant; fails open on a
+	// subscriptions-api outage so a downtime never strands legitimate deliveries.
+	consumerFeatureGate := func(ctx context.Context, tenantID, feature string) bool {
+		return subsClient.ConsumerHasFeature(ctx, tenantID, feature)
+	}
 
 	tenantSyncer := tenant.NewSyncer(entClient, cfg.Auth.ServiceURL)
 
@@ -207,7 +215,9 @@ func New(ctx context.Context) (*App, error) {
 	logisticsHandler := handlers.NewLogisticsHandler(log, taskSvc, fleetSvc, autoDispatcher)
 
 	orderConsumer := consumers.NewOrderReadyConsumer(log, taskSvc, autoDispatcher)
+	orderConsumer.SetFeatureGate(consumerFeatureGate)
 	transferConsumer := consumers.NewTransferReadyConsumer(log, taskSvc, autoDispatcher)
+	transferConsumer.SetFeatureGate(consumerFeatureGate)
 
 	// Initialize routing engine (Valhalla primary, no fallback initially)
 	valhallaProvider := routing.NewValhallaProvider(cfg.Routing.PrimaryURL, cfg.Routing.RequestTimeout)
