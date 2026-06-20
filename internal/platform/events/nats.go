@@ -53,3 +53,42 @@ func EnsureStream(ctx context.Context, nc *nats.Conn, cfg config.EventsConfig) e
 	return err
 }
 
+// EnsureTenantStream guarantees a JetStream stream covers the cross-service
+// "tenant.>" subject space (e.g. tenant.purge emitted by subscriptions-api on a
+// platform-owner-confirmed dormancy purge). The owning service does not include
+// "tenant.>" in its own stream, so a downstream consumer must make sure a stream
+// retains the subject before binding a durable to it — otherwise the message is
+// dropped at publish time ("no responders") and the purge never arrives.
+//
+// Idempotent and conflict-safe: if a stream named "tenant" already exists (or
+// another service already created an overlapping stream and AddStream conflicts),
+// it returns nil so startup is never blocked. The durable bind via js.Subscribe
+// then attaches to whichever stream carries the subject.
+func EnsureTenantStream(ctx context.Context, nc *nats.Conn) error {
+	if nc == nil {
+		return fmt.Errorf("nats connection is nil")
+	}
+
+	js, err := nc.JetStream()
+	if err != nil {
+		return fmt.Errorf("jetstream init: %w", err)
+	}
+
+	const streamName = "tenant"
+	if _, infoErr := js.StreamInfo(streamName); infoErr == nil {
+		return nil // already present
+	}
+
+	if _, addErr := js.AddStream(&nats.StreamConfig{
+		Name:     streamName,
+		Subjects: []string{"tenant.>"},
+		Replicas: 1,
+	}); addErr != nil {
+		// A concurrent creator (another service or pod) may have won the race or an
+		// overlapping stream may already own the subject. Treat as best-effort: the
+		// consumer's js.Subscribe will still bind to whatever stream retains it.
+		return fmt.Errorf("ensure tenant stream: %w", addErr)
+	}
+	return nil
+}
+
