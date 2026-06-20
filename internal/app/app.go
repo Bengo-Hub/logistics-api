@@ -55,6 +55,7 @@ type App struct {
 	events          *nats.Conn
 	orderConsumer    *consumers.OrderReadyConsumer
 	transferConsumer *consumers.TransferReadyConsumer
+	tenantPurgeConsumer *consumers.TenantPurgeConsumer
 	outboxPublisher *eventslib.Publisher
 	etaUpdater      *dispatch.ETAUpdater
 	batchScheduler  *dispatch.BatchScheduler
@@ -87,6 +88,11 @@ func New(ctx context.Context) (*App, error) {
 	if natsConn != nil {
 		if streamErr := events.EnsureStream(ctx, natsConn, cfg.Events); streamErr != nil {
 			log.Warn("failed to ensure logistics stream", zap.Error(streamErr))
+		}
+		// Ensure the cross-service "tenant.>" stream exists so the tenant.purge
+		// durable can bind and the publish is retained (subscriptions-api emits it).
+		if streamErr := events.EnsureTenantStream(ctx, natsConn); streamErr != nil {
+			log.Warn("failed to ensure tenant stream (tenant.purge)", zap.Error(streamErr))
 		}
 	}
 
@@ -219,6 +225,11 @@ func New(ctx context.Context) (*App, error) {
 	transferConsumer := consumers.NewTransferReadyConsumer(log, taskSvc, autoDispatcher)
 	transferConsumer.SetFeatureGate(consumerFeatureGate)
 
+	// Tenant purge consumer: on platform-owner-confirmed dormancy purge (tenant.purge),
+	// IRREVERSIBLY deletes all of the tenant's logistics data. No feature gate — a purge
+	// is destructive and unconditional once its safety guards pass.
+	tenantPurgeConsumer := consumers.NewTenantPurgeConsumer(log, entClient)
+
 	// Initialize routing engine (Valhalla primary, no fallback initially)
 	valhallaProvider := routing.NewValhallaProvider(cfg.Routing.PrimaryURL, cfg.Routing.RequestTimeout)
 	routingSvc := routing.NewService(valhallaProvider, nil, redisClient, cfg.Routing.CacheTTL, log)
@@ -315,6 +326,7 @@ func New(ctx context.Context) (*App, error) {
 		events:          natsConn,
 		orderConsumer:    orderConsumer,
 		transferConsumer: transferConsumer,
+		tenantPurgeConsumer: tenantPurgeConsumer,
 		outboxPublisher: outboxPub,
 		etaUpdater:      etaUpdater,
 		batchScheduler:  batchScheduler,
@@ -359,6 +371,21 @@ func (a *App) Run(ctx context.Context) error {
 				}
 			}()
 			a.log.Info("transfer consumer started (inventory.transfer.created)")
+		}
+	}
+
+	// Start tenant purge consumer — deletes all tenant data on confirmed dormancy purge
+	if a.tenantPurgeConsumer != nil && a.events != nil {
+		js, err := a.events.JetStream()
+		if err != nil {
+			a.log.Warn("jetstream unavailable, tenant purge consumer not started", zap.Error(err))
+		} else {
+			go func() {
+				if err := a.tenantPurgeConsumer.Start(ctx, js); err != nil {
+					a.log.Error("tenant purge consumer stopped", zap.Error(err))
+				}
+			}()
+			a.log.Info("tenant purge consumer started (tenant.purge)")
 		}
 	}
 
