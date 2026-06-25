@@ -2,7 +2,7 @@
 # Uses online tagged auth-client (go.mod replace => github.com/Bengo-Hub/auth-client v0.3.1).
 # Build from repo root: docker build -f logistics-service/logistics-api/Dockerfile -t logistics-api:local .
 
-FROM golang:1.24-alpine AS builder
+FROM golang:1.26-alpine AS builder
 WORKDIR /src
 RUN apk add --no-cache git ca-certificates
 
