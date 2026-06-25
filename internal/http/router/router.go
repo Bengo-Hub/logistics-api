@@ -100,9 +100,12 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 							next.ServeHTTP(w, r)
 							return
 						}
-						// Mutations: enforce subscription with explicit superuser/platform owner bypass
+						// Mutations: enforce an active subscription. Gating-exempt tokens
+						// (platform owner, subscription-exempt, demo, service-charge) pass via
+						// IsSubscriptionActive(). SEC-3 (auth-client v0.10.0): a tenant superuser
+						// is NOT exempt and must hold an active subscription like any tenant user.
 						claims, ok := authclient.ClaimsFromContext(r.Context())
-						if !ok || claims.IsSuperuser() || claims.IsPlatformOwner || claims.IsSubscriptionActive() {
+						if !ok || claims.IsSubscriptionActive() {
 							next.ServeHTTP(w, r)
 							return
 						}

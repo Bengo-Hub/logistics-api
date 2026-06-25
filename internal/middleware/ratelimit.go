@@ -77,8 +77,10 @@ func RequireRateLimit(rl *RateLimiter, featureKey string, upgradeURL string) fun
 				return
 			}
 
-			// Exempt tenants bypass metered limits entirely.
-			if claims.IsPlatformOwner || claims.IsSuperuser() || claims.IsDemo || claims.BillingMode == "service_charge" {
+			// Gating-exempt tenants bypass metered limits entirely. SEC-3 (auth-client
+			// v0.10.0): a tenant superuser is NOT exempt — only platform owner,
+			// subscription-exempt, demo and service-charge tenants are.
+			if claims.IsGatingExempt() {
 				next.ServeHTTP(w, r)
 				return
 			}
