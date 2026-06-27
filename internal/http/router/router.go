@@ -218,9 +218,12 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 			if rh != nil {
 				tenant.Route("/routing", func(routeR chi.Router) {
 					routeR.Use(appmw.RequireRateLimit(rl, "routing_requests_per_day", cfg.Subscriptions.ServiceURL+"/upgrade"))
+					// Basic route/ETA stay open (used by guest checkout). The multi-stop
+					// matrix optimisation is the premium "route_optimisation" surface.
 					routeR.Get("/route", rh.GetRoute)
 					routeR.Get("/eta", rh.GetETA)
-					routeR.Post("/matrix", rh.GetMatrix)
+					routeR.With(appmw.RequireFeature("route_optimisation", cfg.Subscriptions.ServiceURL+"/upgrade")).
+						Post("/matrix", rh.GetMatrix)
 					routeR.Get("/isochrone", rh.GetIsochrone)
 					routeR.Get("/health", rh.HealthCheck)
 				})
@@ -228,6 +231,9 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 
 			if th != nil {
 				tenant.Route("/tracking", func(trackR chi.Router) {
+					// Live GPS rider tracking is a premium feature. Customer-facing order
+					// tracking uses the public /api/v1/track/{code} endpoint, which is unaffected.
+					trackR.Use(appmw.RequireFeature("live_tracking", cfg.Subscriptions.ServiceURL+"/upgrade"))
 					trackR.Use(appmw.RequireRateLimit(rl, "live_tracking_requests_per_day", cfg.Subscriptions.ServiceURL+"/upgrade"))
 					trackR.Get("/{taskId}", th.TrackByCode)
 				})
@@ -278,7 +284,11 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 			}
 
 			if analyticsH != nil {
-				analyticsH.RegisterRoutes(tenant)
+				// Driver/fleet performance analytics are a premium surface.
+				tenant.Group(func(ag chi.Router) {
+					ag.Use(appmw.RequireAnyFeature(cfg.Subscriptions.ServiceURL+"/upgrade", "driver_analytics", "performance_reports"))
+					analyticsH.RegisterRoutes(ag)
+				})
 			}
 
 			if lh != nil {
@@ -315,11 +325,14 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 					fleetR.Get("/members", lh.ListMembers)
 					fleetR.Get("/members/{memberId}", lh.GetMember)
 
-					// Mutations: require fleet management permission
+					// Mutations: require fleet management permission + the rider_management
+					// subscription feature (cross-service tenants with only basic_logistics_access
+					// can receive delivery assignments but cannot manage their own fleet).
 					fleetR.Group(func(mut chi.Router) {
 						if rbacSvc != nil {
 							mut.Use(appmw.RequirePermission(rbacSvc, rbac.PermFleetManage))
 						}
+						mut.Use(appmw.RequireFeature("rider_management", cfg.Subscriptions.ServiceURL+"/upgrade"))
 						mut.Post("/members", lh.InviteMember)
 						mut.Post("/members/{memberId}/approve", lh.ApproveMember)
 						mut.Post("/members/{memberId}/suspend", lh.SuspendMember)
