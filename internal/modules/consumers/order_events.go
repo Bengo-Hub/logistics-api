@@ -80,8 +80,10 @@ func (c *OrderReadyConsumer) Start(ctx context.Context, js nats.JetStreamContext
 }
 
 // orderReadyEvent represents the full event envelope from ordering.order.ready.
+// ordering-backend now publishes the fleet-uniform shared-events envelope
+// (tenant_id/payload), so the wrapper is decoded with those field names.
 type orderReadyEvent struct {
-	TenantID string `json:"tenantId"`
+	TenantID string `json:"tenant_id"`
 	Data     struct {
 		TenantID        string                 `json:"tenant_id"`
 		OrderID         string                 `json:"order_id"`
