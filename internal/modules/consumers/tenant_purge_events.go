@@ -81,10 +81,12 @@ func NewTenantPurgeConsumer(log *zap.Logger, client *ent.Client) *TenantPurgeCon
 // Start binds the durable JetStream consumer for "tenant.purge".
 func (c *TenantPurgeConsumer) Start(ctx context.Context, js nats.JetStreamContext) error {
 	c.svcCtx = ctx
-	eventslib.SubscribeWithRebind(
+	eventslib.SubscribeQueueWithRebind(
 		c.log,
 		js,
+		"tenant",
 		tenantPurgeSubject,
+		tenantPurgeConsumer,
 		c.handleMessage,
 		nats.Durable(tenantPurgeConsumer),
 		nats.AckExplicit(),

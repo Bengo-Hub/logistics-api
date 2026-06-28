@@ -70,7 +70,7 @@ func (s *OutletSubscriber) Start(nc *nats.Conn) error {
 
 	for _, cfg := range subs {
 		cfg := cfg
-		sharedevents.SubscribeWithRebind(s.logger, js, cfg.subject, func(msg *nats.Msg) {
+		sharedevents.SubscribeQueueWithRebind(s.logger, js, authStream, cfg.subject, cfg.durable, func(msg *nats.Msg) {
 			evt, err := sharedevents.FromJSON(msg.Data)
 			if err != nil {
 				s.logger.Error("failed to unmarshal outlet event",

@@ -62,10 +62,12 @@ func (c *OrderReadyConsumer) entitled(ctx context.Context, tenantID, feature str
 // Start begins consuming ordering.order.ready via JetStream.
 func (c *OrderReadyConsumer) Start(ctx context.Context, js nats.JetStreamContext) error {
 	c.svcCtx = ctx
-	eventslib.SubscribeWithRebind(
+	eventslib.SubscribeQueueWithRebind(
 		c.log,
 		js,
+		"ordering",
 		"ordering.order.ready",
+		orderReadyConsumer,
 		c.handleMessage,
 		nats.Durable(orderReadyConsumer),
 		nats.AckExplicit(),

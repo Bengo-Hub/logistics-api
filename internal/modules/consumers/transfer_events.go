@@ -61,10 +61,12 @@ func (c *TransferReadyConsumer) entitled(ctx context.Context, tenantID, feature 
 // Start begins consuming inventory.transfer.created via JetStream.
 func (c *TransferReadyConsumer) Start(ctx context.Context, js nats.JetStreamContext) error {
 	c.svcCtx = ctx
-	eventslib.SubscribeWithRebind(
+	eventslib.SubscribeQueueWithRebind(
 		c.log,
 		js,
+		"inventory",
 		"inventory.transfer.created",
+		transferCreatedConsumer,
 		c.handleMessage,
 		nats.Durable(transferCreatedConsumer),
 		nats.AckExplicit(),
