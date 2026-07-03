@@ -2,6 +2,7 @@ package router
 
 import (
 	"context"
+	"crypto/subtle"
 	"net/http"
 	"strings"
 	"time"
@@ -76,6 +77,19 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 			backupDestH.RegisterPlatformRoutes(admin)
 		}
 	})
+
+	// Service-to-service dispatch routes (create delivery task + assign rider). Authenticated
+	// ONLY by the shared INTERNAL_SERVICE_KEY (X-API-Key) and scoped by the {tenant} UUID in the
+	// path — deliberately OUTSIDE the /api/v1 group so it skips the user-JWT/RBAC/subscription
+	// middleware (the user-facing /tasks mutations are RBAC-gated on a user Subject, which an S2S
+	// key does not carry). Lets pos-api dispatch POS-native delivery orders directly.
+	if lh != nil && cfg != nil && cfg.Treasury.InternalServiceKey != "" {
+		r.Route("/api/v1/s2s/dispatch", func(s2s chi.Router) {
+			s2s.Use(requireServiceKey(cfg.Treasury.InternalServiceKey))
+			s2s.Post("/{tenant}/tasks", lh.S2SCreateTask)
+			s2s.Post("/{tenant}/tasks/{taskId}/assign", lh.S2SAssignTask)
+		})
+	}
 
 	r.Route("/api/v1", func(api chi.Router) {
 		// Apply auth + subscription enforcement with granular control:
@@ -348,4 +362,22 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 	})
 
 	return r
+}
+
+// requireServiceKey guards S2S routes by requiring the shared INTERNAL_SERVICE_KEY in the
+// X-API-Key header, compared in constant time to avoid leaking it via timing.
+func requireServiceKey(expected string) func(http.Handler) http.Handler {
+	expectedBytes := []byte(expected)
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			provided := r.Header.Get("X-API-Key")
+			if provided == "" || subtle.ConstantTimeCompare([]byte(provided), expectedBytes) != 1 {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusUnauthorized)
+				_, _ = w.Write([]byte(`{"error":"invalid or missing service key"}`))
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
 }
