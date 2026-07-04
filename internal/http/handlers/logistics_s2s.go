@@ -17,7 +17,7 @@ import (
 // from the URL path. They let another backend (e.g. pos-api) create a delivery task and assign a
 // rider directly, for orders logistics does not otherwise own (POS-native delivery orders).
 
-// S2SCreateTask handles POST /api/v1/s2s/{tenant}/dispatch/tasks
+// S2SCreateTask handles POST /api/v1/s2s/dispatch/{tenant}/tasks
 // {tenant} is the tenant UUID. Body is tasks.CreateTaskRequest.
 func (h *LogisticsHandler) S2SCreateTask(w http.ResponseWriter, r *http.Request) {
 	tenantID, err := uuid.Parse(chi.URLParam(r, "tenant"))
@@ -47,7 +47,7 @@ func (h *LogisticsHandler) S2SCreateTask(w http.ResponseWriter, r *http.Request)
 	respondJSON(w, http.StatusCreated, t)
 }
 
-// S2SAssignTask handles POST /api/v1/s2s/{tenant}/dispatch/tasks/{taskId}/assign
+// S2SAssignTask handles POST /api/v1/s2s/dispatch/{tenant}/tasks/{taskId}/assign
 // {tenant} is the tenant UUID. Body is tasks.AssignTaskRequest ({fleet_member_id}).
 func (h *LogisticsHandler) S2SAssignTask(w http.ResponseWriter, r *http.Request) {
 	tenantID, err := uuid.Parse(chi.URLParam(r, "tenant"))
