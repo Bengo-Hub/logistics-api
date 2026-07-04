@@ -166,15 +166,14 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 		api.Get("/openapi.json", handlers.OpenAPIJSON)
 
 		// Service-to-service dispatch (create + assign delivery tasks for external services like
-		// pos-api). Registered as a STATIC /s2s/dispatch sub-route so chi matches "s2s" before the
-		// "/{tenant}" param route below. Authenticated ONLY by the shared INTERNAL_SERVICE_KEY
-		// (requireServiceKey); the /api/v1 JWT/RBAC/subscription middleware is skipped for /s2s/ paths.
+		// pos-api). Registered as FLAT routes (explicit static /s2s/dispatch/... path, inline
+		// requireServiceKey) rather than a nested Route/Mount — a nested Mount's "/*" catch-all
+		// collides with the sibling "/{tenant}" Mount so the group middleware runs but the leaf never
+		// matches (→ 404). The /api/v1 JWT/RBAC/subscription middleware is skipped for /s2s/ paths.
 		if lh != nil && cfg != nil && cfg.Treasury.InternalServiceKey != "" {
-			api.Route("/s2s/dispatch", func(s2s chi.Router) {
-				s2s.Use(requireServiceKey(cfg.Treasury.InternalServiceKey))
-				s2s.Post("/{tenant}/tasks", lh.S2SCreateTask)
-				s2s.Post("/{tenant}/tasks/{taskId}/assign", lh.S2SAssignTask)
-			})
+			s2sKey := requireServiceKey(cfg.Treasury.InternalServiceKey)
+			api.With(s2sKey).Post("/s2s/dispatch/{tenant}/tasks", lh.S2SCreateTask)
+			api.With(s2sKey).Post("/s2s/dispatch/{tenant}/tasks/{taskId}/assign", lh.S2SAssignTask)
 		}
 
 		api.Route("/{tenant}", func(tenant chi.Router) {
