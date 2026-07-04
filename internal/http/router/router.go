@@ -78,18 +78,10 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 		}
 	})
 
-	// Service-to-service dispatch routes (create delivery task + assign rider). Authenticated
-	// ONLY by the shared INTERNAL_SERVICE_KEY (X-API-Key) and scoped by the {tenant} UUID in the
-	// path — deliberately OUTSIDE the /api/v1 group so it skips the user-JWT/RBAC/subscription
-	// middleware (the user-facing /tasks mutations are RBAC-gated on a user Subject, which an S2S
-	// key does not carry). Lets pos-api dispatch POS-native delivery orders directly.
-	if lh != nil && cfg != nil && cfg.Treasury.InternalServiceKey != "" {
-		r.Route("/api/v1/s2s/dispatch", func(s2s chi.Router) {
-			s2s.Use(requireServiceKey(cfg.Treasury.InternalServiceKey))
-			s2s.Post("/{tenant}/tasks", lh.S2SCreateTask)
-			s2s.Post("/{tenant}/tasks/{taskId}/assign", lh.S2SAssignTask)
-		})
-	}
+	// NOTE: S2S dispatch routes (/api/v1/s2s/dispatch/...) are registered INSIDE the /api/v1 group
+	// below, as a STATIC sub-route. A separate top-level r.Route("/api/v1/s2s/dispatch") is shadowed
+	// by the /api/v1 mount — chi routes /api/v1/s2s/... into the /api/v1/{tenant} subrouter (matching
+	// "s2s" as a tenant slug) and never reaches it, returning 404. Keeping them in-group fixes that.
 
 	r.Route("/api/v1", func(api chi.Router) {
 		// Apply auth + subscription enforcement with granular control:
@@ -100,6 +92,12 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 			api.Use(func(next http.Handler) http.Handler {
 				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					path := r.URL.Path
+					// S2S dispatch endpoints authenticate via INTERNAL_SERVICE_KEY (requireServiceKey),
+					// not a user JWT — skip the JWT/RBAC/subscription middleware for them.
+					if strings.HasPrefix(path, "/api/v1/s2s/") {
+						next.ServeHTTP(w, r)
+						return
+					}
 					// Public read-only endpoints — skip auth entirely for guest checkout
 					if r.Method == http.MethodGet && (strings.Contains(path, "/zones") ||
 						strings.Contains(path, "/routing/") ||
@@ -166,6 +164,18 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 
 		// Serve OpenAPI spec (public, no auth required)
 		api.Get("/openapi.json", handlers.OpenAPIJSON)
+
+		// Service-to-service dispatch (create + assign delivery tasks for external services like
+		// pos-api). Registered as a STATIC /s2s/dispatch sub-route so chi matches "s2s" before the
+		// "/{tenant}" param route below. Authenticated ONLY by the shared INTERNAL_SERVICE_KEY
+		// (requireServiceKey); the /api/v1 JWT/RBAC/subscription middleware is skipped for /s2s/ paths.
+		if lh != nil && cfg != nil && cfg.Treasury.InternalServiceKey != "" {
+			api.Route("/s2s/dispatch", func(s2s chi.Router) {
+				s2s.Use(requireServiceKey(cfg.Treasury.InternalServiceKey))
+				s2s.Post("/{tenant}/tasks", lh.S2SCreateTask)
+				s2s.Post("/{tenant}/tasks/{taskId}/assign", lh.S2SAssignTask)
+			})
+		}
 
 		api.Route("/{tenant}", func(tenant chi.Router) {
 			tenant.Use(httpware.TenantV2(httpware.TenantConfig{
