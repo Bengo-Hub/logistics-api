@@ -13,7 +13,7 @@ import (
 
 // @title Logistics Service API
 // @version 0.1.0
-// @description HTTP API for the BengoBox logistics service. Provides fleet management, task assignment, routing, and delivery tracking.
+// @description HTTP API for the Codevertex logistics service. Provides fleet management, task assignment, routing, and delivery tracking.
 // @BasePath /api/v1
 // @schemes http https
 // @securityDefinitions.apikey bearerAuth

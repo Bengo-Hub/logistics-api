@@ -1,6 +1,6 @@
 # Security Policy
 
-Logistics data is critical to BengoBox operations. Follow these guidelines to keep it secure.
+Logistics data is critical to Codevertex operations. Follow these guidelines to keep it secure.
 
 ## Supported Versions
 

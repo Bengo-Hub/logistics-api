@@ -1,10 +1,10 @@
 openapi: 3.0.0
 info:
   title: Logistics Service API
-  description: HTTP API for the BengoBox logistics service. Provides fleet management, task assignment, routing, and delivery tracking.
+  description: HTTP API for the Codevertex logistics service. Provides fleet management, task assignment, routing, and delivery tracking.
   version: 0.1.0
   contact:
-    name: BengoBox Support
+    name: Codevertex Support
 servers:
   - url: https://logistics.codevertex.local
     description: Local development server (HTTPS)

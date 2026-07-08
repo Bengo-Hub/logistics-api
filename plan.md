@@ -1,7 +1,7 @@
 ## Logistics Service Delivery Plan
 
 ### Vision & Mission
-- Orchestrate all mid-mile and last-mile logistics for BengoBox properties (food delivery, ecommerce, POS backoffice, inventory transfers) using a single, multi-tenant platform that shares the core `tenant_slug` and outlet registry with every Go microservice.
+- Orchestrate all mid-mile and last-mile logistics for Codevertex properties (food delivery, ecommerce, POS backoffice, inventory transfers) using a single, multi-tenant platform that shares the core `tenant_slug` and outlet registry with every Go microservice.
 - Provide real-time visibility over riders/drivers, fleets, tasks, and service-level agreements while integrating tightly with inventory, POS, delivery apps, and treasury.
 - Support a wide spectrum of flows: on-demand delivery, scheduled routes, batch consolidation, courier marketplace, third-party carrier integrations, and reverse logistics (returns, waste recovery).
 - Offer subscription-aware features (advanced routing, marketplace integrations) aligned with tenant licensing.
