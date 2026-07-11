@@ -102,7 +102,7 @@ type orderReadyEvent struct {
 		FulfillmentType string                 `json:"fulfillment_type"`
 		OutletLocation  map[string]interface{} `json:"outlet_location"`
 		DeliveryAddress map[string]interface{} `json:"delivery_address"`
-	} `json:"data"`
+	} `json:"payload"` // shared-events nests business fields under `payload`, not `data`
 }
 
 func (c *OrderReadyConsumer) handleMessage(msg *nats.Msg) {
