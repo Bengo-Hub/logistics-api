@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/subtle"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -118,6 +119,13 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 						// is NOT exempt and must hold an active subscription like any tenant user.
 						claims, ok := authclient.ClaimsFromContext(r.Context())
 						if !ok || claims.IsSubscriptionActive() {
+							next.ServeHTTP(w, r)
+							return
+						}
+						// Uniform 7-day grace: an EXPIRED tenant still within the grace
+						// window passes (surfacing X-Sub-Grace-Days-Left) instead of a 403.
+						if left, inGrace := claims.GraceDaysLeft(7); inGrace {
+							w.Header().Set("X-Sub-Grace-Days-Left", strconv.Itoa(left))
 							next.ServeHTTP(w, r)
 							return
 						}
