@@ -33,8 +33,10 @@ func RequireFeature(featureCode, upgradeURL string) func(http.Handler) http.Hand
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusForbidden)
 				_ = json.NewEncoder(w).Encode(map[string]any{
+					"code":             "feature_not_available", // canonical discriminator read by frontends
 					"error":            "feature_not_available",
 					"required_feature": featureCode,
+					"upgrade":          true,
 					"upgrade_url":      upgradeURL,
 				})
 				return
@@ -66,8 +68,10 @@ func RequireAnyFeature(upgradeURL string, featureCodes ...string) func(http.Hand
 				required = featureCodes[0]
 			}
 			_ = json.NewEncoder(w).Encode(map[string]any{
+				"code":             "feature_not_available", // canonical discriminator read by frontends
 				"error":            "feature_not_available",
 				"required_feature": required,
+				"upgrade":          true,
 				"upgrade_url":      upgradeURL,
 			})
 		})
