@@ -302,7 +302,7 @@ func seedTenantAdminRole(ctx context.Context, client *ent.Client, tenantID uuid.
 	// management works out of the box — only once the user has synced into logistics.
 	if slug == "codevertex-demo" {
 		adminUser, uerr := client.User.Query().
-			Where(user.TenantID(tenantID), user.EmailEQ("admin@demo.codevertexitsolutions.com")).
+			Where(user.TenantID(tenantID), user.EmailEQ("admin@demo.codevertexafrica.com")).
 			Only(ctx)
 		if uerr != nil {
 			log.Printf("    [SKIP] demo admin not yet synced into logistics users: %v", uerr)

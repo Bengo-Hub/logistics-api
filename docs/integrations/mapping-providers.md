@@ -11,7 +11,7 @@ Frontend (MapLibre GL JS via @bengo-hub/maps)
       |
       | vector tiles
       |
-TileServer-GL (tiles.codevertexitsolutions.com)
+TileServer-GL (tiles.codevertexafrica.com)
       |
       | OpenStreetMap Kenya mbtiles
       |
@@ -49,7 +49,7 @@ Valhalla routing engine (ClusterIP: valhalla:8002)
 
 ### TileServer-GL (Map Rendering - FREE)
 - **Status**: Deployed in-cluster (`tileserver.logistics.svc.cluster.local:8080`)
-- **Public URL**: `https://tiles.codevertexitsolutions.com`
+- **Public URL**: `https://tiles.codevertexafrica.com`
 - **Purpose**: Serve vector map tiles to MapLibre GL JS frontends
 - **Data**: Kenya OpenMapTiles (mbtiles format)
 

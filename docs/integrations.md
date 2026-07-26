@@ -155,8 +155,8 @@ Returns: status, status_history timeline, rider info, pickup/dropoff locations, 
 
 | Component | Internal URL | External URL |
 |-----------|-------------|--------------|
-| Valhalla | `http://valhalla.logistics.svc.cluster.local:8002` | `https://routing.codevertexitsolutions.com` |
-| TileServer | `http://tileserver.logistics.svc.cluster.local:8080` | `https://tiles.codevertexitsolutions.com` |
+| Valhalla | `http://valhalla.logistics.svc.cluster.local:8002` | `https://routing.codevertexafrica.com` |
+| TileServer | `http://tileserver.logistics.svc.cluster.local:8080` | `https://tiles.codevertexafrica.com` |
 
 ### Rate Limiting (per tenant subscription plan)
 
