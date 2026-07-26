@@ -2,7 +2,7 @@
 
 ## Service
 Go REST API for fleet/rider management, task dispatch, GPS telemetry, routing, and earnings.  
-**Production**: `https://logisticsapi.codevertexitsolutions.com`  
+**Production**: `https://logisticsapi.codevertexafrica.com`  
 **K8s namespace**: `logistics`  
 **Repo**: `github.com/Bengo-Hub/logistics-api`
 

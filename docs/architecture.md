@@ -1,7 +1,7 @@
 # logistics-api -- Architecture
 
 **Service**: logistics-api (Go)
-**Deployed**: logisticsapi.codevertexitsolutions.com
+**Deployed**: logisticsapi.codevertexafrica.com
 **Port**: 4005
 **Canonical tenant**: `urban-loft` | **Active outlet**: Busia
 

@@ -1,6 +1,6 @@
 # Logistics Service
 
-**Live in production** at `https://logisticsapi.codevertexitsolutions.com`
+**Live in production** at `https://logisticsapi.codevertexafrica.com`
 
 The Logistics Service coordinates dispatch, routing, telemetry, and carrier integrations for Codevertex deliveries, inventory transfers, and reverse logistics using the same multi-tenant `tenant_slug` and outlet registry shared across the platform.
 
@@ -37,7 +37,7 @@ The Logistics Service coordinates dispatch, routing, telemetry, and carrier inte
 ## Technology
 
 - **Go 1.22+**, Ent ORM, PostgreSQL 16 + PostGIS, Redis 7
-- **Routing**: self-hosted Valhalla v3.5.1 (`routing.codevertexitsolutions.com`)
+- **Routing**: self-hosted Valhalla v3.5.1 (`routing.codevertexafrica.com`)
 - **REST API**: chi v5 router, JWT auth via shared-auth-client (JWKS)
 - **Events**: NATS JetStream, outbox pattern for reliable delivery
 - **Observability**: zap logs, Prometheus metrics, OpenTelemetry traces (OTLP)

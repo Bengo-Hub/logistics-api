@@ -14,12 +14,12 @@ class TestConfig:
     
     # Production API URLs (with /api/v1 path prefix for logistics-api)
     # Note: /healthz is at root level, not under /api/v1
-    API_BASE_URL: str = "https://logisticsapi.codevertexitsolutions.com"
-    AUTH_API_URL: str = "https://sso.codevertexitsolutions.com"
+    API_BASE_URL: str = "https://logisticsapi.codevertexafrica.com"
+    AUTH_API_URL: str = "https://sso.codevertexafrica.com"
     
     # Frontend URL
-    FRONTEND_URL: str = "https://logistics.codevertexitsolutions.com"
-    RIDER_APP_URL: str = "https://riderapp.codevertexitsolutions.com"
+    FRONTEND_URL: str = "https://logistics.codevertexafrica.com"
+    RIDER_APP_URL: str = "https://riderapp.codevertexafrica.com"
     
     # Test tenant
     TENANT_SLUG: str = "urban-loft"
@@ -43,8 +43,8 @@ class TestConfig:
     DEFAULT_TIMEOUT: int = 30
     
     # Auth endpoints
-    AUTH_TOKEN_URL: str = "https://sso.codevertexitsolutions.com/api/v1/token"
-    AUTH_ME_URL: str = "https://sso.codevertexitsolutions.com/api/v1/auth/me"
+    AUTH_TOKEN_URL: str = "https://sso.codevertexafrica.com/api/v1/token"
+    AUTH_ME_URL: str = "https://sso.codevertexafrica.com/api/v1/auth/me"
     
     # API Paths (to be appended to base URLs)
     API_V1_PATH: str = "/api/v1"
