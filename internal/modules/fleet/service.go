@@ -124,6 +124,18 @@ func (s *Service) ListMembers(ctx context.Context, tenantID uuid.UUID, status, s
 	return members, total, nil
 }
 
+// CountActiveMembers returns the tenant's fleet head-count for subscription structural-limit
+// gating (max_riders): every member that occupies a seat — i.e. everything except rejected
+// invites, which never actually joined the fleet.
+func (s *Service) CountActiveMembers(ctx context.Context, tenantID uuid.UUID) (int, error) {
+	return s.client.FleetMember.Query().
+		Where(
+			fleetmember.TenantID(tenantID),
+			fleetmember.StatusNEQ("rejected"),
+		).
+		Count(ctx)
+}
+
 // GetMember returns a specific fleet member.
 func (s *Service) GetMember(ctx context.Context, tenantID, memberID uuid.UUID) (*ent.FleetMember, error) {
 	m, err := s.client.FleetMember.Query().

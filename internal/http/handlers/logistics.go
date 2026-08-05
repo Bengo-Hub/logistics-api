@@ -17,6 +17,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/proofofdelivery"
 	"github.com/bengobox/logistics-service/internal/modules/fleet"
 	"github.com/bengobox/logistics-service/internal/modules/tasks"
+	"github.com/bengobox/logistics-service/internal/platform/subscriptions"
 )
 
 // TaskDispatcher is the subset of dispatch.AutoDispatcher used by the handler.
@@ -421,6 +422,12 @@ func (h *LogisticsHandler) InviteMember(w http.ResponseWriter, r *http.Request) 
 		slug = claims.GetTenantSlug()
 	}
 
+	if count, cerr := h.fleetSvc.CountActiveMembers(r.Context(), tenantID); cerr == nil {
+		if !subscriptions.CheckStructuralLimit(w, r, "riders", subscriptions.LimitRiders, count) {
+			return
+		}
+	}
+
 	// Support both formats: {email, id_number} or {user_id, ...}
 	var raw map[string]interface{}
 	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
@@ -570,6 +577,12 @@ func (h *LogisticsHandler) BatchInviteMembers(w http.ResponseWriter, r *http.Req
 	if err := json.NewDecoder(r.Body).Decode(&requests); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
+	}
+
+	if count, cerr := h.fleetSvc.CountActiveMembers(r.Context(), tenantID); cerr == nil {
+		if !subscriptions.CheckStructuralLimit(w, r, "riders", subscriptions.LimitRiders, count+len(requests)-1) {
+			return
+		}
 	}
 
 	results := h.fleetSvc.BatchInviteByEmail(r.Context(), tenantID, tenantSlug, requests)
