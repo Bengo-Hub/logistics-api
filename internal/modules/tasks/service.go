@@ -221,6 +221,20 @@ func (s *Service) CreateTask(ctx context.Context, tenantID uuid.UUID, req Create
 		builder.SetMetadata(req.Metadata)
 	}
 
+	// The dedicated Task.cash_on_delivery ent column (used by completion validation/cash-collection
+	// logic below, e.g. the CashOnDelivery check in ConfirmDelivery) was never being set here — only
+	// the generic metadata blob carried it, so COD tasks always validated against a zero column.
+	// Every caller (including CreateTaskFromOrder) already threads the amount through Metadata, so
+	// read it back out here once, at the single Task-creation choke point, instead of requiring every
+	// caller to also call a setter.
+	if req.Metadata != nil {
+		if raw, ok := req.Metadata["cash_on_delivery"]; ok {
+			if codAmount := metadataNumber(raw); codAmount > 0 {
+				builder.SetCashOnDelivery(codAmount)
+			}
+		}
+	}
+
 	t, err := builder.Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("tasks: create: %w", err)
@@ -281,6 +295,20 @@ func (s *Service) CreateTask(ctx context.Context, tenantID uuid.UUID, req Create
 		zap.String("type", taskType),
 		zap.String("ref", req.ExternalReference),
 	)
+
+	if s.publisher != nil {
+		if pubErr := s.publisher.PublishTaskCreated(ctx, tenantID, events.TaskEventData{
+			TaskID:            t.ID.String(),
+			TrackingCode:      t.TrackingCode,
+			ExternalReference: req.ExternalReference,
+			Status:            t.Status,
+			SourceService:     req.SourceService,
+			CashOnDelivery:    t.CashOnDelivery,
+		}); pubErr != nil {
+			s.log.Warn("failed to publish task.created", zap.Error(pubErr), zap.String("task_id", t.ID.String()))
+		}
+	}
+
 	return t, nil
 }
 

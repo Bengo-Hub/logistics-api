@@ -176,6 +176,13 @@ func (d TaskEventData) toMap() map[string]interface{} {
 	return m
 }
 
+// PublishTaskCreated publishes a logistics.task.created event. Consumers (e.g. ordering-backend)
+// use this to track the task reactively instead of creating their own task record for the same
+// order — see the documented-but-previously-unimplemented logistics.task.created integration.
+func (p *Publisher) PublishTaskCreated(ctx context.Context, tenantID uuid.UUID, data TaskEventData) error {
+	return p.publish(ctx, tenantID, "logistics", "task.created", data.toMap())
+}
+
 // PublishTaskAssigned publishes a logistics.task.assigned event.
 func (p *Publisher) PublishTaskAssigned(ctx context.Context, tenantID uuid.UUID, data TaskEventData) error {
 	return p.publish(ctx, tenantID, "logistics", "task.assigned", data.toMap())
