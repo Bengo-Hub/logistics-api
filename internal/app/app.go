@@ -151,6 +151,11 @@ func New(ctx context.Context) (*App, error) {
 	consumerFeatureGate := func(ctx context.Context, tenantID, feature string) bool {
 		return subsClient.ConsumerHasFeature(ctx, tenantID, feature)
 	}
+	// consumerActiveProductGate additionally gates on per-product ACTIVATION (has the tenant
+	// currently turned the app on), distinct from plan entitlement above. Same fail-open contract.
+	consumerActiveProductGate := func(ctx context.Context, tenantID, productCode string) bool {
+		return subsClient.ConsumerHasActiveProduct(ctx, tenantID, productCode)
+	}
 
 	tenantSyncer := tenant.NewSyncer(entClient, cfg.Auth.ServiceURL)
 
@@ -222,6 +227,7 @@ func New(ctx context.Context) (*App, error) {
 
 	orderConsumer := consumers.NewOrderReadyConsumer(log, taskSvc, autoDispatcher)
 	orderConsumer.SetFeatureGate(consumerFeatureGate)
+	orderConsumer.SetActiveProductGate(consumerActiveProductGate)
 	transferConsumer := consumers.NewTransferReadyConsumer(log, taskSvc, autoDispatcher)
 	transferConsumer.SetFeatureGate(consumerFeatureGate)
 
