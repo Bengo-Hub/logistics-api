@@ -20,6 +20,13 @@ type Entitlements struct {
 	Status       string   `json:"status"`
 	BillingMode  string   `json:"billing_mode"`
 	IsDemoBypass bool     `json:"is_demo_bypass"`
+	// ActiveProducts is the product_code of every currently-active per-product subscription
+	// line — used by ConsumerHasActiveProduct to gate cross-service traffic against a product
+	// the tenant has self-deactivated (distinct from Features, which is plan ENTITLEMENT — a
+	// tenant can be entitled to a product and still have turned it off). Empty/nil for exempt
+	// tenants (subscriptions-api's exemptResult never populates it) — ConsumerHasActiveProduct
+	// bypasses via BillingMode, never by checking this list.
+	ActiveProducts []string `json:"active_products"`
 }
 
 type cachedEntitlements struct {
@@ -80,6 +87,46 @@ func (c *Client) ConsumerHasFeature(ctx context.Context, tenantID, featureCode s
 	}
 	for _, f := range e.Features {
 		if f == featureCode {
+			return true
+		}
+	}
+	return false
+}
+
+// ConsumerHasActiveProduct reports whether tenantID has currently ACTIVATED productCode — used
+// to gate cross-service traffic (S2S calls into this service, NATS events this service reacts
+// to) against a product the tenant has self-deactivated via subscriptions-api's per-product
+// activation flow. Distinct from ConsumerHasFeature: that checks plan ENTITLEMENT (can the
+// tenant use this at all); this checks ACTIVATION (has the tenant currently turned it on).
+//
+//   - Exempt (BillingMode == "exempt") and service-charge/PAYG tenants always pass — checked via
+//     BillingMode, NEVER by looking for the product in ActiveProducts (exemptResult never
+//     populates that list).
+//   - FAILS OPEN (returns true) when the client is nil, tenantID/productCode is empty,
+//     subscriptions-api is unreachable, or ActiveProducts is completely EMPTY (a tenant
+//     subscription that pre-dates per-product self-activation and was never backfilled — see
+//     subscriptions-api's product_id/backfill fix). A subscriptions-api outage — or an
+//     unmigrated tenant — must never silently strand a legitimate delivery.
+//
+// Callers should treat a false result as "skip this tenant" (ack/no-op), never as an error to
+// retry — mirroring the existing entitled()/hasFeature skip-not-fail pattern already used by
+// OrderReadyConsumer.
+func (c *Client) ConsumerHasActiveProduct(ctx context.Context, tenantID, productCode string) bool {
+	if c == nil || tenantID == "" || productCode == "" {
+		return true // not wired / no product to check → fail open
+	}
+	e := c.cachedEntitlements(ctx, tenantID)
+	if e == nil {
+		return true // lookup failed → fail open
+	}
+	if e.BillingMode == "exempt" || e.BillingMode == "service_charge" {
+		return true
+	}
+	if len(e.ActiveProducts) == 0 {
+		return true // pre-migration tenant, never backfilled
+	}
+	for _, p := range e.ActiveProducts {
+		if p == productCode {
 			return true
 		}
 	}

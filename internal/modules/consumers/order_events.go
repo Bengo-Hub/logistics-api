@@ -33,6 +33,10 @@ type OrderReadyConsumer struct {
 	// hasFeature gates ordering→logistics delivery sync by subscription entitlement.
 	// Nil → fail open.
 	hasFeature func(ctx context.Context, tenantID, feature string) bool
+	// hasActiveProduct gates ordering→logistics delivery sync by per-product activation
+	// (distinct from hasFeature's plan-entitlement check — this checks whether the tenant has
+	// currently turned "logistics" on). Nil → fail open.
+	hasActiveProduct func(ctx context.Context, tenantID, productCode string) bool
 }
 
 // NewOrderReadyConsumer creates the consumer.
@@ -50,6 +54,12 @@ func (c *OrderReadyConsumer) SetFeatureGate(fn func(ctx context.Context, tenantI
 	c.hasFeature = fn
 }
 
+// SetActiveProductGate wires the per-product activation check used to gate delivery-task sync
+// against a tenant that has self-deactivated the logistics app.
+func (c *OrderReadyConsumer) SetActiveProductGate(fn func(ctx context.Context, tenantID, productCode string) bool) {
+	c.hasActiveProduct = fn
+}
+
 // entitled reports whether the tenant may have a delivery task synced. Fails open when no
 // gate is wired or tenantID is empty (never strand a legitimate delivery on a parse miss).
 func (c *OrderReadyConsumer) entitled(ctx context.Context, tenantID, feature string) bool {
@@ -57,6 +67,15 @@ func (c *OrderReadyConsumer) entitled(ctx context.Context, tenantID, feature str
 		return true
 	}
 	return c.hasFeature(ctx, tenantID, feature)
+}
+
+// productActive reports whether the tenant currently has the logistics product activated.
+// Fails open when no gate is wired or tenantID is empty.
+func (c *OrderReadyConsumer) productActive(ctx context.Context, tenantID, productCode string) bool {
+	if c.hasActiveProduct == nil || tenantID == "" {
+		return true
+	}
+	return c.hasActiveProduct(ctx, tenantID, productCode)
 }
 
 // Start begins consuming ordering.order.ready via JetStream.
@@ -138,6 +157,16 @@ func (c *OrderReadyConsumer) handleMessage(msg *nats.Msg) {
 	// is auto-injected into ordering plans, so any tenant whose orders reach here is normally entitled.
 	if !c.entitled(ctx, rawTenantID, "basic_logistics_access") {
 		c.log.Debug("order ready: tenant lacks basic_logistics_access — skipping delivery task sync",
+			zap.String("tenant_id", rawTenantID), zap.String("order_id", orderID))
+		_ = msg.Ack()
+		return
+	}
+
+	// Gate on per-product activation: a tenant may be plan-entitled to logistics but have
+	// self-deactivated the app via subscriptions-api. Skip (ack, don't retry) rather than fail —
+	// this is not an error, it's the tenant opting out.
+	if !c.productActive(ctx, rawTenantID, "logistics") {
+		c.log.Info("order ready: logistics deactivated for tenant, skipping delivery task sync",
 			zap.String("tenant_id", rawTenantID), zap.String("order_id", orderID))
 		_ = msg.Ack()
 		return
