@@ -25,9 +25,9 @@ class TestConfig:
     TENANT_SLUG: str = "urban-loft"
     
     # Test credentials (from auth-api seed script)
-    # Demo user - safe to share, has member role in all tenants
-    TEST_EMAIL: str = os.getenv("TEST_EMAIL", "demo@bengobox.dev")
-    TEST_PASSWORD: str = os.getenv("TEST_PASSWORD", "DemoUser2024!")
+    # Demo tenant admin - safe to share, scoped to the codevertex-demo tenant only
+    TEST_EMAIL: str = os.getenv("TEST_EMAIL", "admin@demo.codevertexafrica.com")
+    TEST_PASSWORD: str = os.getenv("TEST_PASSWORD", "DemoAdmin2024!")
     
     # Rider credentials (specific for logistics tests)
     RIDER_EMAIL: str = os.getenv("RIDER_EMAIL", "rider@urbanloft.com")
