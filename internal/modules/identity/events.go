@@ -16,6 +16,8 @@ import (
 
 	"github.com/bengobox/logistics-service/internal/ent"
 	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
+	"github.com/bengobox/logistics-service/internal/ent/riderrating"
+	"github.com/bengobox/logistics-service/internal/ent/taskassignment"
 	"github.com/bengobox/logistics-service/internal/ent/user"
 	"github.com/bengobox/logistics-service/internal/ent/userroleassignment"
 )
@@ -176,9 +178,99 @@ func (h *EventHandler) SubscribeToAuthEvents(nc *nats.Conn) error {
 		return fmt.Errorf("identity: consume log-auth-user-deactivated: %w", err)
 	}
 
+	// --- auth.user.deleted ---
+	deletedCons, err := js.CreateOrUpdateConsumer(ctx, authStream, jetstream.ConsumerConfig{
+		Durable:       "log-auth-user-deleted",
+		FilterSubject: "auth.user.deleted",
+		AckPolicy:     jetstream.AckExplicitPolicy,
+		AckWait:       30 * time.Second,
+		MaxDeliver:    5,
+		DeliverPolicy: jetstream.DeliverAllPolicy,
+	})
+	if err != nil {
+		return fmt.Errorf("identity: create consumer log-auth-user-deleted: %w", err)
+	}
+
+	_, err = deletedCons.Consume(func(msg jetstream.Msg) {
+		evt, parseErr := sharedevents.FromJSON(msg.Data())
+		if parseErr != nil {
+			h.logger.Error("failed to parse auth.user.deleted envelope", zap.Error(parseErr))
+			_ = msg.Nak()
+			return
+		}
+		if handleErr := h.handleUserDeleted(context.Background(), evt); handleErr != nil {
+			h.logger.Error("failed to handle auth.user.deleted event", zap.Error(handleErr))
+			_ = msg.Nak()
+			return
+		}
+		_ = msg.Ack()
+	})
+	if err != nil {
+		return fmt.Errorf("identity: consume log-auth-user-deleted: %w", err)
+	}
+
 	h.logger.Info("auth JetStream durable consumers active",
 		zap.String("stream", authStream),
-		zap.Strings("consumers", []string{"log-auth-user-created", "log-auth-user-updated", "log-auth-user-deactivated"}))
+		zap.Strings("consumers", []string{"log-auth-user-created", "log-auth-user-updated", "log-auth-user-deactivated", "log-auth-user-deleted"}))
+	return nil
+}
+
+// handleUserDeleted hard-deletes this user's local logistics-api rows after auth-api
+// permanently deletes the account (AdminPurgeUser). Both fleet_members and
+// user_role_assignments carry a real OnDelete:NoAction FK to users, and
+// task_assignments/rider_ratings carry the same kind of FK to fleet_members, so
+// everything is deleted child-first in one transaction: task_assignments +
+// rider_ratings (scoped to this user's fleet member rows) -> fleet_members ->
+// user_role_assignments -> users.
+func (h *EventHandler) handleUserDeleted(ctx context.Context, evt *sharedevents.Event) error {
+	userIDStr, _ := evt.Payload["user_id"].(string)
+	authUserID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return fmt.Errorf("invalid user_id in deleted event: %w", err)
+	}
+
+	tx, err := h.service.client.Tx(ctx)
+	if err != nil {
+		return fmt.Errorf("start tx: %w", err)
+	}
+
+	members, err := tx.FleetMember.Query().Where(fleetmember.UserID(authUserID)).All(ctx)
+	if err != nil {
+		_ = tx.Rollback()
+		return fmt.Errorf("query fleet members: %w", err)
+	}
+	memberIDs := make([]uuid.UUID, 0, len(members))
+	for _, m := range members {
+		memberIDs = append(memberIDs, m.ID)
+	}
+	if len(memberIDs) > 0 {
+		if _, err := tx.TaskAssignment.Delete().Where(taskassignment.FleetMemberIDIn(memberIDs...)).Exec(ctx); err != nil {
+			_ = tx.Rollback()
+			return fmt.Errorf("delete task assignments: %w", err)
+		}
+		if _, err := tx.RiderRating.Delete().Where(riderrating.FleetMemberIDIn(memberIDs...)).Exec(ctx); err != nil {
+			_ = tx.Rollback()
+			return fmt.Errorf("delete rider ratings: %w", err)
+		}
+	}
+	if _, err := tx.FleetMember.Delete().Where(fleetmember.UserID(authUserID)).Exec(ctx); err != nil {
+		_ = tx.Rollback()
+		return fmt.Errorf("delete fleet members: %w", err)
+	}
+	if _, err := tx.UserRoleAssignment.Delete().Where(userroleassignment.UserID(authUserID)).Exec(ctx); err != nil {
+		_ = tx.Rollback()
+		return fmt.Errorf("delete user role assignments: %w", err)
+	}
+	if _, err := tx.User.Delete().Where(user.AuthServiceUserID(authUserID)).Exec(ctx); err != nil {
+		_ = tx.Rollback()
+		return fmt.Errorf("delete user: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit: %w", err)
+	}
+
+	log.Printf("[identity-event] hard-deleted user (auth=%s)", authUserID)
 	return nil
 }
 
