@@ -141,6 +141,12 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 			// gate on), and logistics-ui has no service-level /auth/me — it uses SSO's own
 			// /api/v1/auth/me directly for bootstrap.
 			api.Use(authclient.RequireServiceAccess("logistics"))
+			// Mutations-only annual support-fee gate for a perpetual/one-time-license tenant
+			// (e.g. boi-enterprises on POWERSUITE_DUKA_GOLD_ONE_TIME, which already includes
+			// logistics from Tier 1) whose support fee has gone unpaid past its 7-day grace
+			// window — independent axis from the subscription gate above. No-ops for every
+			// tenant without a support-fee obligation at all.
+			api.Use(authclient.RequireSupportFeeCurrentForMutations(7))
 		}
 
 		if idSvc != nil {
