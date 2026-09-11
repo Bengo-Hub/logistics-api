@@ -135,6 +135,12 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 					})).ServeHTTP(w, r)
 				})
 			})
+			// Module gate: block the WHOLE logistics module (reads and writes alike) for a
+			// tenant whose plan never included it. Safe at this top level: the S2S (/api/v1/s2s/)
+			// and public zones/routing/track reads above skip RequireAuth entirely (no claims to
+			// gate on), and logistics-ui has no service-level /auth/me — it uses SSO's own
+			// /api/v1/auth/me directly for bootstrap.
+			api.Use(authclient.RequireServiceAccess("logistics"))
 		}
 
 		if idSvc != nil {
