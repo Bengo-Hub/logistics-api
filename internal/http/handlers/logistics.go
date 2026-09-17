@@ -98,7 +98,7 @@ func (h *LogisticsHandler) ListTasks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondJSON(w, http.StatusOK, pagination.NewResponse(list, total, p))
+	respondJSON(w, http.StatusOK, pagination.NewResponse(toTaskResponses(list), total, p))
 }
 
 // ListMyTasks handles GET /api/v1/{tenant}/riders/me/tasks
@@ -155,7 +155,7 @@ func (h *LogisticsHandler) ListMyTasks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondJSON(w, http.StatusOK, pagination.NewResponse(list, total, p))
+	respondJSON(w, http.StatusOK, pagination.NewResponse(toTaskResponses(list), total, p))
 }
 
 // GetTask handles GET /api/v1/{tenant}/tasks/{taskId}
@@ -178,7 +178,7 @@ func (h *LogisticsHandler) GetTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondJSON(w, http.StatusOK, t)
+	respondJSON(w, http.StatusOK, toTaskResponse(t))
 }
 
 // UpdateTaskStatus handles PATCH /api/v1/{tenant}/tasks/{taskId}/status
@@ -209,7 +209,7 @@ func (h *LogisticsHandler) UpdateTaskStatus(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	respondJSON(w, http.StatusOK, t)
+	respondJSON(w, http.StatusOK, toTaskResponse(t))
 }
 
 // AssignTask handles POST /api/v1/{tenant}/tasks/{taskId}/assign

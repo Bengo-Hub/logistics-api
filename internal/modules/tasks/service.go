@@ -333,7 +333,8 @@ func (s *Service) GetTask(ctx context.Context, tenantID, taskID uuid.UUID) (*ent
 func (s *Service) ListTasks(ctx context.Context, tenantID uuid.UUID, f ListTasksFilter) ([]*ent.Task, int, error) {
 	q := s.client.Task.Query().
 		Where(task.TenantID(tenantID)).
-		WithAssignments()
+		WithAssignments().
+		WithSteps()
 
 	if f.Status != "" {
 		q = q.Where(task.Status(f.Status))
@@ -387,9 +388,16 @@ func (s *Service) UpdateStatus(ctx context.Context, tenantID, taskID uuid.UUID, 
 		return nil, fmt.Errorf("tasks: invalid transition %q → %q", t.Status, newStatus)
 	}
 
-	updated, err := s.client.Task.UpdateOne(t).SetStatus(newStatus).Save(ctx)
-	if err != nil {
+	if _, err := s.client.Task.UpdateOne(t).SetStatus(newStatus).Save(ctx); err != nil {
 		return nil, fmt.Errorf("tasks: update status: %w", err)
+	}
+	updated, err := s.client.Task.Query().
+		Where(task.ID(taskID)).
+		WithSteps().
+		WithAssignments().
+		Only(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("tasks: re-fetch after status update: %w", err)
 	}
 
 	s.log.Info("task status updated",
