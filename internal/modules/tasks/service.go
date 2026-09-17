@@ -23,14 +23,29 @@ import (
 )
 
 // Valid task statuses (state machine).
+//
+// "en_route"/"delivered" are the original coarse states -- still valid (SubmitPoD sets
+// "delivered" directly regardless of which branch got the task there, and some older
+// callers may still use "en_route"). "en_route_pickup" through "arrived_dropoff" are the
+// granular per-leg states the rider-app's UI has always been built against (distinct
+// "driving to the outlet" vs "driving to the customer" phases, matching Bolt/Uber-style
+// tracking) but which this table never actually accepted -- confirmed live: a real rider
+// PATCHing to "en_route_pickup" from "accepted" got a 400 and could never advance past
+// acceptance. Both vocabularies are accepted so neither existing nor new callers break.
 var validTransitions = map[string][]string{
-	"pending":          {"assigned", "cancelled"},
-	"assigned":         {"accepted", "cancelled"},
-	"accepted":         {"en_route", "cancelled"},
-	"en_route":         {"delivered", "failed"},
-	"delivered":        {},
-	"failed":           {},
-	"cancelled":        {},
+	"pending":           {"assigned", "cancelled"},
+	"assigned":          {"accepted", "cancelled"},
+	"accepted":          {"en_route", "en_route_pickup", "cancelled"},
+	"en_route":          {"delivered", "failed"},
+	"en_route_pickup":   {"arrived_pickup", "cancelled", "failed"},
+	"arrived_pickup":    {"picked_up", "cancelled", "failed"},
+	"picked_up":         {"en_route_dropoff", "cancelled", "failed"},
+	"en_route_dropoff":  {"arrived_dropoff", "cancelled", "failed"},
+	"arrived_dropoff":   {"delivered", "cancelled", "failed"},
+	"delivered":         {},
+	"completed":         {},
+	"failed":            {},
+	"cancelled":         {},
 }
 
 // CreateTaskRequest is the DTO for creating a task.
@@ -418,9 +433,10 @@ func (s *Service) UpdateStatus(ctx context.Context, tenantID, taskID uuid.UUID, 
 		})
 	}
 
-	// Trigger ETA recalculation when rider accepts or goes en-route — these are
-	// the transitions where location/route data becomes meaningful for the first time.
-	if s.etaTrigger != nil && (newStatus == "accepted" || newStatus == "en_route") {
+	// Trigger ETA recalculation when rider accepts or goes en-route (either leg) --
+	// these are the transitions where location/route data becomes meaningful.
+	if s.etaTrigger != nil && (newStatus == "accepted" || newStatus == "en_route" ||
+		newStatus == "en_route_pickup" || newStatus == "en_route_dropoff") {
 		go s.etaTrigger.ComputeAndPublishETA(ctx, tenantID, taskID)
 	}
 
@@ -588,12 +604,18 @@ func (s *Service) SubmitPoD(ctx context.Context, tenantID, taskID uuid.UUID, req
 		return nil, fmt.Errorf("tasks: create pod: %w", err)
 	}
 
-	// Transition task to delivered
+	// Transition task to delivered. Guarded to only move the task forward (never
+	// resurrect an already-terminal task) rather than allow-listing specific
+	// pre-delivery statuses -- that allow-list previously named only "en_route" and
+	// "accepted", so a real rider on the granular per-leg flow (e.g. "arrived_dropoff")
+	// got a ProofOfDelivery record and a logistics.task.completed event published, but
+	// the task row itself silently never flipped to "delivered" and stayed stuck on
+	// the rider's active-deliveries list forever.
 	taskUpdate := s.client.Task.UpdateOneID(taskID).SetStatus("delivered")
 	if t.CashOnDelivery > 0 && req.AmountCollected >= t.CashOnDelivery {
 		taskUpdate.SetCashCollected(true)
 	}
-	if t.Status == "en_route" || t.Status == "accepted" {
+	if t.Status != "delivered" && t.Status != "completed" && t.Status != "cancelled" && t.Status != "failed" {
 		_, _ = taskUpdate.Save(ctx)
 	}
 
