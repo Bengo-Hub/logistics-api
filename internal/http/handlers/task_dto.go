@@ -24,6 +24,9 @@ type TaskResponse struct {
 	ExternalType        string         `json:"external_type"`
 	Status              string         `json:"status"`
 	Priority            string         `json:"priority"`
+	SLADueAt            *time.Time     `json:"sla_due_at"`
+	RequestedPickupAt   *time.Time     `json:"requested_pickup_at"`
+	RequestedDropoffAt  *time.Time     `json:"requested_dropoff_at"`
 	AssignedRiderID     *string        `json:"assigned_rider_id"`
 	PickupAddress       string         `json:"pickup_address"`
 	PickupLatitude      *float64       `json:"pickup_latitude"`
@@ -67,17 +70,20 @@ func toTaskResponse(t *ent.Task) *TaskResponse {
 	}
 
 	resp := &TaskResponse{
-		ID:                t.ID.String(),
-		TenantID:          t.TenantID.String(),
-		TrackingCode:      t.TrackingCode,
-		ExternalReference: t.ExternalReference,
-		ExternalType:      t.TaskType,
-		Status:            t.Status,
-		Priority:          priorityLabel(t.Priority),
-		CashOnDelivery:    t.CashOnDelivery,
-		Metadata:          t.Metadata,
-		CreatedAt:         t.CreatedAt,
-		UpdatedAt:         t.UpdatedAt,
+		ID:                 t.ID.String(),
+		TenantID:           t.TenantID.String(),
+		TrackingCode:       t.TrackingCode,
+		ExternalReference:  t.ExternalReference,
+		ExternalType:       t.TaskType,
+		Status:             t.Status,
+		Priority:           priorityLabel(t.Priority),
+		SLADueAt:           t.SLADueAt,
+		RequestedPickupAt:  t.RequestedPickupAt,
+		RequestedDropoffAt: t.RequestedDropoffAt,
+		CashOnDelivery:     t.CashOnDelivery,
+		Metadata:           t.Metadata,
+		CreatedAt:          t.CreatedAt,
+		UpdatedAt:          t.UpdatedAt,
 	}
 
 	for _, step := range t.Edges.Steps {
