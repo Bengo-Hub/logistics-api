@@ -33,19 +33,19 @@ import (
 // PATCHing to "en_route_pickup" from "accepted" got a 400 and could never advance past
 // acceptance. Both vocabularies are accepted so neither existing nor new callers break.
 var validTransitions = map[string][]string{
-	"pending":           {"assigned", "cancelled"},
-	"assigned":          {"accepted", "cancelled"},
-	"accepted":          {"en_route", "en_route_pickup", "cancelled"},
-	"en_route":          {"delivered", "failed"},
-	"en_route_pickup":   {"arrived_pickup", "cancelled", "failed"},
-	"arrived_pickup":    {"picked_up", "cancelled", "failed"},
-	"picked_up":         {"en_route_dropoff", "cancelled", "failed"},
-	"en_route_dropoff":  {"arrived_dropoff", "cancelled", "failed"},
-	"arrived_dropoff":   {"delivered", "cancelled", "failed"},
-	"delivered":         {},
-	"completed":         {},
-	"failed":            {},
-	"cancelled":         {},
+	"pending":          {"assigned", "cancelled"},
+	"assigned":         {"accepted", "cancelled"},
+	"accepted":         {"en_route", "en_route_pickup", "cancelled"},
+	"en_route":         {"delivered", "failed"},
+	"en_route_pickup":  {"arrived_pickup", "cancelled", "failed"},
+	"arrived_pickup":   {"picked_up", "cancelled", "failed"},
+	"picked_up":        {"en_route_dropoff", "cancelled", "failed"},
+	"en_route_dropoff": {"arrived_dropoff", "cancelled", "failed"},
+	"arrived_dropoff":  {"delivered", "cancelled", "failed"},
+	"delivered":        {},
+	"completed":        {},
+	"failed":           {},
+	"cancelled":        {},
 }
 
 // CreateTaskRequest is the DTO for creating a task.
@@ -108,9 +108,17 @@ type SubmitPoDRequest struct {
 
 // ListTasksFilter holds optional filters for listing tasks.
 type ListTasksFilter struct {
-	Status   string
+	Status string
+	// Statuses, when non-empty, OR-matches any of these statuses (task.StatusIn) instead of
+	// Status's exact match -- used for a coarse UI tab like "En Route" that maps to more than
+	// one of the granular FSM states (en_route_pickup, en_route_dropoff).
+	Statuses []string
 	MemberID uuid.UUID
 	OutletID *uuid.UUID
+	// Search matches tracking_code or external_reference (case-insensitive substring).
+	Search   string
+	DateFrom *time.Time
+	DateTo   *time.Time
 	Limit    int
 	Offset   int
 }
@@ -159,11 +167,11 @@ type StatusBroadcaster interface {
 
 // Service handles task business logic.
 type Service struct {
-	client      *ent.Client
-	log         *zap.Logger
-	publisher   *events.Publisher
-	earningsSvc EarningsRecorder
-	etaTrigger  ETATrigger
+	client         *ent.Client
+	log            *zap.Logger
+	publisher      *events.Publisher
+	earningsSvc    EarningsRecorder
+	etaTrigger     ETATrigger
 	sseBroadcaster StatusBroadcaster
 }
 
@@ -351,7 +359,9 @@ func (s *Service) ListTasks(ctx context.Context, tenantID uuid.UUID, f ListTasks
 		WithAssignments().
 		WithSteps()
 
-	if f.Status != "" {
+	if len(f.Statuses) > 0 {
+		q = q.Where(task.StatusIn(f.Statuses...))
+	} else if f.Status != "" {
 		q = q.Where(task.Status(f.Status))
 	}
 
@@ -361,6 +371,20 @@ func (s *Service) ListTasks(ctx context.Context, tenantID uuid.UUID, f ListTasks
 
 	if f.MemberID != uuid.Nil {
 		q = q.Where(task.HasAssignmentsWith(taskassignment.FleetMemberID(f.MemberID)))
+	}
+
+	if f.Search != "" {
+		q = q.Where(task.Or(
+			task.TrackingCodeContainsFold(f.Search),
+			task.ExternalReferenceContainsFold(f.Search),
+		))
+	}
+
+	if f.DateFrom != nil {
+		q = q.Where(task.CreatedAtGTE(*f.DateFrom))
+	}
+	if f.DateTo != nil {
+		q = q.Where(task.CreatedAtLTE(*f.DateTo))
 	}
 
 	total, _ := q.Clone().Count(ctx)

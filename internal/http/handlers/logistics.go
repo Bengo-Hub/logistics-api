@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
+	"time"
 
+	httpware "github.com/Bengo-Hub/httpware"
 	"github.com/Bengo-Hub/pagination"
 	authclient "github.com/Bengo-Hub/shared-auth-client"
-	httpware "github.com/Bengo-Hub/httpware"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -78,10 +80,33 @@ func (h *LogisticsHandler) ListTasks(w http.ResponseWriter, r *http.Request) {
 	}
 
 	p := pagination.Parse(r)
+	q := r.URL.Query()
 	filter := tasks.ListTasksFilter{
-		Status: r.URL.Query().Get("status"),
 		Limit:  p.Limit,
 		Offset: p.Offset,
+		Search: strings.TrimSpace(q.Get("search")),
+	}
+
+	// status accepts either a single value (exact match) or a comma-separated list (OR-matched)
+	// -- the frontend's coarse "En Route" tab sends "en_route_pickup,en_route_dropoff" since no
+	// single granular FSM status means "en route" on its own.
+	if statusParam := q.Get("status"); statusParam != "" {
+		if strings.Contains(statusParam, ",") {
+			filter.Statuses = strings.Split(statusParam, ",")
+		} else {
+			filter.Status = statusParam
+		}
+	}
+
+	if v := q.Get("date_from"); v != "" {
+		if t, err := time.Parse(time.RFC3339, v); err == nil {
+			filter.DateFrom = &t
+		}
+	}
+	if v := q.Get("date_to"); v != "" {
+		if t, err := time.Parse(time.RFC3339, v); err == nil {
+			filter.DateTo = &t
+		}
 	}
 
 	// Apply outlet context filter if X-Outlet-ID was sent
@@ -708,4 +733,3 @@ func (h *LogisticsHandler) GetPoD(w http.ResponseWriter, r *http.Request) {
 
 // --- helpers ---
 // tenantIDFromClaims is now defined in tenant.go with platform-owner override support.
-
