@@ -13,10 +13,16 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent"
 	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
 	"github.com/bengobox/logistics-service/internal/ent/task"
+	"github.com/bengobox/logistics-service/internal/ent/taskassignment"
 	"github.com/bengobox/logistics-service/internal/ent/telemetrypoint"
 	"github.com/bengobox/logistics-service/internal/ent/telemetrystream"
 	telemetrysvc "github.com/bengobox/logistics-service/internal/modules/telemetry"
 )
+
+// terminalTaskStatuses mirrors the deny-list used by the task service's own completion
+// guard (internal/modules/tasks/service.go) — kept in sync manually since there's no
+// shared status-classification helper yet.
+var terminalTaskStatuses = []string{"delivered", "completed", "cancelled", "failed"}
 
 // TelemetryHandler handles GPS telemetry ingestion and stream query endpoints.
 type TelemetryHandler struct {
@@ -37,7 +43,7 @@ func NewTelemetryHandler(log *zap.Logger, svc *telemetrysvc.Service, client *ent
 // RegisterRoutes registers telemetry routes on the given tenant-scoped router.
 func (h *TelemetryHandler) RegisterRoutes(r chi.Router) {
 	r.Route("/telemetry", func(t chi.Router) {
-		t.Get("/", h.GetSummary)   // GET /telemetry?period=today — summary for tracking/dashboard
+		t.Get("/", h.GetSummary) // GET /telemetry?period=today — summary for tracking/dashboard
 		t.Post("/location", h.IngestLocation)
 		t.Post("/stream/end", h.EndStream)
 		t.Get("/streams", h.ListStreams)
@@ -45,13 +51,20 @@ func (h *TelemetryHandler) RegisterRoutes(r chi.Router) {
 	})
 }
 
+// RegisterFleetTrackingRoute registers GET /tracking/fleet on the given router. Kept
+// separate from RegisterRoutes so it can be mounted inside the existing /tracking group
+// (router.go), which already carries the live_tracking subscription + rate-limit gates.
+func (h *TelemetryHandler) RegisterFleetTrackingRoute(r chi.Router) {
+	r.Get("/fleet", h.GetFleetTracking)
+}
+
 // TelemetrySummary is returned by GET /telemetry.
 type TelemetrySummary struct {
-	Period                   string  `json:"period"`
-	ActiveRiders             int     `json:"active_riders"`
-	CompletedTasks           int     `json:"completed_tasks"`
-	AvgDeliveryTimeMinutes   float64 `json:"avg_delivery_time_minutes"`
-	ActiveStreams             int     `json:"active_streams"`
+	Period                 string  `json:"period"`
+	ActiveRiders           int     `json:"active_riders"`
+	CompletedTasks         int     `json:"completed_tasks"`
+	AvgDeliveryTimeMinutes float64 `json:"avg_delivery_time_minutes"`
+	ActiveStreams          int     `json:"active_streams"`
 }
 
 // GetSummary handles GET /api/v1/{tenant}/telemetry?period=today
@@ -139,7 +152,7 @@ func (h *TelemetryHandler) GetSummary(w http.ResponseWriter, r *http.Request) {
 		ActiveRiders:           activeRiders,
 		CompletedTasks:         completedTasks,
 		AvgDeliveryTimeMinutes: avgMins,
-		ActiveStreams:           activeStreams,
+		ActiveStreams:          activeStreams,
 	})
 }
 
@@ -263,6 +276,124 @@ func (h *TelemetryHandler) ListPoints(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	respondJSON(w, http.StatusOK, points)
+}
+
+// FleetRiderPosition is one rider's current known position, shaped to match
+// @bengo-hub/maps' LiveFleetMap component (its FleetMap wrapper calls this endpoint for
+// the map's initial snapshot; the component's own WebSocket layer for live push updates
+// has no backend counterpart yet — see the fleet-map.tsx doc comment on the frontend).
+type FleetRiderPosition struct {
+	RiderID      string    `json:"rider_id"`
+	Name         string    `json:"name"`
+	Status       string    `json:"status"`
+	Latitude     float64   `json:"latitude"`
+	Longitude    float64   `json:"longitude"`
+	Heading      *float64  `json:"heading,omitempty"`
+	Speed        *float64  `json:"speed,omitempty"`
+	UpdatedAt    time.Time `json:"updated_at"`
+	ActiveTaskID *string   `json:"active_task_id,omitempty"`
+}
+
+// GetFleetTracking handles GET /api/v1/{tenant}/tracking/fleet
+// Returns each active fleet member's most recently reported location (from their current
+// telemetry stream), for the dispatcher's live fleet map. A rider with no active stream or
+// no location point yet is simply omitted rather than reported at (0,0).
+func (h *TelemetryHandler) GetFleetTracking(w http.ResponseWriter, r *http.Request) {
+	tenantID := tenantIDFromClaims(r)
+	if tenantID == uuid.Nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	ctx := r.Context()
+
+	members, err := h.client.FleetMember.Query().
+		Where(
+			fleetmember.TenantID(tenantID),
+			fleetmember.StatusEQ("active"),
+		).
+		WithUser().
+		All(ctx)
+	if err != nil {
+		h.log.Error("fleet tracking: list members", zap.Error(err))
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	riders := make([]FleetRiderPosition, 0, len(members))
+	for _, m := range members {
+		stream, err := h.client.TelemetryStream.Query().
+			Where(
+				telemetrystream.TenantID(tenantID),
+				telemetrystream.FleetMemberID(m.ID),
+				telemetrystream.Status("active"),
+			).
+			Only(ctx)
+		if err != nil {
+			continue // no active stream — rider has reported no recent location
+		}
+
+		point, err := h.client.TelemetryPoint.Query().
+			Where(telemetrypoint.StreamID(stream.ID)).
+			Order(ent.Desc(telemetrypoint.FieldCapturedAt)).
+			First(ctx)
+		if err != nil {
+			continue
+		}
+
+		lat, lng, ok := latLngFromMetadata(point.Metadata)
+		if !ok {
+			continue
+		}
+
+		name := "Rider"
+		if u := m.Edges.User; u != nil && u.FullName != "" {
+			name = u.FullName
+		}
+
+		pos := FleetRiderPosition{
+			RiderID:   m.ID.String(),
+			Name:      name,
+			Status:    m.Status,
+			Latitude:  lat,
+			Longitude: lng,
+			UpdatedAt: point.CapturedAt,
+		}
+		if point.SpeedKph != 0 {
+			speed := point.SpeedKph
+			pos.Speed = &speed
+		}
+		if point.BearingDeg != 0 {
+			heading := point.BearingDeg
+			pos.Heading = &heading
+		}
+		if activeTask, err := h.client.Task.Query().
+			Where(
+				task.TenantID(tenantID),
+				task.StatusNotIn(terminalTaskStatuses...),
+				task.HasAssignmentsWith(taskassignment.FleetMemberID(m.ID)),
+			).
+			Order(ent.Desc(task.FieldUpdatedAt)).
+			First(ctx); err == nil {
+			id := activeTask.ID.String()
+			pos.ActiveTaskID = &id
+		}
+
+		riders = append(riders, pos)
+	}
+
+	respondJSON(w, http.StatusOK, map[string]any{"riders": riders})
+}
+
+// latLngFromMetadata extracts the lat/lng pair IngestLocation stores in a TelemetryPoint's
+// JSON metadata (there are no dedicated lat/lng columns on that entity — see
+// internal/modules/telemetry/service.go's IngestLocation).
+func latLngFromMetadata(metadata map[string]any) (lat, lng float64, ok bool) {
+	latVal, latOK := metadata["lat"].(float64)
+	lngVal, lngOK := metadata["lng"].(float64)
+	if !latOK || !lngOK || (latVal == 0 && lngVal == 0) {
+		return 0, 0, false
+	}
+	return latVal, lngVal, true
 }
 
 // resolveFleetMember looks up the FleetMember UUID from the JWT subject (auth user ID).
