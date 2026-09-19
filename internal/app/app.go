@@ -245,6 +245,13 @@ func New(ctx context.Context) (*App, error) {
 	telemetrySvc := telemetrymod.NewService(log, entClient, autoDispatcher)
 	telemetryHandler := handlers.NewTelemetryHandler(log, telemetrySvc, entClient)
 
+	// Fleet tracking hub: real-time WebSocket push of rider location updates to
+	// dispatchers on logistics-ui's live tracking map, Redis-relayed across replicas.
+	fleetTrackingHub := handlers.NewFleetTrackingHub(log, redisClient)
+	go fleetTrackingHub.Start(ctx)
+	telemetryHandler.SetFleetHub(fleetTrackingHub)
+	fleetTrackingWSHandler := handlers.NewFleetTrackingWSHandler(log, fleetTrackingHub, cfg.HTTP.AllowedOrigins)
+
 	// SSE hub: in-process real-time task event bus for logistics-ui / public tracker
 	sseHub := handlers.NewSSEHub(log)
 	sseHandler := handlers.NewSSEHandler(sseHub, log)
@@ -311,7 +318,7 @@ func New(ctx context.Context) (*App, error) {
 		RetentionDays: cfg.Backup.RetentionDays,
 	}, log).Start(ctx)
 
-	chiRouter := router.New(log, healthHandler, authMiddleware, identitySvc, logisticsHandler, routingHandler, trackingHandler, zonesHandler, rbacHandler, redisClient, cfg, cfg.HTTP.AllowedOrigins, serviceConfigHandler, earningsHandler, sseHandler, rbacSvc, telemetryHandler, shipmentHandler, shiftHandler, analyticsHandler, backupsHandler, backupDestHandler)
+	chiRouter := router.New(log, healthHandler, authMiddleware, identitySvc, logisticsHandler, routingHandler, trackingHandler, zonesHandler, rbacHandler, redisClient, cfg, cfg.HTTP.AllowedOrigins, serviceConfigHandler, earningsHandler, sseHandler, rbacSvc, telemetryHandler, shipmentHandler, shiftHandler, analyticsHandler, backupsHandler, backupDestHandler, validator, fleetTrackingWSHandler)
 
 	httpServer := &http.Server{
 		Addr:              fmt.Sprintf("%s:%d", cfg.HTTP.Host, cfg.HTTP.Port),

@@ -26,9 +26,10 @@ var terminalTaskStatuses = []string{"delivered", "completed", "cancelled", "fail
 
 // TelemetryHandler handles GPS telemetry ingestion and stream query endpoints.
 type TelemetryHandler struct {
-	log    *zap.Logger
-	svc    *telemetrysvc.Service
-	client *ent.Client
+	log      *zap.Logger
+	svc      *telemetrysvc.Service
+	client   *ent.Client
+	fleetHub *FleetTrackingHub
 }
 
 // NewTelemetryHandler creates a new TelemetryHandler.
@@ -39,6 +40,10 @@ func NewTelemetryHandler(log *zap.Logger, svc *telemetrysvc.Service, client *ent
 		client: client,
 	}
 }
+
+// SetFleetHub wires the fleet-tracking WebSocket hub so IngestLocation can broadcast each
+// GPS update in real time, in addition to the persistence/GEO-index work it already does.
+func (h *TelemetryHandler) SetFleetHub(hub *FleetTrackingHub) { h.fleetHub = hub }
 
 // RegisterRoutes registers telemetry routes on the given tenant-scoped router.
 func (h *TelemetryHandler) RegisterRoutes(r chi.Router) {
@@ -182,6 +187,11 @@ func (h *TelemetryHandler) IngestLocation(w http.ResponseWriter, r *http.Request
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
+
+	if h.fleetHub != nil {
+		h.fleetHub.Broadcast(tenantID, memberID, pt.Latitude, pt.Longitude, pt.BearingDeg, pt.SpeedKph)
+	}
+
 	w.WriteHeader(http.StatusNoContent)
 }
 
