@@ -26,7 +26,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/modules/rbac"
 )
 
-func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authclient.AuthMiddleware, idSvc *identity.Service, lh *handlers.LogisticsHandler, rh *handlers.RoutingHandler, th *handlers.TrackingHandler, zh *handlers.ZonesHandler, rbacH *handlers.RBACHandler, rdb *redis.Client, cfg *config.Config, allowedOrigins []string, serviceConfigH *handlers.ServiceConfigHandler, earningsH *handlers.EarningsHandler, sseH *handlers.SSEHandler, rbacSvc *rbac.Service, telH *handlers.TelemetryHandler, shipmentH *handlers.ShipmentHandler, shiftH *handlers.ShiftHandler, analyticsH *handlers.AnalyticsHandler, backupsH *handlers.BackupsHandler, backupDestH *handlers.BackupDestinationHandler) http.Handler {
+func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authclient.AuthMiddleware, idSvc *identity.Service, lh *handlers.LogisticsHandler, rh *handlers.RoutingHandler, th *handlers.TrackingHandler, zh *handlers.ZonesHandler, rbacH *handlers.RBACHandler, rdb *redis.Client, cfg *config.Config, allowedOrigins []string, serviceConfigH *handlers.ServiceConfigHandler, earningsH *handlers.EarningsHandler, sseH *handlers.SSEHandler, rbacSvc *rbac.Service, telH *handlers.TelemetryHandler, shipmentH *handlers.ShipmentHandler, shiftH *handlers.ShiftHandler, analyticsH *handlers.AnalyticsHandler, backupsH *handlers.BackupsHandler, backupDestH *handlers.BackupDestinationHandler, validator *authclient.Validator, fleetWSH *handlers.FleetTrackingWSHandler) http.Handler {
 	rl := appmw.NewRateLimiter(rdb)
 	r := chi.NewRouter()
 
@@ -97,6 +97,24 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 					// not a user JWT — skip the JWT/RBAC/subscription middleware for them.
 					if strings.HasPrefix(path, "/api/v1/s2s/") {
 						next.ServeHTTP(w, r)
+						return
+					}
+					// Fleet-tracking WebSocket handshake: a browser's native WebSocket API cannot
+					// set an Authorization header, so this route authenticates via a "?token="
+					// query param fallback instead (still fully verified, see AuthenticateWS's
+					// own doc comment) rather than through the standard RequireAuth below. Sets
+					// claims in context on success so TenantV2/RequireFeature/RequireRateLimit
+					// downstream behave exactly as they do for a normal authenticated request.
+					if r.Method == http.MethodGet && strings.Contains(path, "/tracking/fleet/ws") {
+						if validator == nil {
+							http.Error(w, `{"error":"auth not configured"}`, http.StatusInternalServerError)
+							return
+						}
+						authedR, ok := appmw.AuthenticateWS(validator, w, r)
+						if !ok {
+							return
+						}
+						next.ServeHTTP(w, authedR)
 						return
 					}
 					// Public read-only endpoints — skip auth entirely for guest checkout
@@ -280,6 +298,9 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 					trackR.Use(appmw.RequireRateLimit(rl, "live_tracking_requests_per_day", cfg.Subscriptions.ServiceURL+"/upgrade"))
 					if telH != nil {
 						telH.RegisterFleetTrackingRoute(trackR)
+					}
+					if fleetWSH != nil {
+						trackR.Get("/fleet/ws", fleetWSH.ServeFleetWS)
 					}
 					trackR.Get("/{taskId}", th.TrackByCode)
 				})
