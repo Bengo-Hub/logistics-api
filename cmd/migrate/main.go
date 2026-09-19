@@ -46,9 +46,29 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to open database: %v", err)
 	}
-	db.SetMaxIdleConns(cfg.Postgres.MaxIdleConns)
-	db.SetMaxOpenConns(cfg.Postgres.MaxOpenConns)
-	db.SetConnMaxLifetime(cfg.Postgres.ConnMaxLifetime)
+
+	// Every replica runs this binary on startup — without coordination, N pods launching at
+	// once each run their own Schema.Create concurrently against the same tables. This exact
+	// unguarded-concurrent-migrate race already caused a production P0 on pos-api
+	// (2026-07-26, corrupted a nullable-then-backfill migration on a live table); the same
+	// fix has since been applied to pos-api/inventory-api/treasury-api/hospital-api/
+	// ordering-backend. A single physical connection (MaxOpenConns=1) + a session-level
+	// advisory lock ensures only ONE pod across the whole cluster ever executes the
+	// migration at a time; the rest block here until it finishes, then find nothing pending
+	// and return immediately.
+	db.SetMaxOpenConns(1)
+	db.SetMaxIdleConns(1)
+	db.SetConnMaxLifetime(5 * time.Minute)
+
+	const migrationLockKey = 727271006 // unique per service — see sibling cmd/migrate/main.go files for the others in use
+	if _, err := db.ExecContext(ctx, "SELECT pg_advisory_lock($1)", migrationLockKey); err != nil {
+		log.Fatalf("failed to acquire migration lock: %v", err)
+	}
+	defer func() {
+		if _, err := db.ExecContext(context.Background(), "SELECT pg_advisory_unlock($1)", migrationLockKey); err != nil {
+			log.Printf("failed to release migration lock: %v", err)
+		}
+	}()
 
 	drv := entsql.OpenDB(dialect.Postgres, db)
 	client := ent.NewClient(ent.Driver(drv))
