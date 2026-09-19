@@ -673,6 +673,65 @@ func (h *LogisticsHandler) AssignVehicle(w http.ResponseWriter, r *http.Request)
 	respondJSON(w, http.StatusOK, map[string]string{"status": "assigned"})
 }
 
+// UpdateVehicle handles PATCH /api/v1/{tenant}/fleet/vehicles/{vehicleId}
+func (h *LogisticsHandler) UpdateVehicle(w http.ResponseWriter, r *http.Request) {
+	tenantID := tenantIDFromClaims(r)
+	if tenantID == uuid.Nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	vehicleID, err := uuid.Parse(chi.URLParam(r, "vehicleId"))
+	if err != nil {
+		http.Error(w, "invalid vehicle id", http.StatusBadRequest)
+		return
+	}
+
+	var req fleet.UpdateVehicleRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	v, err := h.fleetSvc.UpdateVehicle(r.Context(), tenantID, vehicleID, req)
+	if err != nil {
+		status := http.StatusBadRequest
+		if strings.Contains(err.Error(), "not found") {
+			status = http.StatusNotFound
+		}
+		http.Error(w, err.Error(), status)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, v)
+}
+
+// DeleteVehicle handles DELETE /api/v1/{tenant}/fleet/vehicles/{vehicleId}
+func (h *LogisticsHandler) DeleteVehicle(w http.ResponseWriter, r *http.Request) {
+	tenantID := tenantIDFromClaims(r)
+	if tenantID == uuid.Nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	vehicleID, err := uuid.Parse(chi.URLParam(r, "vehicleId"))
+	if err != nil {
+		http.Error(w, "invalid vehicle id", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.fleetSvc.DeleteVehicle(r.Context(), tenantID, vehicleID); err != nil {
+		status := http.StatusConflict
+		if strings.Contains(err.Error(), "not found") {
+			status = http.StatusNotFound
+		}
+		http.Error(w, err.Error(), status)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // DispatchTask handles POST /api/v1/{tenant}/tasks/{taskId}/dispatch
 // Manually triggers the auto-dispatch algorithm for an unassigned task.
 func (h *LogisticsHandler) DispatchTask(w http.ResponseWriter, r *http.Request) {

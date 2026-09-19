@@ -387,6 +387,8 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 						mut.Delete("/members/{memberId}", lh.DeleteMember)
 						mut.Post("/members/batch", lh.BatchInviteMembers)
 						mut.Post("/vehicles", lh.CreateVehicle)
+						mut.Patch("/vehicles/{vehicleId}", lh.UpdateVehicle)
+						mut.Delete("/vehicles/{vehicleId}", lh.DeleteVehicle)
 					})
 				})
 			}

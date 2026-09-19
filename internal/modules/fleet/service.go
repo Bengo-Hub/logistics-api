@@ -14,15 +14,16 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/logisticsrole"
 	entuser "github.com/bengobox/logistics-service/internal/ent/user"
 	"github.com/bengobox/logistics-service/internal/ent/userroleassignment"
+	entvehicle "github.com/bengobox/logistics-service/internal/ent/vehicle"
 	"github.com/bengobox/logistics-service/internal/platform/events"
 )
 
 // InviteMemberRequest is the DTO for adding a rider to a fleet.
 type InviteMemberRequest struct {
-	UserID   uuid.UUID `json:"user_id"`
-	FleetID  uuid.UUID `json:"fleet_id,omitempty"`
-	IDNumber string    `json:"id_number,omitempty"`
-	LicenseNo string   `json:"license_no,omitempty"`
+	UserID    uuid.UUID `json:"user_id"`
+	FleetID   uuid.UUID `json:"fleet_id,omitempty"`
+	IDNumber  string    `json:"id_number,omitempty"`
+	LicenseNo string    `json:"license_no,omitempty"`
 }
 
 // Service handles fleet and fleet member business logic.
@@ -244,8 +245,8 @@ func (s *Service) InviteMember(ctx context.Context, tenantID uuid.UUID, tenantSl
 		email, name := s.resolveUserInfo(ctx, req.UserID)
 		if email != "" {
 			if pubErr := s.publisher.PublishFleetMemberInvited(ctx, tenantID, events.FleetMemberEventData{
-				MemberID:   m.ID.String(), UserID: req.UserID.String(),
-				FleetID:    fleetID.String(), UserEmail: email, UserName: name,
+				MemberID: m.ID.String(), UserID: req.UserID.String(),
+				FleetID: fleetID.String(), UserEmail: email, UserName: name,
 				TenantSlug: tenantSlug,
 			}); pubErr != nil {
 				s.log.Warn("failed to publish fleet.member_invited", zap.Error(pubErr))
@@ -281,8 +282,8 @@ func (s *Service) ApproveMember(ctx context.Context, tenantID, memberID uuid.UUI
 		email, name := s.resolveUserInfo(ctx, m.UserID)
 		if email != "" {
 			if pubErr := s.publisher.PublishFleetMemberApproved(ctx, tenantID, events.FleetMemberEventData{
-				MemberID:   memberID.String(), UserID: m.UserID.String(),
-				FleetID:    m.FleetID.String(), UserEmail: email, UserName: name,
+				MemberID: memberID.String(), UserID: m.UserID.String(),
+				FleetID: m.FleetID.String(), UserEmail: email, UserName: name,
 				TenantSlug: s.resolveTenantSlug(ctx, m.FleetID),
 			}); pubErr != nil {
 				s.log.Warn("failed to publish fleet.member_approved", zap.Error(pubErr))
@@ -363,8 +364,8 @@ func (s *Service) SuspendMember(ctx context.Context, tenantID, memberID uuid.UUI
 		email, name := s.resolveUserInfo(ctx, m.UserID)
 		if email != "" {
 			if pubErr := s.publisher.PublishFleetMemberSuspended(ctx, tenantID, events.FleetMemberEventData{
-				MemberID:   memberID.String(), UserID: m.UserID.String(),
-				FleetID:    m.FleetID.String(), UserEmail: email, UserName: name,
+				MemberID: memberID.String(), UserID: m.UserID.String(),
+				FleetID: m.FleetID.String(), UserEmail: email, UserName: name,
 				TenantSlug: s.resolveTenantSlug(ctx, m.FleetID),
 			}); pubErr != nil {
 				s.log.Warn("failed to publish fleet.member_suspended", zap.Error(pubErr))
@@ -402,8 +403,8 @@ func (s *Service) RejectMember(ctx context.Context, tenantID, memberID uuid.UUID
 		email, name := s.resolveUserInfo(ctx, m.UserID)
 		if email != "" {
 			if pubErr := s.publisher.PublishFleetMemberRejected(ctx, tenantID, events.FleetMemberEventData{
-				MemberID:   memberID.String(), UserID: m.UserID.String(),
-				FleetID:    m.FleetID.String(), UserEmail: email, UserName: name,
+				MemberID: memberID.String(), UserID: m.UserID.String(),
+				FleetID: m.FleetID.String(), UserEmail: email, UserName: name,
 				TenantSlug: s.resolveTenantSlug(ctx, m.FleetID),
 			}); pubErr != nil {
 				s.log.Warn("failed to publish fleet.member_rejected", zap.Error(pubErr))
@@ -523,9 +524,9 @@ func (s *Service) RateRider(ctx context.Context, tenantID, memberID uuid.UUID, r
 
 // BatchInviteResult holds the result for a single invite in a batch operation.
 type BatchInviteResult struct {
-	Email  string          `json:"email"`
+	Email  string           `json:"email"`
 	Member *ent.FleetMember `json:"member,omitempty"`
-	Error  string          `json:"error,omitempty"`
+	Error  string           `json:"error,omitempty"`
 }
 
 // BatchInviteByEmail invites multiple riders in a single operation.
@@ -594,6 +595,80 @@ func (s *Service) AssignVehicle(ctx context.Context, tenantID, memberID, vehicle
 		Save(ctx)
 	if err != nil {
 		return fmt.Errorf("fleet: assign vehicle: %w", err)
+	}
+	return nil
+}
+
+// UpdateVehicleRequest carries only the fields a caller may change; nil means "leave as is".
+type UpdateVehicleRequest struct {
+	VehicleType  *string `json:"vehicle_type,omitempty"`
+	Make         *string `json:"make,omitempty"`
+	Model        *string `json:"model,omitempty"`
+	LicensePlate *string `json:"license_plate,omitempty"`
+	Status       *string `json:"status,omitempty"`
+}
+
+// UpdateVehicle applies a partial update to a tenant-owned vehicle.
+func (s *Service) UpdateVehicle(ctx context.Context, tenantID, vehicleID uuid.UUID, req UpdateVehicleRequest) (*ent.Vehicle, error) {
+	existing, err := s.client.Vehicle.Query().
+		Where(entvehicle.ID(vehicleID), entvehicle.TenantID(tenantID)).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, fmt.Errorf("fleet: vehicle not found")
+		}
+		return nil, fmt.Errorf("fleet: get vehicle: %w", err)
+	}
+
+	upd := s.client.Vehicle.UpdateOne(existing)
+	if req.VehicleType != nil {
+		upd = upd.SetVehicleType(*req.VehicleType)
+	}
+	if req.Make != nil {
+		upd = upd.SetMake(*req.Make)
+	}
+	if req.Model != nil {
+		upd = upd.SetModel(*req.Model)
+	}
+	if req.LicensePlate != nil {
+		upd = upd.SetLicensePlate(*req.LicensePlate)
+	}
+	if req.Status != nil {
+		upd = upd.SetStatus(*req.Status)
+	}
+
+	v, err := upd.Save(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("fleet: update vehicle: %w", err)
+	}
+	return v, nil
+}
+
+// DeleteVehicle removes a tenant-owned vehicle, rejecting the delete (rather than letting a
+// foreign-key error bubble up as an opaque 500) while it's still assigned to a fleet member.
+func (s *Service) DeleteVehicle(ctx context.Context, tenantID, vehicleID uuid.UUID) error {
+	existing, err := s.client.Vehicle.Query().
+		Where(entvehicle.ID(vehicleID), entvehicle.TenantID(tenantID)).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return fmt.Errorf("fleet: vehicle not found")
+		}
+		return fmt.Errorf("fleet: get vehicle: %w", err)
+	}
+
+	inUse, err := s.client.FleetMember.Query().
+		Where(fleetmember.TenantID(tenantID), fleetmember.VehicleID(vehicleID)).
+		Exist(ctx)
+	if err != nil {
+		return fmt.Errorf("fleet: check vehicle assignment: %w", err)
+	}
+	if inUse {
+		return fmt.Errorf("fleet: vehicle is still assigned to a rider — unassign it first")
+	}
+
+	if err := s.client.Vehicle.DeleteOne(existing).Exec(ctx); err != nil {
+		return fmt.Errorf("fleet: delete vehicle: %w", err)
 	}
 	return nil
 }
