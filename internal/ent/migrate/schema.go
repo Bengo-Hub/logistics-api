@@ -346,6 +346,36 @@ var (
 			},
 		},
 	}
+	// LogisticsNotificationsColumns holds the columns for the "logistics_notifications" table.
+	LogisticsNotificationsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID},
+		{Name: "notification_type", Type: field.TypeString},
+		{Name: "title", Type: field.TypeString},
+		{Name: "body", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "payload", Type: field.TypeJSON},
+		{Name: "related_task_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "is_read", Type: field.TypeBool, Default: false},
+		{Name: "created_at", Type: field.TypeTime},
+	}
+	// LogisticsNotificationsTable holds the schema information for the "logistics_notifications" table.
+	LogisticsNotificationsTable = &schema.Table{
+		Name:       "logistics_notifications",
+		Columns:    LogisticsNotificationsColumns,
+		PrimaryKey: []*schema.Column{LogisticsNotificationsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "logisticsnotification_tenant_id_is_read_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{LogisticsNotificationsColumns[1], LogisticsNotificationsColumns[7], LogisticsNotificationsColumns[8]},
+			},
+			{
+				Name:    "logisticsnotification_tenant_id_notification_type_related_task_id",
+				Unique:  false,
+				Columns: []*schema.Column{LogisticsNotificationsColumns[1], LogisticsNotificationsColumns[2], LogisticsNotificationsColumns[6]},
+			},
+		},
+	}
 	// LogisticsPermissionsColumns holds the columns for the "logistics_permissions" table.
 	LogisticsPermissionsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -1214,6 +1244,7 @@ var (
 		FleetMembersTable,
 		GeoFencesTable,
 		IntegrationSettingsTable,
+		LogisticsNotificationsTable,
 		LogisticsPermissionsTable,
 		LogisticsRolesTable,
 		OutboxEventsTable,

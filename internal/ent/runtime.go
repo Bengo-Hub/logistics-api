@@ -16,6 +16,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
 	"github.com/bengobox/logistics-service/internal/ent/geofence"
 	"github.com/bengobox/logistics-service/internal/ent/integrationsetting"
+	"github.com/bengobox/logistics-service/internal/ent/logisticsnotification"
 	"github.com/bengobox/logistics-service/internal/ent/logisticspermission"
 	"github.com/bengobox/logistics-service/internal/ent/logisticsrole"
 	"github.com/bengobox/logistics-service/internal/ent/outboxevent"
@@ -372,6 +373,32 @@ func init() {
 	integrationsettingDescID := integrationsettingFields[0].Descriptor()
 	// integrationsetting.DefaultID holds the default value on creation for the id field.
 	integrationsetting.DefaultID = integrationsettingDescID.Default.(func() uuid.UUID)
+	logisticsnotificationFields := schema.LogisticsNotification{}.Fields()
+	_ = logisticsnotificationFields
+	// logisticsnotificationDescNotificationType is the schema descriptor for notification_type field.
+	logisticsnotificationDescNotificationType := logisticsnotificationFields[2].Descriptor()
+	// logisticsnotification.NotificationTypeValidator is a validator for the "notification_type" field. It is called by the builders before save.
+	logisticsnotification.NotificationTypeValidator = logisticsnotificationDescNotificationType.Validators[0].(func(string) error)
+	// logisticsnotificationDescTitle is the schema descriptor for title field.
+	logisticsnotificationDescTitle := logisticsnotificationFields[3].Descriptor()
+	// logisticsnotification.TitleValidator is a validator for the "title" field. It is called by the builders before save.
+	logisticsnotification.TitleValidator = logisticsnotificationDescTitle.Validators[0].(func(string) error)
+	// logisticsnotificationDescPayload is the schema descriptor for payload field.
+	logisticsnotificationDescPayload := logisticsnotificationFields[5].Descriptor()
+	// logisticsnotification.DefaultPayload holds the default value on creation for the payload field.
+	logisticsnotification.DefaultPayload = logisticsnotificationDescPayload.Default.(map[string]interface{})
+	// logisticsnotificationDescIsRead is the schema descriptor for is_read field.
+	logisticsnotificationDescIsRead := logisticsnotificationFields[7].Descriptor()
+	// logisticsnotification.DefaultIsRead holds the default value on creation for the is_read field.
+	logisticsnotification.DefaultIsRead = logisticsnotificationDescIsRead.Default.(bool)
+	// logisticsnotificationDescCreatedAt is the schema descriptor for created_at field.
+	logisticsnotificationDescCreatedAt := logisticsnotificationFields[8].Descriptor()
+	// logisticsnotification.DefaultCreatedAt holds the default value on creation for the created_at field.
+	logisticsnotification.DefaultCreatedAt = logisticsnotificationDescCreatedAt.Default.(func() time.Time)
+	// logisticsnotificationDescID is the schema descriptor for id field.
+	logisticsnotificationDescID := logisticsnotificationFields[0].Descriptor()
+	// logisticsnotification.DefaultID holds the default value on creation for the id field.
+	logisticsnotification.DefaultID = logisticsnotificationDescID.Default.(func() uuid.UUID)
 	logisticspermissionFields := schema.LogisticsPermission{}.Fields()
 	_ = logisticspermissionFields
 	// logisticspermissionDescPermissionCode is the schema descriptor for permission_code field.

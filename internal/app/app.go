@@ -32,6 +32,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/modules/earnings"
 	fleetmod "github.com/bengobox/logistics-service/internal/modules/fleet"
 	"github.com/bengobox/logistics-service/internal/modules/identity"
+	notifmod "github.com/bengobox/logistics-service/internal/modules/notifications"
 	rbacmod "github.com/bengobox/logistics-service/internal/modules/rbac"
 	"github.com/bengobox/logistics-service/internal/modules/routing"
 	"github.com/bengobox/logistics-service/internal/modules/tasks"
@@ -252,6 +253,16 @@ func New(ctx context.Context) (*App, error) {
 	telemetryHandler.SetFleetHub(fleetTrackingHub)
 	fleetTrackingWSHandler := handlers.NewFleetTrackingWSHandler(log, fleetTrackingHub, cfg.HTTP.AllowedOrigins)
 
+	// Notifications: dispatcher-facing operational alert feed + WebSocket push, backing
+	// logistics-ui's notification bell. Wired into the auto-dispatcher and SLA monitor so a
+	// task that can't auto-dispatch, or breaches its SLA, actually surfaces to a dispatcher
+	// instead of only a log line.
+	notifHub := notifmod.NewHub(log, redisClient)
+	go notifHub.Start(ctx)
+	notifSvc := notifmod.NewService(log, entClient, notifHub)
+	autoDispatcher.SetNotifications(notifSvc)
+	notificationsHandler := handlers.NewNotificationsHandler(log, notifSvc, notifHub, cfg.HTTP.AllowedOrigins)
+
 	// SSE hub: in-process real-time task event bus for logistics-ui / public tracker
 	sseHub := handlers.NewSSEHub(log)
 	sseHandler := handlers.NewSSEHandler(sseHub, log)
@@ -263,6 +274,7 @@ func New(ctx context.Context) (*App, error) {
 
 	// SLA monitor: scans for overdue tasks and publishes breach events every 5 min
 	slaMonitor := tasks.NewSLAMonitor(log, entClient, eventPublisher, 5*time.Minute)
+	slaMonitor.SetNotifications(notifSvc)
 	go slaMonitor.Start(ctx)
 
 	// Batch scheduler: groups nearby pending tasks for the same rider every 2 min
@@ -318,7 +330,7 @@ func New(ctx context.Context) (*App, error) {
 		RetentionDays: cfg.Backup.RetentionDays,
 	}, log).Start(ctx)
 
-	chiRouter := router.New(log, healthHandler, authMiddleware, identitySvc, logisticsHandler, routingHandler, trackingHandler, zonesHandler, rbacHandler, redisClient, cfg, cfg.HTTP.AllowedOrigins, serviceConfigHandler, earningsHandler, sseHandler, rbacSvc, telemetryHandler, shipmentHandler, shiftHandler, analyticsHandler, backupsHandler, backupDestHandler, validator, fleetTrackingWSHandler)
+	chiRouter := router.New(log, healthHandler, authMiddleware, identitySvc, logisticsHandler, routingHandler, trackingHandler, zonesHandler, rbacHandler, redisClient, cfg, cfg.HTTP.AllowedOrigins, serviceConfigHandler, earningsHandler, sseHandler, rbacSvc, telemetryHandler, shipmentHandler, shiftHandler, analyticsHandler, backupsHandler, backupDestHandler, validator, fleetTrackingWSHandler, notificationsHandler)
 
 	httpServer := &http.Server{
 		Addr:              fmt.Sprintf("%s:%d", cfg.HTTP.Host, cfg.HTTP.Port),
