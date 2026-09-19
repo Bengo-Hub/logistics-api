@@ -2,6 +2,7 @@ package tasks
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/bengobox/logistics-service/internal/ent"
 	"github.com/bengobox/logistics-service/internal/ent/task"
+	notifmod "github.com/bengobox/logistics-service/internal/modules/notifications"
 	"github.com/bengobox/logistics-service/internal/platform/events"
 )
 
@@ -20,6 +22,7 @@ type SLAMonitor struct {
 	client    *ent.Client
 	publisher *events.Publisher
 	interval  time.Duration
+	notifSvc  *notifmod.Service
 }
 
 // NewSLAMonitor creates a new SLAMonitor.
@@ -34,6 +37,10 @@ func NewSLAMonitor(log *zap.Logger, client *ent.Client, publisher *events.Publis
 		interval:  interval,
 	}
 }
+
+// SetNotifications wires the dispatcher-alert service so each newly-detected breach also
+// raises a notification (deduplicated so a still-breached task doesn't re-alert every tick).
+func (m *SLAMonitor) SetNotifications(svc *notifmod.Service) { m.notifSvc = svc }
 
 // Start runs the SLA breach check on a fixed interval until ctx is cancelled.
 func (m *SLAMonitor) Start(ctx context.Context) {
@@ -86,6 +93,34 @@ func (m *SLAMonitor) checkBreaches(ctx context.Context) {
 			zap.String("status", t.Status),
 			zap.Duration("breach_age", breachAge),
 		)
+
+		if m.notifSvc != nil {
+			taskID := t.ID
+			label := t.TrackingCode
+			if label == "" {
+				label = t.ExternalReference
+			}
+			if label == "" {
+				label = taskID.String()[:8]
+			}
+			_, notifErr := m.notifSvc.CreateDeduped(ctx, notifmod.CreateRequest{
+				TenantID:         t.TenantID,
+				NotificationType: "sla_breach",
+				Title:            fmt.Sprintf("SLA breached: %s", label),
+				Body:             fmt.Sprintf("Task %s is %s overdue and still %s.", label, breachAge.Round(time.Minute), t.Status),
+				Payload: map[string]any{
+					"task_id":     taskID.String(),
+					"status":      t.Status,
+					"breach_mins": int(breachAge.Minutes()),
+				},
+				RelatedTaskID: &taskID,
+			})
+			if notifErr != nil {
+				m.log.Error("failed to create SLA breach notification",
+					zap.String("task_id", t.ID.String()),
+					zap.Error(notifErr))
+			}
+		}
 
 		if m.publisher == nil {
 			continue

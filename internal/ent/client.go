@@ -27,6 +27,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
 	"github.com/bengobox/logistics-service/internal/ent/geofence"
 	"github.com/bengobox/logistics-service/internal/ent/integrationsetting"
+	"github.com/bengobox/logistics-service/internal/ent/logisticsnotification"
 	"github.com/bengobox/logistics-service/internal/ent/logisticspermission"
 	"github.com/bengobox/logistics-service/internal/ent/logisticsrole"
 	"github.com/bengobox/logistics-service/internal/ent/outboxevent"
@@ -79,6 +80,8 @@ type Client struct {
 	GeoFence *GeoFenceClient
 	// IntegrationSetting is the client for interacting with the IntegrationSetting builders.
 	IntegrationSetting *IntegrationSettingClient
+	// LogisticsNotification is the client for interacting with the LogisticsNotification builders.
+	LogisticsNotification *LogisticsNotificationClient
 	// LogisticsPermission is the client for interacting with the LogisticsPermission builders.
 	LogisticsPermission *LogisticsPermissionClient
 	// LogisticsRole is the client for interacting with the LogisticsRole builders.
@@ -147,6 +150,7 @@ func (c *Client) init() {
 	c.FleetMember = NewFleetMemberClient(c.config)
 	c.GeoFence = NewGeoFenceClient(c.config)
 	c.IntegrationSetting = NewIntegrationSettingClient(c.config)
+	c.LogisticsNotification = NewLogisticsNotificationClient(c.config)
 	c.LogisticsPermission = NewLogisticsPermissionClient(c.config)
 	c.LogisticsRole = NewLogisticsRoleClient(c.config)
 	c.OutboxEvent = NewOutboxEventClient(c.config)
@@ -260,42 +264,43 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:                 ctx,
-		config:              cfg,
-		Backup:              NewBackupClient(cfg),
-		BackupSetting:       NewBackupSettingClient(cfg),
-		BillingEvent:        NewBillingEventClient(cfg),
-		CarrierJob:          NewCarrierJobClient(cfg),
-		CarrierPartner:      NewCarrierPartnerClient(cfg),
-		ChainOfCustody:      NewChainOfCustodyClient(cfg),
-		EarningsStatement:   NewEarningsStatementClient(cfg),
-		Fleet:               NewFleetClient(cfg),
-		FleetMember:         NewFleetMemberClient(cfg),
-		GeoFence:            NewGeoFenceClient(cfg),
-		IntegrationSetting:  NewIntegrationSettingClient(cfg),
-		LogisticsPermission: NewLogisticsPermissionClient(cfg),
-		LogisticsRole:       NewLogisticsRoleClient(cfg),
-		OutboxEvent:         NewOutboxEventClient(cfg),
-		Outlet:              NewOutletClient(cfg),
-		PricingRule:         NewPricingRuleClient(cfg),
-		ProofOfDelivery:     NewProofOfDeliveryClient(cfg),
-		RateLimitConfig:     NewRateLimitConfigClient(cfg),
-		RiderRating:         NewRiderRatingClient(cfg),
-		RiderShift:          NewRiderShiftClient(cfg),
-		RolePermission:      NewRolePermissionClient(cfg),
-		ServiceConfig:       NewServiceConfigClient(cfg),
-		Shipment:            NewShipmentClient(cfg),
-		Task:                NewTaskClient(cfg),
-		TaskAssignment:      NewTaskAssignmentClient(cfg),
-		TaskEvent:           NewTaskEventClient(cfg),
-		TaskStep:            NewTaskStepClient(cfg),
-		TelemetryPoint:      NewTelemetryPointClient(cfg),
-		TelemetryStream:     NewTelemetryStreamClient(cfg),
-		Tenant:              NewTenantClient(cfg),
-		TenantSyncEvent:     NewTenantSyncEventClient(cfg),
-		User:                NewUserClient(cfg),
-		UserRoleAssignment:  NewUserRoleAssignmentClient(cfg),
-		Vehicle:             NewVehicleClient(cfg),
+		ctx:                   ctx,
+		config:                cfg,
+		Backup:                NewBackupClient(cfg),
+		BackupSetting:         NewBackupSettingClient(cfg),
+		BillingEvent:          NewBillingEventClient(cfg),
+		CarrierJob:            NewCarrierJobClient(cfg),
+		CarrierPartner:        NewCarrierPartnerClient(cfg),
+		ChainOfCustody:        NewChainOfCustodyClient(cfg),
+		EarningsStatement:     NewEarningsStatementClient(cfg),
+		Fleet:                 NewFleetClient(cfg),
+		FleetMember:           NewFleetMemberClient(cfg),
+		GeoFence:              NewGeoFenceClient(cfg),
+		IntegrationSetting:    NewIntegrationSettingClient(cfg),
+		LogisticsNotification: NewLogisticsNotificationClient(cfg),
+		LogisticsPermission:   NewLogisticsPermissionClient(cfg),
+		LogisticsRole:         NewLogisticsRoleClient(cfg),
+		OutboxEvent:           NewOutboxEventClient(cfg),
+		Outlet:                NewOutletClient(cfg),
+		PricingRule:           NewPricingRuleClient(cfg),
+		ProofOfDelivery:       NewProofOfDeliveryClient(cfg),
+		RateLimitConfig:       NewRateLimitConfigClient(cfg),
+		RiderRating:           NewRiderRatingClient(cfg),
+		RiderShift:            NewRiderShiftClient(cfg),
+		RolePermission:        NewRolePermissionClient(cfg),
+		ServiceConfig:         NewServiceConfigClient(cfg),
+		Shipment:              NewShipmentClient(cfg),
+		Task:                  NewTaskClient(cfg),
+		TaskAssignment:        NewTaskAssignmentClient(cfg),
+		TaskEvent:             NewTaskEventClient(cfg),
+		TaskStep:              NewTaskStepClient(cfg),
+		TelemetryPoint:        NewTelemetryPointClient(cfg),
+		TelemetryStream:       NewTelemetryStreamClient(cfg),
+		Tenant:                NewTenantClient(cfg),
+		TenantSyncEvent:       NewTenantSyncEventClient(cfg),
+		User:                  NewUserClient(cfg),
+		UserRoleAssignment:    NewUserRoleAssignmentClient(cfg),
+		Vehicle:               NewVehicleClient(cfg),
 	}, nil
 }
 
@@ -313,42 +318,43 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:                 ctx,
-		config:              cfg,
-		Backup:              NewBackupClient(cfg),
-		BackupSetting:       NewBackupSettingClient(cfg),
-		BillingEvent:        NewBillingEventClient(cfg),
-		CarrierJob:          NewCarrierJobClient(cfg),
-		CarrierPartner:      NewCarrierPartnerClient(cfg),
-		ChainOfCustody:      NewChainOfCustodyClient(cfg),
-		EarningsStatement:   NewEarningsStatementClient(cfg),
-		Fleet:               NewFleetClient(cfg),
-		FleetMember:         NewFleetMemberClient(cfg),
-		GeoFence:            NewGeoFenceClient(cfg),
-		IntegrationSetting:  NewIntegrationSettingClient(cfg),
-		LogisticsPermission: NewLogisticsPermissionClient(cfg),
-		LogisticsRole:       NewLogisticsRoleClient(cfg),
-		OutboxEvent:         NewOutboxEventClient(cfg),
-		Outlet:              NewOutletClient(cfg),
-		PricingRule:         NewPricingRuleClient(cfg),
-		ProofOfDelivery:     NewProofOfDeliveryClient(cfg),
-		RateLimitConfig:     NewRateLimitConfigClient(cfg),
-		RiderRating:         NewRiderRatingClient(cfg),
-		RiderShift:          NewRiderShiftClient(cfg),
-		RolePermission:      NewRolePermissionClient(cfg),
-		ServiceConfig:       NewServiceConfigClient(cfg),
-		Shipment:            NewShipmentClient(cfg),
-		Task:                NewTaskClient(cfg),
-		TaskAssignment:      NewTaskAssignmentClient(cfg),
-		TaskEvent:           NewTaskEventClient(cfg),
-		TaskStep:            NewTaskStepClient(cfg),
-		TelemetryPoint:      NewTelemetryPointClient(cfg),
-		TelemetryStream:     NewTelemetryStreamClient(cfg),
-		Tenant:              NewTenantClient(cfg),
-		TenantSyncEvent:     NewTenantSyncEventClient(cfg),
-		User:                NewUserClient(cfg),
-		UserRoleAssignment:  NewUserRoleAssignmentClient(cfg),
-		Vehicle:             NewVehicleClient(cfg),
+		ctx:                   ctx,
+		config:                cfg,
+		Backup:                NewBackupClient(cfg),
+		BackupSetting:         NewBackupSettingClient(cfg),
+		BillingEvent:          NewBillingEventClient(cfg),
+		CarrierJob:            NewCarrierJobClient(cfg),
+		CarrierPartner:        NewCarrierPartnerClient(cfg),
+		ChainOfCustody:        NewChainOfCustodyClient(cfg),
+		EarningsStatement:     NewEarningsStatementClient(cfg),
+		Fleet:                 NewFleetClient(cfg),
+		FleetMember:           NewFleetMemberClient(cfg),
+		GeoFence:              NewGeoFenceClient(cfg),
+		IntegrationSetting:    NewIntegrationSettingClient(cfg),
+		LogisticsNotification: NewLogisticsNotificationClient(cfg),
+		LogisticsPermission:   NewLogisticsPermissionClient(cfg),
+		LogisticsRole:         NewLogisticsRoleClient(cfg),
+		OutboxEvent:           NewOutboxEventClient(cfg),
+		Outlet:                NewOutletClient(cfg),
+		PricingRule:           NewPricingRuleClient(cfg),
+		ProofOfDelivery:       NewProofOfDeliveryClient(cfg),
+		RateLimitConfig:       NewRateLimitConfigClient(cfg),
+		RiderRating:           NewRiderRatingClient(cfg),
+		RiderShift:            NewRiderShiftClient(cfg),
+		RolePermission:        NewRolePermissionClient(cfg),
+		ServiceConfig:         NewServiceConfigClient(cfg),
+		Shipment:              NewShipmentClient(cfg),
+		Task:                  NewTaskClient(cfg),
+		TaskAssignment:        NewTaskAssignmentClient(cfg),
+		TaskEvent:             NewTaskEventClient(cfg),
+		TaskStep:              NewTaskStepClient(cfg),
+		TelemetryPoint:        NewTelemetryPointClient(cfg),
+		TelemetryStream:       NewTelemetryStreamClient(cfg),
+		Tenant:                NewTenantClient(cfg),
+		TenantSyncEvent:       NewTenantSyncEventClient(cfg),
+		User:                  NewUserClient(cfg),
+		UserRoleAssignment:    NewUserRoleAssignmentClient(cfg),
+		Vehicle:               NewVehicleClient(cfg),
 	}, nil
 }
 
@@ -380,11 +386,12 @@ func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.Backup, c.BackupSetting, c.BillingEvent, c.CarrierJob, c.CarrierPartner,
 		c.ChainOfCustody, c.EarningsStatement, c.Fleet, c.FleetMember, c.GeoFence,
-		c.IntegrationSetting, c.LogisticsPermission, c.LogisticsRole, c.OutboxEvent,
-		c.Outlet, c.PricingRule, c.ProofOfDelivery, c.RateLimitConfig, c.RiderRating,
-		c.RiderShift, c.RolePermission, c.ServiceConfig, c.Shipment, c.Task,
-		c.TaskAssignment, c.TaskEvent, c.TaskStep, c.TelemetryPoint, c.TelemetryStream,
-		c.Tenant, c.TenantSyncEvent, c.User, c.UserRoleAssignment, c.Vehicle,
+		c.IntegrationSetting, c.LogisticsNotification, c.LogisticsPermission,
+		c.LogisticsRole, c.OutboxEvent, c.Outlet, c.PricingRule, c.ProofOfDelivery,
+		c.RateLimitConfig, c.RiderRating, c.RiderShift, c.RolePermission,
+		c.ServiceConfig, c.Shipment, c.Task, c.TaskAssignment, c.TaskEvent, c.TaskStep,
+		c.TelemetryPoint, c.TelemetryStream, c.Tenant, c.TenantSyncEvent, c.User,
+		c.UserRoleAssignment, c.Vehicle,
 	} {
 		n.Use(hooks...)
 	}
@@ -396,11 +403,12 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.Backup, c.BackupSetting, c.BillingEvent, c.CarrierJob, c.CarrierPartner,
 		c.ChainOfCustody, c.EarningsStatement, c.Fleet, c.FleetMember, c.GeoFence,
-		c.IntegrationSetting, c.LogisticsPermission, c.LogisticsRole, c.OutboxEvent,
-		c.Outlet, c.PricingRule, c.ProofOfDelivery, c.RateLimitConfig, c.RiderRating,
-		c.RiderShift, c.RolePermission, c.ServiceConfig, c.Shipment, c.Task,
-		c.TaskAssignment, c.TaskEvent, c.TaskStep, c.TelemetryPoint, c.TelemetryStream,
-		c.Tenant, c.TenantSyncEvent, c.User, c.UserRoleAssignment, c.Vehicle,
+		c.IntegrationSetting, c.LogisticsNotification, c.LogisticsPermission,
+		c.LogisticsRole, c.OutboxEvent, c.Outlet, c.PricingRule, c.ProofOfDelivery,
+		c.RateLimitConfig, c.RiderRating, c.RiderShift, c.RolePermission,
+		c.ServiceConfig, c.Shipment, c.Task, c.TaskAssignment, c.TaskEvent, c.TaskStep,
+		c.TelemetryPoint, c.TelemetryStream, c.Tenant, c.TenantSyncEvent, c.User,
+		c.UserRoleAssignment, c.Vehicle,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -431,6 +439,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.GeoFence.mutate(ctx, m)
 	case *IntegrationSettingMutation:
 		return c.IntegrationSetting.mutate(ctx, m)
+	case *LogisticsNotificationMutation:
+		return c.LogisticsNotification.mutate(ctx, m)
 	case *LogisticsPermissionMutation:
 		return c.LogisticsPermission.mutate(ctx, m)
 	case *LogisticsRoleMutation:
@@ -2070,6 +2080,139 @@ func (c *IntegrationSettingClient) mutate(ctx context.Context, m *IntegrationSet
 		return (&IntegrationSettingDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown IntegrationSetting mutation op: %q", m.Op())
+	}
+}
+
+// LogisticsNotificationClient is a client for the LogisticsNotification schema.
+type LogisticsNotificationClient struct {
+	config
+}
+
+// NewLogisticsNotificationClient returns a client for the LogisticsNotification from the given config.
+func NewLogisticsNotificationClient(c config) *LogisticsNotificationClient {
+	return &LogisticsNotificationClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `logisticsnotification.Hooks(f(g(h())))`.
+func (c *LogisticsNotificationClient) Use(hooks ...Hook) {
+	c.hooks.LogisticsNotification = append(c.hooks.LogisticsNotification, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `logisticsnotification.Intercept(f(g(h())))`.
+func (c *LogisticsNotificationClient) Intercept(interceptors ...Interceptor) {
+	c.inters.LogisticsNotification = append(c.inters.LogisticsNotification, interceptors...)
+}
+
+// Create returns a builder for creating a LogisticsNotification entity.
+func (c *LogisticsNotificationClient) Create() *LogisticsNotificationCreate {
+	mutation := newLogisticsNotificationMutation(c.config, OpCreate)
+	return &LogisticsNotificationCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of LogisticsNotification entities.
+func (c *LogisticsNotificationClient) CreateBulk(builders ...*LogisticsNotificationCreate) *LogisticsNotificationCreateBulk {
+	return &LogisticsNotificationCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *LogisticsNotificationClient) MapCreateBulk(slice any, setFunc func(*LogisticsNotificationCreate, int)) *LogisticsNotificationCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &LogisticsNotificationCreateBulk{err: fmt.Errorf("calling to LogisticsNotificationClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*LogisticsNotificationCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &LogisticsNotificationCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for LogisticsNotification.
+func (c *LogisticsNotificationClient) Update() *LogisticsNotificationUpdate {
+	mutation := newLogisticsNotificationMutation(c.config, OpUpdate)
+	return &LogisticsNotificationUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *LogisticsNotificationClient) UpdateOne(_m *LogisticsNotification) *LogisticsNotificationUpdateOne {
+	mutation := newLogisticsNotificationMutation(c.config, OpUpdateOne, withLogisticsNotification(_m))
+	return &LogisticsNotificationUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *LogisticsNotificationClient) UpdateOneID(id uuid.UUID) *LogisticsNotificationUpdateOne {
+	mutation := newLogisticsNotificationMutation(c.config, OpUpdateOne, withLogisticsNotificationID(id))
+	return &LogisticsNotificationUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for LogisticsNotification.
+func (c *LogisticsNotificationClient) Delete() *LogisticsNotificationDelete {
+	mutation := newLogisticsNotificationMutation(c.config, OpDelete)
+	return &LogisticsNotificationDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *LogisticsNotificationClient) DeleteOne(_m *LogisticsNotification) *LogisticsNotificationDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *LogisticsNotificationClient) DeleteOneID(id uuid.UUID) *LogisticsNotificationDeleteOne {
+	builder := c.Delete().Where(logisticsnotification.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &LogisticsNotificationDeleteOne{builder}
+}
+
+// Query returns a query builder for LogisticsNotification.
+func (c *LogisticsNotificationClient) Query() *LogisticsNotificationQuery {
+	return &LogisticsNotificationQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeLogisticsNotification},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a LogisticsNotification entity by its id.
+func (c *LogisticsNotificationClient) Get(ctx context.Context, id uuid.UUID) (*LogisticsNotification, error) {
+	return c.Query().Where(logisticsnotification.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *LogisticsNotificationClient) GetX(ctx context.Context, id uuid.UUID) *LogisticsNotification {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *LogisticsNotificationClient) Hooks() []Hook {
+	return c.hooks.LogisticsNotification
+}
+
+// Interceptors returns the client interceptors.
+func (c *LogisticsNotificationClient) Interceptors() []Interceptor {
+	return c.inters.LogisticsNotification
+}
+
+func (c *LogisticsNotificationClient) mutate(ctx context.Context, m *LogisticsNotificationMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&LogisticsNotificationCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&LogisticsNotificationUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&LogisticsNotificationUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&LogisticsNotificationDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown LogisticsNotification mutation op: %q", m.Op())
 	}
 }
 
@@ -5585,19 +5728,19 @@ type (
 	hooks struct {
 		Backup, BackupSetting, BillingEvent, CarrierJob, CarrierPartner, ChainOfCustody,
 		EarningsStatement, Fleet, FleetMember, GeoFence, IntegrationSetting,
-		LogisticsPermission, LogisticsRole, OutboxEvent, Outlet, PricingRule,
-		ProofOfDelivery, RateLimitConfig, RiderRating, RiderShift, RolePermission,
-		ServiceConfig, Shipment, Task, TaskAssignment, TaskEvent, TaskStep,
-		TelemetryPoint, TelemetryStream, Tenant, TenantSyncEvent, User,
+		LogisticsNotification, LogisticsPermission, LogisticsRole, OutboxEvent, Outlet,
+		PricingRule, ProofOfDelivery, RateLimitConfig, RiderRating, RiderShift,
+		RolePermission, ServiceConfig, Shipment, Task, TaskAssignment, TaskEvent,
+		TaskStep, TelemetryPoint, TelemetryStream, Tenant, TenantSyncEvent, User,
 		UserRoleAssignment, Vehicle []ent.Hook
 	}
 	inters struct {
 		Backup, BackupSetting, BillingEvent, CarrierJob, CarrierPartner, ChainOfCustody,
 		EarningsStatement, Fleet, FleetMember, GeoFence, IntegrationSetting,
-		LogisticsPermission, LogisticsRole, OutboxEvent, Outlet, PricingRule,
-		ProofOfDelivery, RateLimitConfig, RiderRating, RiderShift, RolePermission,
-		ServiceConfig, Shipment, Task, TaskAssignment, TaskEvent, TaskStep,
-		TelemetryPoint, TelemetryStream, Tenant, TenantSyncEvent, User,
+		LogisticsNotification, LogisticsPermission, LogisticsRole, OutboxEvent, Outlet,
+		PricingRule, ProofOfDelivery, RateLimitConfig, RiderRating, RiderShift,
+		RolePermission, ServiceConfig, Shipment, Task, TaskAssignment, TaskEvent,
+		TaskStep, TelemetryPoint, TelemetryStream, Tenant, TenantSyncEvent, User,
 		UserRoleAssignment, Vehicle []ent.Interceptor
 	}
 )

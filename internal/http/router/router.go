@@ -26,7 +26,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/modules/rbac"
 )
 
-func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authclient.AuthMiddleware, idSvc *identity.Service, lh *handlers.LogisticsHandler, rh *handlers.RoutingHandler, th *handlers.TrackingHandler, zh *handlers.ZonesHandler, rbacH *handlers.RBACHandler, rdb *redis.Client, cfg *config.Config, allowedOrigins []string, serviceConfigH *handlers.ServiceConfigHandler, earningsH *handlers.EarningsHandler, sseH *handlers.SSEHandler, rbacSvc *rbac.Service, telH *handlers.TelemetryHandler, shipmentH *handlers.ShipmentHandler, shiftH *handlers.ShiftHandler, analyticsH *handlers.AnalyticsHandler, backupsH *handlers.BackupsHandler, backupDestH *handlers.BackupDestinationHandler, validator *authclient.Validator, fleetWSH *handlers.FleetTrackingWSHandler) http.Handler {
+func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authclient.AuthMiddleware, idSvc *identity.Service, lh *handlers.LogisticsHandler, rh *handlers.RoutingHandler, th *handlers.TrackingHandler, zh *handlers.ZonesHandler, rbacH *handlers.RBACHandler, rdb *redis.Client, cfg *config.Config, allowedOrigins []string, serviceConfigH *handlers.ServiceConfigHandler, earningsH *handlers.EarningsHandler, sseH *handlers.SSEHandler, rbacSvc *rbac.Service, telH *handlers.TelemetryHandler, shipmentH *handlers.ShipmentHandler, shiftH *handlers.ShiftHandler, analyticsH *handlers.AnalyticsHandler, backupsH *handlers.BackupsHandler, backupDestH *handlers.BackupDestinationHandler, validator *authclient.Validator, fleetWSH *handlers.FleetTrackingWSHandler, notifH *handlers.NotificationsHandler) http.Handler {
 	rl := appmw.NewRateLimiter(rdb)
 	r := chi.NewRouter()
 
@@ -99,13 +99,14 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 						next.ServeHTTP(w, r)
 						return
 					}
-					// Fleet-tracking WebSocket handshake: a browser's native WebSocket API cannot
-					// set an Authorization header, so this route authenticates via a "?token="
+					// WebSocket handshakes: a browser's native WebSocket API cannot set an
+					// Authorization header, so these routes authenticate via a "?token="
 					// query param fallback instead (still fully verified, see AuthenticateWS's
 					// own doc comment) rather than through the standard RequireAuth below. Sets
 					// claims in context on success so TenantV2/RequireFeature/RequireRateLimit
 					// downstream behave exactly as they do for a normal authenticated request.
-					if r.Method == http.MethodGet && strings.Contains(path, "/tracking/fleet/ws") {
+					if r.Method == http.MethodGet && (strings.Contains(path, "/tracking/fleet/ws") ||
+						strings.Contains(path, "/notifications/stream")) {
 						if validator == nil {
 							http.Error(w, `{"error":"auth not configured"}`, http.StatusInternalServerError)
 							return
@@ -303,6 +304,15 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 						trackR.Get("/fleet/ws", fleetWSH.ServeFleetWS)
 					}
 					trackR.Get("/{taskId}", th.TrackByCode)
+				})
+			}
+
+			if notifH != nil {
+				tenant.Route("/notifications", func(notifR chi.Router) {
+					notifR.Get("/", notifH.List)
+					notifR.Get("/stream", notifH.StreamNotifications)
+					notifR.Patch("/{id}/read", notifH.MarkRead)
+					notifR.Post("/mark-all-read", notifH.MarkAllRead)
 				})
 			}
 

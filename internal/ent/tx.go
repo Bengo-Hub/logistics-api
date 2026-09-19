@@ -34,6 +34,8 @@ type Tx struct {
 	GeoFence *GeoFenceClient
 	// IntegrationSetting is the client for interacting with the IntegrationSetting builders.
 	IntegrationSetting *IntegrationSettingClient
+	// LogisticsNotification is the client for interacting with the LogisticsNotification builders.
+	LogisticsNotification *LogisticsNotificationClient
 	// LogisticsPermission is the client for interacting with the LogisticsPermission builders.
 	LogisticsPermission *LogisticsPermissionClient
 	// LogisticsRole is the client for interacting with the LogisticsRole builders.
@@ -222,6 +224,7 @@ func (tx *Tx) init() {
 	tx.FleetMember = NewFleetMemberClient(tx.config)
 	tx.GeoFence = NewGeoFenceClient(tx.config)
 	tx.IntegrationSetting = NewIntegrationSettingClient(tx.config)
+	tx.LogisticsNotification = NewLogisticsNotificationClient(tx.config)
 	tx.LogisticsPermission = NewLogisticsPermissionClient(tx.config)
 	tx.LogisticsRole = NewLogisticsRoleClient(tx.config)
 	tx.OutboxEvent = NewOutboxEventClient(tx.config)

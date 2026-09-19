@@ -12,6 +12,7 @@ import (
 
 	"github.com/bengobox/logistics-service/internal/ent"
 	"github.com/bengobox/logistics-service/internal/modules/fleet"
+	notifmod "github.com/bengobox/logistics-service/internal/modules/notifications"
 	"github.com/bengobox/logistics-service/internal/modules/tasks"
 )
 
@@ -28,6 +29,7 @@ type AutoDispatcher struct {
 	fleetSvc *fleet.Service
 	taskSvc  *tasks.Service
 	redis    *redis.Client
+	notifSvc *notifmod.Service
 }
 
 // NewAutoDispatcher creates a new auto-dispatcher.
@@ -37,6 +39,35 @@ func NewAutoDispatcher(log *zap.Logger, fleetSvc *fleet.Service, taskSvc *tasks.
 		fleetSvc: fleetSvc,
 		taskSvc:  taskSvc,
 		redis:    rdb,
+	}
+}
+
+// SetNotifications wires the dispatcher-alert service so a task that couldn't be
+// auto-dispatched raises a notification instead of only a log line — previously a
+// dispatcher had no way to know a task needed manual assignment short of noticing it
+// still pending on the Tasks page.
+func (d *AutoDispatcher) SetNotifications(svc *notifmod.Service) { d.notifSvc = svc }
+
+// notifyDispatchFailed records why auto-dispatch couldn't assign taskID, deduplicated so a
+// task that keeps failing to auto-dispatch (e.g. retried by a scheduler) doesn't spam one
+// notification per attempt.
+func (d *AutoDispatcher) notifyDispatchFailed(ctx context.Context, tenantID, taskID uuid.UUID, reason string) {
+	if d.notifSvc == nil {
+		return
+	}
+	if _, err := d.notifSvc.CreateDeduped(ctx, notifmod.CreateRequest{
+		TenantID:         tenantID,
+		NotificationType: "dispatch_failed",
+		Title:            "Task needs manual assignment",
+		Body:             reason,
+		Payload: map[string]any{
+			"task_id": taskID.String(),
+			"reason":  reason,
+		},
+		RelatedTaskID: &taskID,
+	}); err != nil {
+		d.log.Error("failed to create dispatch-failed notification",
+			zap.String("task_id", taskID.String()), zap.Error(err))
 	}
 }
 
@@ -98,6 +129,7 @@ func (d *AutoDispatcher) DispatchTask(ctx context.Context, tenantID, taskID uuid
 		d.log.Warn("no pickup location for auto-dispatch",
 			zap.String("task_id", taskID.String()),
 		)
+		d.notifyDispatchFailed(ctx, tenantID, taskID, "No pickup location on the task — auto-dispatch can't route it.")
 		return nil // Can't dispatch without a pickup location
 	}
 
@@ -111,6 +143,7 @@ func (d *AutoDispatcher) DispatchTask(ctx context.Context, tenantID, taskID uuid
 		d.log.Warn("no active riders for auto-dispatch",
 			zap.String("task_id", taskID.String()),
 		)
+		d.notifyDispatchFailed(ctx, tenantID, taskID, "No active riders in the fleet to assign.")
 		return nil
 	}
 
@@ -127,6 +160,7 @@ func (d *AutoDispatcher) DispatchTask(ctx context.Context, tenantID, taskID uuid
 		d.log.Warn("no riders with location available for auto-dispatch",
 			zap.String("task_id", taskID.String()),
 		)
+		d.notifyDispatchFailed(ctx, tenantID, taskID, "No riders have reported a live GPS location yet.")
 		return nil
 	}
 
@@ -148,6 +182,8 @@ func (d *AutoDispatcher) DispatchTask(ctx context.Context, tenantID, taskID uuid
 			zap.String("task_id", taskID.String()),
 			zap.Float64("radius_km", maxDispatchRadiusKm),
 		)
+		d.notifyDispatchFailed(ctx, tenantID, taskID,
+			fmt.Sprintf("No riders within %.0f km of the pickup location.", maxDispatchRadiusKm))
 		return nil
 	}
 

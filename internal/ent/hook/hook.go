@@ -141,6 +141,18 @@ func (f IntegrationSettingFunc) Mutate(ctx context.Context, m ent.Mutation) (ent
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.IntegrationSettingMutation", m)
 }
 
+// The LogisticsNotificationFunc type is an adapter to allow the use of ordinary
+// function as LogisticsNotification mutator.
+type LogisticsNotificationFunc func(context.Context, *ent.LogisticsNotificationMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f LogisticsNotificationFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.LogisticsNotificationMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.LogisticsNotificationMutation", m)
+}
+
 // The LogisticsPermissionFunc type is an adapter to allow the use of ordinary
 // function as LogisticsPermission mutator.
 type LogisticsPermissionFunc func(context.Context, *ent.LogisticsPermissionMutation) (ent.Value, error)

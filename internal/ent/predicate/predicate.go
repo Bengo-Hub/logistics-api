@@ -39,6 +39,9 @@ type GeoFence func(*sql.Selector)
 // IntegrationSetting is the predicate function for integrationsetting builders.
 type IntegrationSetting func(*sql.Selector)
 
+// LogisticsNotification is the predicate function for logisticsnotification builders.
+type LogisticsNotification func(*sql.Selector)
+
 // LogisticsPermission is the predicate function for logisticspermission builders.
 type LogisticsPermission func(*sql.Selector)
 
