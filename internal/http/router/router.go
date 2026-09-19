@@ -15,15 +15,15 @@ import (
 	"github.com/go-chi/cors"
 	"go.uber.org/zap"
 
-	authclient "github.com/Bengo-Hub/shared-auth-client"
 	"github.com/Bengo-Hub/httpware"
+	authclient "github.com/Bengo-Hub/shared-auth-client"
 	"github.com/redis/go-redis/v9"
 
+	"github.com/bengobox/logistics-service/internal/config"
 	"github.com/bengobox/logistics-service/internal/http/handlers"
 	appmw "github.com/bengobox/logistics-service/internal/middleware"
 	"github.com/bengobox/logistics-service/internal/modules/identity"
 	"github.com/bengobox/logistics-service/internal/modules/rbac"
-	"github.com/bengobox/logistics-service/internal/config"
 )
 
 func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authclient.AuthMiddleware, idSvc *identity.Service, lh *handlers.LogisticsHandler, rh *handlers.RoutingHandler, th *handlers.TrackingHandler, zh *handlers.ZonesHandler, rbacH *handlers.RBACHandler, rdb *redis.Client, cfg *config.Config, allowedOrigins []string, serviceConfigH *handlers.ServiceConfigHandler, earningsH *handlers.EarningsHandler, sseH *handlers.SSEHandler, rbacSvc *rbac.Service, telH *handlers.TelemetryHandler, shipmentH *handlers.ShipmentHandler, shiftH *handlers.ShiftHandler, analyticsH *handlers.AnalyticsHandler, backupsH *handlers.BackupsHandler, backupDestH *handlers.BackupDestinationHandler) http.Handler {
@@ -278,6 +278,9 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 					// tracking uses the public /api/v1/track/{code} endpoint, which is unaffected.
 					trackR.Use(appmw.RequireFeature("live_tracking", cfg.Subscriptions.ServiceURL+"/upgrade"))
 					trackR.Use(appmw.RequireRateLimit(rl, "live_tracking_requests_per_day", cfg.Subscriptions.ServiceURL+"/upgrade"))
+					if telH != nil {
+						telH.RegisterFleetTrackingRoute(trackR)
+					}
 					trackR.Get("/{taskId}", th.TrackByCode)
 				})
 			}
