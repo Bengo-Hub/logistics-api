@@ -1,5 +1,15 @@
 ## Logistics Service Delivery Plan
 
+**Note (2026-09):** this is the original blue-sky delivery plan and its sprint checkboxes
+below are stale in both directions - some marked done have since regressed or been
+superseded, and several marked pending (routing/dispatch, telemetry, billing/earnings) are
+now substantially live: Valhalla-backed route optimization, a granular per-leg task FSM,
+an SLA monitor, telemetry ingestion, and a real PricingRule/EarningsStatement billing model
+all exist in current code even though Sprint 3/4/7 below still read unchecked. Treat the
+checkboxes as historical intent, not current status - verify against the actual ent schema
+and handlers (or `docs/integrations.md`, which this session confirmed is kept current)
+before relying on a sprint's checkbox state.
+
 ### Vision & Mission
 - Orchestrate all mid-mile and last-mile logistics for Codevertex properties (food delivery, ecommerce, POS backoffice, inventory transfers) using a single, multi-tenant platform that shares the core `tenant_slug` and outlet registry with every Go microservice.
 - Provide real-time visibility over riders/drivers, fleets, tasks, and service-level agreements while integrating tightly with inventory, POS, delivery apps, and treasury.

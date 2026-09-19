@@ -197,9 +197,23 @@ WebSocket upgrade planned for real-time streaming to logistics-ui and cafe-websi
 
 ### Post-MVP
 
-- PostGIS geo-queries for zone-based dispatch
-- Telemetry streaming and analytics
-- Route optimization (OSRM/Mapbox)
-- Earnings calculation and treasury integration
-- Delivery zone configuration
-- SLA monitoring and breach alerts
+Live as of 2026-09, despite still being listed here as forward-looking:
+
+- Telemetry streaming and analytics (`internal/modules/telemetry`, `logistics-ui`'s live
+  tracking page rendering rider positions via `@bengo-hub/maps`)
+- Route optimization, now on a self-hosted Valhalla + TileServer stack rather than the
+  OSRM/Mapbox originally scoped (see `docs/integrations.md`)
+- Earnings calculation (`EarningsStatement`, `PricingRule` CRUD under `/earnings`) - the
+  treasury-integration half (actually disbursing a payout, not just computing one) is not
+  built
+- SLA monitoring and breach alerts (`internal/modules/tasks/sla_monitor.go`)
+
+Still genuinely not built:
+
+- PostGIS geo-queries / zone-based dispatch - the Task schema carries no zone association
+  at all; auto-dispatch has no pickup-location routing until outlet coordinates exist
+  upstream in auth-api (see the open items note in the order-to-delivery workflow plan)
+- Delivery zone configuration (the `/zones` page and `Hexagon`/zone nav items exist in
+  logistics-ui but the backend has no zone entity backing them)
+- Treasury-app payout disbursement (earnings are computed, never actually paid out through
+  treasury-api)
