@@ -644,9 +644,19 @@ func (s *Service) publishAssigned(ctx context.Context, tenantID, taskID uuid.UUI
 	if s.publisher == nil || member == nil {
 		return
 	}
-	t, _ := s.client.Task.Query().Where(task.ID(taskID)).Only(ctx)
+	t, _ := s.client.Task.Query().Where(task.ID(taskID)).WithSteps().Only(ctx)
 	if t == nil {
 		return
+	}
+	pickup := ""
+	for _, st := range t.Edges.Steps {
+		if st.StepType == "pickup" {
+			pickup = st.LocationName
+			if st.ContactName != "" {
+				pickup = st.ContactName
+			}
+			break
+		}
 	}
 	riderEmail, riderName := "", ""
 	if ru, uerr := s.client.User.Query().Where(entuser.ID(member.UserID)).Only(ctx); uerr == nil && ru != nil {
@@ -663,6 +673,8 @@ func (s *Service) publishAssigned(ctx context.Context, tenantID, taskID uuid.UUI
 		RiderName:         riderName,
 		SourceService:     t.SourceService,
 		OrderNumber:       metadataString(t.Metadata, "order_number"),
+		RiderUserID:       member.UserID.String(),
+		PickupName:        pickup,
 	})
 }
 

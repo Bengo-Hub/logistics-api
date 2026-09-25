@@ -145,6 +145,10 @@ type TaskEventData struct {
 	// door ("cash", or "mpesa" with its confirmation code) so ordering books the right tender.
 	CollectionMethod    string `json:"collection_method,omitempty"`
 	CollectionReference string `json:"collection_reference,omitempty"`
+	// RiderUserID is the rider's auth user id, so notifications can push to the rider's devices.
+	RiderUserID string `json:"rider_user_id,omitempty"`
+	// PickupName is where the rider collects the order (outlet name or address).
+	PickupName string `json:"pickup_name,omitempty"`
 }
 
 func (d TaskEventData) toMap() map[string]interface{} {
@@ -187,6 +191,12 @@ func (d TaskEventData) toMap() map[string]interface{} {
 	}
 	if d.CollectionReference != "" {
 		m["collection_reference"] = d.CollectionReference
+	}
+	if d.RiderUserID != "" {
+		m["rider_user_id"] = d.RiderUserID
+	}
+	if d.PickupName != "" {
+		m["pickup_name"] = d.PickupName
 	}
 	return m
 }
