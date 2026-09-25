@@ -376,6 +376,15 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 				// Ownership is the caller's own fleet membership, so no task-manage permission.
 				tenant.Get("/riders/me/open-tasks", lh.ListOpenJobs)
 				tenant.Post("/riders/me/tasks/{taskId}/claim", lh.ClaimJob)
+				// Cash on delivery the rider holds until it is handed in at the outlet.
+				tenant.Get("/riders/me/cash", lh.GetMyCash)
+				tenant.Route("/cash/riders", func(cashR chi.Router) {
+					if rbacSvc != nil {
+						cashR.Use(appmw.RequirePermission(rbacSvc, rbac.PermTaskManage))
+					}
+					cashR.Get("/", lh.ListCashWithRiders)
+					cashR.Post("/{memberId}/remit", lh.RecordCashRemittance)
+				})
 
 				tenant.Route("/tasks", func(taskR chi.Router) {
 					// Read-only task access
