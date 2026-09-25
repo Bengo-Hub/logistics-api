@@ -132,36 +132,8 @@ func (h *LogisticsHandler) ListTasks(w http.ResponseWriter, r *http.Request) {
 // paginated, in the same envelope as ListTasks ({data, total, limit, page, hasMore}).
 // Supports ?status=, ?limit=, ?offset= / ?page=.
 func (h *LogisticsHandler) ListMyTasks(w http.ResponseWriter, r *http.Request) {
-	tenantID := tenantIDFromClaims(r)
-	if tenantID == uuid.Nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	// Resolve fleet member from the JWT subject (auth user ID).
-	claims, ok := authclient.ClaimsFromContext(r.Context())
-	if !ok || claims.Subject == "" {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-	authUserID, err := uuid.Parse(claims.Subject)
-	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	member, err := h.taskSvc.Client().FleetMember.Query().
-		Where(
-			fleetmember.UserID(authUserID),
-			fleetmember.TenantID(tenantID),
-		).Only(r.Context())
-	if err != nil {
-		if ent.IsNotFound(err) {
-			http.Error(w, "rider not found in fleet", http.StatusNotFound)
-			return
-		}
-		h.log.Error("resolve fleet member for tasks", zap.Error(err))
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+	tenantID, member, ok := h.currentRider(w, r)
+	if !ok {
 		return
 	}
 
