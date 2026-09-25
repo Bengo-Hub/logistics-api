@@ -45,6 +45,8 @@ type TaskResponse struct {
 	Instructions        string         `json:"instructions"`
 	ItemsDescription    string         `json:"items_description"`
 	ItemCount           int            `json:"item_count"`
+	OrderNumber         string         `json:"order_number"`
+	PaymentMethod       string         `json:"payment_method"`
 	CashOnDelivery      float64        `json:"cash_on_delivery"`
 	DistanceKm          *float64       `json:"distance_km"`
 	EtaMinutes          *float64       `json:"eta_minutes"`
@@ -81,9 +83,26 @@ func toTaskResponse(t *ent.Task) *TaskResponse {
 		RequestedPickupAt:  t.RequestedPickupAt,
 		RequestedDropoffAt: t.RequestedDropoffAt,
 		CashOnDelivery:     t.CashOnDelivery,
-		Metadata:           t.Metadata,
+		Metadata:           publicTaskMetadata(t.Metadata),
 		CreatedAt:          t.CreatedAt,
 		UpdatedAt:          t.UpdatedAt,
+	}
+	if t.Metadata != nil {
+		resp.OrderNumber, _ = t.Metadata["order_number"].(string)
+		resp.PaymentMethod, _ = t.Metadata["payment_method"].(string)
+		resp.ItemsDescription, _ = t.Metadata["items_description"].(string)
+		if n, ok := t.Metadata["item_count"].(float64); ok {
+			resp.ItemCount = int(n)
+		} else if n, ok := t.Metadata["item_count"].(int); ok {
+			resp.ItemCount = n
+		}
+		// Tasks created from an order carry the COD amount in metadata; older rows never set the
+		// column, so the rider saw no "collect cash" banner.
+		if resp.CashOnDelivery == 0 {
+			if v, ok := t.Metadata["cash_on_delivery"].(float64); ok {
+				resp.CashOnDelivery = v
+			}
+		}
 	}
 
 	for _, step := range t.Edges.Steps {
@@ -93,6 +112,9 @@ func toTaskResponse(t *ent.Task) *TaskResponse {
 		switch step.StepType {
 		case "pickup":
 			resp.PickupAddress = step.LocationName
+			if street, _ := step.AddressJSON["address"].(string); street != "" {
+				resp.PickupAddress = step.LocationName + ", " + street
+			}
 			resp.PickupLatitude = lat
 			resp.PickupLongitude = lng
 			resp.PickupNotes = notes
@@ -175,15 +197,35 @@ func toFloat64(v any) (float64, bool) {
 }
 
 // priorityLabel maps the ent Task.priority int column to the label the frontend's
-// TaskPriority enum expects. No task-creation path in this codebase currently sets a
-// non-zero priority, so this is a best-effort mapping rather than a confirmed scale.
+// TaskPriority enum expects. Creators use 0 or 1 for a normal delivery (pos-api and
+// ordering-backend both send 1), 2 for high and 3+ for urgent; 1 used to show as "high",
+// so every routine order looked urgent on the dispatch board.
 func priorityLabel(p int) string {
 	switch {
-	case p <= 0:
+	case p <= 1:
 		return "normal"
-	case p == 1:
+	case p == 2:
 		return "high"
 	default:
 		return "urgent"
 	}
+}
+
+// secretTaskMetadataKeys never leave the API: the customer's proof-of-delivery code must only be
+// checked server-side, otherwise the rider could read it off the task instead of asking at the door.
+var secretTaskMetadataKeys = []string{"pod_code"}
+
+// publicTaskMetadata returns a copy of the task metadata without secret keys.
+func publicTaskMetadata(m map[string]any) map[string]any {
+	if m == nil {
+		return nil
+	}
+	out := make(map[string]any, len(m))
+	for k, v := range m {
+		out[k] = v
+	}
+	for _, k := range secretTaskMetadataKeys {
+		delete(out, k)
+	}
+	return out
 }

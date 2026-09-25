@@ -139,6 +139,12 @@ type TaskEventData struct {
 	CashOnDelivery    float64 `json:"cash_on_delivery,omitempty"`
 	CashCollected     bool    `json:"cash_collected,omitempty"`
 	AmountCollected   float64 `json:"amount_collected,omitempty"`
+	// OrderNumber is the source order's human number (ordering/POS), for notifications and boards.
+	OrderNumber string `json:"order_number,omitempty"`
+	// CollectionMethod/CollectionReference record how a cash-on-delivery order was paid at the
+	// door ("cash", or "mpesa" with its confirmation code) so ordering books the right tender.
+	CollectionMethod    string `json:"collection_method,omitempty"`
+	CollectionReference string `json:"collection_reference,omitempty"`
 }
 
 func (d TaskEventData) toMap() map[string]interface{} {
@@ -172,6 +178,15 @@ func (d TaskEventData) toMap() map[string]interface{} {
 		m["cash_on_delivery"] = d.CashOnDelivery
 		m["cash_collected"] = d.CashCollected
 		m["amount_collected"] = d.AmountCollected
+	}
+	if d.OrderNumber != "" {
+		m["order_number"] = d.OrderNumber
+	}
+	if d.CollectionMethod != "" {
+		m["collection_method"] = d.CollectionMethod
+	}
+	if d.CollectionReference != "" {
+		m["collection_reference"] = d.CollectionReference
 	}
 	return m
 }
