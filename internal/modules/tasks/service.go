@@ -16,6 +16,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent"
 	"github.com/bengobox/logistics-service/internal/ent/fleet"
 	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
+	"github.com/bengobox/logistics-service/internal/ent/serviceconfig"
 	"github.com/bengobox/logistics-service/internal/ent/task"
 	"github.com/bengobox/logistics-service/internal/ent/taskassignment"
 	entuser "github.com/bengobox/logistics-service/internal/ent/user"
@@ -87,6 +88,16 @@ type CreateTaskFromOrderRequest struct {
 	DropoffName     string  `json:"dropoff_name"`
 	DropoffLat      float64 `json:"dropoff_lat"`
 	DropoffLng      float64 `json:"dropoff_lng"`
+	// Outlet (pickup point) details for the rider: which branch, where the counter is, who to call.
+	OutletID      string `json:"outlet_id"`
+	PickupAddress string `json:"pickup_address"`
+	PickupPhone   string `json:"pickup_phone"`
+	// PODCode is the customer's proof-of-delivery code. It is kept in task metadata to verify the
+	// code the rider enters and is never returned to API clients (see handlers.publicTaskMetadata).
+	PODCode       string                   `json:"pod_code"`
+	DeliveryFee   float64                  `json:"delivery_fee"`
+	PaymentMethod string                   `json:"payment_method"`
+	Items         []map[string]interface{} `json:"items"`
 }
 
 // AssignTaskRequest is the DTO for assigning a task to a fleet member.
@@ -96,14 +107,102 @@ type AssignTaskRequest struct {
 
 // SubmitPoDRequest is the DTO for submitting proof of delivery.
 type SubmitPoDRequest struct {
-	FleetMemberID    uuid.UUID      `json:"fleet_member_id"`
-	SignatureURL     string         `json:"signature_url,omitempty"`
-	PhotoURL         string         `json:"photo_url,omitempty"`
-	OTPCode          string         `json:"otp_code,omitempty"`
-	ConfirmationCode string         `json:"confirmation_code,omitempty"`
-	AmountCollected  float64        `json:"amount_collected,omitempty"`
-	CollectionMethod string         `json:"collection_method,omitempty"`
-	Metadata         map[string]any `json:"metadata,omitempty"`
+	FleetMemberID    uuid.UUID `json:"fleet_member_id"`
+	SignatureURL     string    `json:"signature_url,omitempty"`
+	PhotoURL         string    `json:"photo_url,omitempty"`
+	OTPCode          string    `json:"otp_code,omitempty"`
+	ConfirmationCode string    `json:"confirmation_code,omitempty"`
+	AmountCollected  float64   `json:"amount_collected,omitempty"`
+	// CollectionMethod is how the customer paid at the door: "cash" or "mpesa" (to the business
+	// Till/Paybill). CollectionReference is the M-Pesa code for an mpesa collection.
+	CollectionMethod    string         `json:"collection_method,omitempty"`
+	CollectionReference string         `json:"collection_reference,omitempty"`
+	RecipientName       string         `json:"recipient_name,omitempty"`
+	Notes               string         `json:"notes,omitempty"`
+	Latitude            *float64       `json:"latitude,omitempty"`
+	Longitude           *float64       `json:"longitude,omitempty"`
+	Metadata            map[string]any `json:"metadata,omitempty"`
+}
+
+// podAllowedFrom lists the statuses a task can be delivered from: the rider must have collected
+// the order. A pending/assigned/accepted task (still at the outlet) cannot be proof-of-delivered.
+var podAllowedFrom = map[string]bool{
+	"picked_up": true, "en_route_dropoff": true, "arrived_dropoff": true, "en_route": true,
+}
+
+// describeItems renders an order's lines as "2x Burger, 1x Chips" plus the unit count, so the
+// rider can check the bag at the counter.
+func describeItems(items []map[string]interface{}) (string, int) {
+	parts := make([]string, 0, len(items))
+	count := 0
+	for _, it := range items {
+		name, _ := it["name"].(string)
+		if strings.TrimSpace(name) == "" {
+			continue
+		}
+		qty := int(metadataNumber(it["quantity"]))
+		if qty <= 0 {
+			qty = 1
+		}
+		count += qty
+		parts = append(parts, fmt.Sprintf("%dx %s", qty, name))
+	}
+	return strings.Join(parts, ", "), count
+}
+
+// metadataString reads a string metadata value ("" when absent).
+func metadataString(m map[string]any, key string) string {
+	if m == nil {
+		return ""
+	}
+	v, _ := m[key].(string)
+	return v
+}
+
+// taskCODAmount returns the cash the rider must collect, from the column or (for tasks created
+// from an order, which carry it in metadata) the metadata.
+func taskCODAmount(t *ent.Task) float64 {
+	if t.CashOnDelivery > 0 {
+		return t.CashOnDelivery
+	}
+	if t.Metadata != nil {
+		return metadataNumber(t.Metadata["cash_on_delivery"])
+	}
+	return 0
+}
+
+// AutoAssignEnabled reports whether the tenant wants new delivery tasks auto-assigned to the
+// nearest rider (setting logistics.auto_assign_enabled: the tenant's own value, else the platform
+// default, else on). A business with its own dispatcher turns it off and assigns from the board.
+func (s *Service) AutoAssignEnabled(ctx context.Context, tenantID uuid.UUID) bool {
+	const key = "logistics.auto_assign_enabled"
+	cfg, err := s.client.ServiceConfig.Query().
+		Where(serviceconfig.ConfigKey(key), serviceconfig.TenantID(tenantID)).
+		First(ctx)
+	if err != nil {
+		cfg, err = s.client.ServiceConfig.Query().
+			Where(serviceconfig.ConfigKey(key), serviceconfig.TenantIDIsNil()).
+			First(ctx)
+	}
+	if err != nil {
+		return true
+	}
+	v, perr := strconv.ParseBool(strings.TrimSpace(cfg.ConfigValue))
+	if perr != nil {
+		return true
+	}
+	return v
+}
+
+// ActiveAssignee returns the fleet member currently assigned to the task, if any.
+func (s *Service) ActiveAssignee(ctx context.Context, taskID uuid.UUID) (uuid.UUID, bool) {
+	a, err := s.client.TaskAssignment.Query().
+		Where(taskassignment.TaskID(taskID), taskassignment.StatusIn("assigned", "accepted")).
+		First(ctx)
+	if err != nil {
+		return uuid.Nil, false
+	}
+	return a.FleetMemberID, true
 }
 
 // ListTasksFilter holds optional filters for listing tasks.
@@ -412,6 +511,12 @@ func (s *Service) UpdateStatus(ctx context.Context, tenantID, taskID uuid.UUID, 
 		return nil, fmt.Errorf("tasks: query for status update: %w", err)
 	}
 
+	// Delivery is only ever recorded through proof of delivery (SubmitPoD), which checks the
+	// customer's code and the cash collected. A plain status change to "delivered" skipped both.
+	if newStatus == "delivered" || newStatus == "completed" {
+		return nil, fmt.Errorf("tasks: submit proof of delivery to complete a delivery")
+	}
+
 	allowed, ok := validTransitions[t.Status]
 	if !ok {
 		return nil, fmt.Errorf("tasks: unknown current status %q", t.Status)
@@ -454,6 +559,7 @@ func (s *Service) UpdateStatus(ctx context.Context, tenantID, taskID uuid.UUID, 
 			Status:            newStatus,
 			PreviousStatus:    t.Status,
 			SourceService:     updated.SourceService,
+			OrderNumber:       metadataString(updated.Metadata, "order_number"),
 		})
 	}
 
@@ -560,9 +666,29 @@ func (s *Service) SubmitPoD(ctx context.Context, tenantID, taskID uuid.UUID, req
 		return nil, fmt.Errorf("tasks: get for pod: %w", err)
 	}
 
-	// Validate COD: if task requires cash collection, ensure amount was collected
-	if t.CashOnDelivery > 0 && req.AmountCollected < t.CashOnDelivery {
-		return nil, fmt.Errorf("tasks: COD amount collected (%.2f) is less than required (%.2f)", req.AmountCollected, t.CashOnDelivery)
+	if !podAllowedFrom[t.Status] {
+		return nil, fmt.Errorf("tasks: the order has not been picked up yet (status %s)", t.Status)
+	}
+
+	// Validate COD: the customer pays the rider in cash or by M-Pesa to the business, and the
+	// full amount must be taken. An M-Pesa collection needs its confirmation code so the
+	// business can match it on its statement.
+	codAmount := taskCODAmount(t)
+	method := strings.ToLower(strings.TrimSpace(req.CollectionMethod))
+	reference := strings.ToUpper(strings.Join(strings.Fields(req.CollectionReference), ""))
+	if codAmount > 0 {
+		if req.AmountCollected < codAmount {
+			return nil, fmt.Errorf("tasks: amount collected (%.2f) is less than the %.2f due", req.AmountCollected, codAmount)
+		}
+		if method == "" {
+			method = "cash"
+		}
+		if method != "cash" && method != "mpesa" {
+			return nil, fmt.Errorf("tasks: collection method must be cash or mpesa")
+		}
+		if method == "mpesa" && len(reference) != 10 {
+			return nil, fmt.Errorf("tasks: enter the 10-character M-Pesa code for this payment")
+		}
 	}
 
 	// Validate proof-of-delivery confirmation code. ordering-backend stores a
@@ -586,6 +712,19 @@ func (s *Service) SubmitPoD(ctx context.Context, tenantID, taskID uuid.UUID, req
 	meta := req.Metadata
 	if meta == nil {
 		meta = map[string]any{}
+	}
+	if reference != "" {
+		meta["collection_reference"] = reference
+	}
+	if req.RecipientName != "" {
+		meta["recipient_name"] = req.RecipientName
+	}
+	if req.Notes != "" {
+		meta["notes"] = req.Notes
+	}
+	if req.Latitude != nil && req.Longitude != nil {
+		meta["latitude"] = *req.Latitude
+		meta["longitude"] = *req.Longitude
 	}
 
 	// Resolve the fleet member from the task's active assignment rather than
@@ -619,8 +758,8 @@ func (s *Service) SubmitPoD(ctx context.Context, tenantID, taskID uuid.UUID, req
 	if req.OTPCode != "" {
 		builder.SetOtpCode(req.OTPCode)
 	}
-	if req.CollectionMethod != "" {
-		builder.SetCollectionMethod(req.CollectionMethod)
+	if method != "" {
+		builder.SetCollectionMethod(method)
 	}
 
 	pod, err := builder.Save(ctx)
@@ -636,7 +775,7 @@ func (s *Service) SubmitPoD(ctx context.Context, tenantID, taskID uuid.UUID, req
 	// the task row itself silently never flipped to "delivered" and stayed stuck on
 	// the rider's active-deliveries list forever.
 	taskUpdate := s.client.Task.UpdateOneID(taskID).SetStatus("delivered")
-	if t.CashOnDelivery > 0 && req.AmountCollected >= t.CashOnDelivery {
+	if codAmount > 0 && req.AmountCollected >= codAmount {
 		taskUpdate.SetCashCollected(true)
 	}
 	if t.Status != "delivered" && t.Status != "completed" && t.Status != "cancelled" && t.Status != "failed" {
@@ -667,15 +806,18 @@ func (s *Service) SubmitPoD(ctx context.Context, tenantID, taskID uuid.UUID, req
 	// Publish task completed event
 	if s.publisher != nil {
 		_ = s.publisher.PublishTaskCompleted(ctx, tenantID, events.TaskEventData{
-			TaskID:            taskID.String(),
-			TrackingCode:      t.TrackingCode,
-			ExternalReference: t.ExternalReference,
-			Status:            "delivered",
-			FleetMemberID:     memberID.String(),
-			SourceService:     t.SourceService,
-			CashOnDelivery:    t.CashOnDelivery,
-			CashCollected:     t.CashOnDelivery > 0 && req.AmountCollected >= t.CashOnDelivery,
-			AmountCollected:   req.AmountCollected,
+			TaskID:              taskID.String(),
+			TrackingCode:        t.TrackingCode,
+			ExternalReference:   t.ExternalReference,
+			Status:              "delivered",
+			FleetMemberID:       memberID.String(),
+			SourceService:       t.SourceService,
+			CashOnDelivery:      codAmount,
+			CashCollected:       codAmount > 0 && req.AmountCollected >= codAmount,
+			AmountCollected:     req.AmountCollected,
+			OrderNumber:         metadataString(t.Metadata, "order_number"),
+			CollectionMethod:    method,
+			CollectionReference: reference,
 		})
 	}
 
@@ -737,9 +879,28 @@ func (s *Service) CreateTaskFromOrder(ctx context.Context, tenantID uuid.UUID, e
 	if req.CashOnDelivery > 0 {
 		metadata["cash_on_delivery"] = req.CashOnDelivery
 		metadata["payment_method"] = "cod"
+	} else if req.PaymentMethod != "" {
+		metadata["payment_method"] = req.PaymentMethod
 	}
 	if req.FulfillmentType != "" {
 		metadata["fulfillment_type"] = req.FulfillmentType
+	}
+	if req.PODCode != "" {
+		metadata["pod_code"] = req.PODCode
+	}
+	if req.DeliveryFee > 0 {
+		metadata["delivery_fee"] = req.DeliveryFee
+	}
+	if req.OutletID != "" {
+		metadata["outlet_id"] = req.OutletID
+	}
+	if req.PickupPhone != "" {
+		metadata["pickup_phone"] = req.PickupPhone
+	}
+	// What is in the bag, so the rider can check it at the counter.
+	if desc, count := describeItems(req.Items); count > 0 {
+		metadata["items_description"] = desc
+		metadata["item_count"] = count
 	}
 
 	// Store pickup/dropoff coords in metadata as fallback for dispatcher
@@ -758,6 +919,12 @@ func (s *Service) CreateTaskFromOrder(ctx context.Context, tenantID uuid.UUID, e
 	if err != nil {
 		return nil, err
 	}
+	// Scope the task to its outlet so a branch dispatcher filtering by outlet sees it.
+	if oid, perr := uuid.Parse(req.OutletID); perr == nil {
+		if upd, uerr := s.client.Task.UpdateOneID(t.ID).SetOutletID(oid).Save(ctx); uerr == nil {
+			t = upd
+		}
+	}
 
 	// Create pickup step (sequence 1)
 	if req.PickupLat != 0 && req.PickupLng != 0 {
@@ -766,12 +933,17 @@ func (s *Service) CreateTaskFromOrder(ctx context.Context, tenantID uuid.UUID, e
 			SetStepType("pickup").
 			SetSequence(1).
 			SetLocationName(req.PickupName).
+			SetContactName(req.PickupName).
+			SetContactPhone(req.PickupPhone).
 			SetAddressJSON(map[string]any{
 				"latitude":  req.PickupLat,
 				"longitude": req.PickupLng,
 				"name":      req.PickupName,
+				"address":   req.PickupAddress,
 			}).
-			SetMetadata(map[string]any{}).
+			SetMetadata(map[string]any{
+				"order_number": req.OrderNumber,
+			}).
 			Save(ctx)
 		if stepErr != nil {
 			s.log.Warn("failed to create pickup step", zap.Error(stepErr))

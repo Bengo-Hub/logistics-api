@@ -118,9 +118,11 @@ type orderReadyEvent struct {
 		CustomerName    string                 `json:"customer_name"`
 		CustomerPhone   string                 `json:"customer_phone"`
 		Instructions    string                 `json:"instructions"`
-		FulfillmentType string                 `json:"fulfillment_type"`
-		OutletLocation  map[string]interface{} `json:"outlet_location"`
-		DeliveryAddress map[string]interface{} `json:"delivery_address"`
+		FulfillmentType string                   `json:"fulfillment_type"`
+		OutletLocation  map[string]interface{}   `json:"outlet_location"`
+		DeliveryAddress map[string]interface{}   `json:"delivery_address"`
+		PODCode         string                   `json:"pod_code"`
+		Items           []map[string]interface{} `json:"items"`
 	} `json:"payload"` // shared-events nests business fields under `payload`, not `data`
 }
 
@@ -148,6 +150,14 @@ func (c *OrderReadyConsumer) handleMessage(msg *nats.Msg) {
 
 	orderID := envelope.Data.OrderID
 	if orderID == "" {
+		_ = msg.Ack()
+		return
+	}
+	// Only a delivery needs a rider. A pickup or dine-in order that reaches "ready" must never get
+	// a delivery task (and an auto-dispatched rider) created for it.
+	switch envelope.Data.FulfillmentType {
+	case "", "delivery", "scheduled":
+	default:
 		_ = msg.Ack()
 		return
 	}
@@ -181,10 +191,17 @@ func (c *OrderReadyConsumer) handleMessage(msg *nats.Msg) {
 		Instructions:    envelope.Data.Instructions,
 		CashOnDelivery:  envelope.Data.CashOnDelivery,
 		FulfillmentType: envelope.Data.FulfillmentType,
+		OutletID:        envelope.Data.OutletID,
+		PODCode:         envelope.Data.PODCode,
+		DeliveryFee:     envelope.Data.DeliveryFee,
+		PaymentMethod:   envelope.Data.PaymentMethod,
+		Items:           envelope.Data.Items,
 	}
 
 	// Extract pickup location from outlet
 	if loc := envelope.Data.OutletLocation; loc != nil {
+		req.PickupAddress, _ = loc["address"].(string)
+		req.PickupPhone, _ = loc["phone"].(string)
 		req.PickupName, _ = loc["name"].(string)
 		req.PickupLat, _ = toFloat64(loc["latitude"])
 		req.PickupLng, _ = toFloat64(loc["longitude"])
@@ -223,7 +240,7 @@ func (c *OrderReadyConsumer) handleMessage(msg *nats.Msg) {
 	// Auto-dispatch: find and assign nearest available rider (async, best-effort).
 	// Derive from svcCtx (not Background) so the goroutine is cancelled when the
 	// service shuts down — prevents double-dispatch on rolling restarts.
-	if c.dispatcher != nil {
+	if c.dispatcher != nil && c.taskSvc.AutoAssignEnabled(ctx, tenantID) {
 		dispatchCtx, dispatchCancel := context.WithTimeout(c.svcCtx, 30*time.Second)
 		go func() {
 			defer dispatchCancel()

@@ -228,6 +228,10 @@ func (h *LogisticsHandler) UpdateTaskStatus(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	if !h.callerMayWorkTask(w, r, tenantID, taskID) {
+		return
+	}
+
 	t, err := h.taskSvc.UpdateStatus(r.Context(), tenantID, taskID, body.Status)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -286,6 +290,10 @@ func (h *LogisticsHandler) SubmitPoD(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !h.callerMayWorkTask(w, r, tenantID, taskID) {
+		return
+	}
+
 	pod, err := h.taskSvc.SubmitPoD(r.Context(), tenantID, taskID, req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -293,6 +301,32 @@ func (h *LogisticsHandler) SubmitPoD(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondJSON(w, http.StatusCreated, pod)
+}
+
+// callerMayWorkTask stops a rider from moving or delivering a task that is not theirs. Riders hold
+// logistics.tasks.manage (it is what lets them update their own jobs), so without this any rider in
+// the tenant could mark another rider's order picked up or delivered. Dispatchers and admins (users
+// who are not fleet members) are unaffected. Writes a 403 and returns false when refused.
+func (h *LogisticsHandler) callerMayWorkTask(w http.ResponseWriter, r *http.Request, tenantID, taskID uuid.UUID) bool {
+	claims, ok := authclient.ClaimsFromContext(r.Context())
+	if !ok || claims.Subject == "" {
+		return true // service calls carry no rider identity
+	}
+	userID, err := uuid.Parse(claims.Subject)
+	if err != nil {
+		return true
+	}
+	member, err := h.taskSvc.Client().FleetMember.Query().
+		Where(fleetmember.UserID(userID), fleetmember.TenantID(tenantID)).
+		Only(r.Context())
+	if err != nil {
+		return true // not a rider: a dispatcher/admin acting on the board
+	}
+	if assignee, assigned := h.taskSvc.ActiveAssignee(r.Context(), taskID); assigned && assignee == member.ID {
+		return true
+	}
+	http.Error(w, "this delivery is assigned to another rider", http.StatusForbidden)
+	return false
 }
 
 // RateRider handles POST /api/v1/{tenant}/tasks/{taskId}/rate
