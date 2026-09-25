@@ -175,7 +175,12 @@ func taskCODAmount(t *ent.Task) float64 {
 // nearest rider (setting logistics.auto_assign_enabled: the tenant's own value, else the platform
 // default, else on). A business with its own dispatcher turns it off and assigns from the board.
 func (s *Service) AutoAssignEnabled(ctx context.Context, tenantID uuid.UUID) bool {
-	const key = "logistics.auto_assign_enabled"
+	return s.boolSetting(ctx, tenantID, "logistics.auto_assign_enabled", true)
+}
+
+// boolSetting reads a boolean service setting: the tenant's own value, else the platform
+// default, else def.
+func (s *Service) boolSetting(ctx context.Context, tenantID uuid.UUID, key string, def bool) bool {
 	cfg, err := s.client.ServiceConfig.Query().
 		Where(serviceconfig.ConfigKey(key), serviceconfig.TenantID(tenantID)).
 		First(ctx)
@@ -185,11 +190,11 @@ func (s *Service) AutoAssignEnabled(ctx context.Context, tenantID uuid.UUID) boo
 			First(ctx)
 	}
 	if err != nil {
-		return true
+		return def
 	}
 	v, perr := strconv.ParseBool(strings.TrimSpace(cfg.ConfigValue))
 	if perr != nil {
-		return true
+		return def
 	}
 	return v
 }
@@ -627,30 +632,38 @@ func (s *Service) AssignTask(ctx context.Context, tenantID, taskID uuid.UUID, re
 		zap.String("member_id", req.FleetMemberID.String()),
 	)
 
-	// Publish task assigned event, enriched with the rider's contact (resolved from the local user
-	// table synced from auth) so notifications-api can alert the rider of the new task.
-	if s.publisher != nil {
-		t, _ := s.client.Task.Query().Where(task.ID(taskID)).Only(ctx)
-		if t != nil {
-			riderEmail, riderName := "", ""
-			if ru, uerr := s.client.User.Query().Where(entuser.ID(member.UserID)).Only(ctx); uerr == nil && ru != nil {
-				riderEmail = ru.Email
-				riderName = ru.FullName
-			}
-			_ = s.publisher.PublishTaskAssigned(ctx, tenantID, events.TaskEventData{
-				TaskID:            taskID.String(),
-				TrackingCode:      t.TrackingCode,
-				ExternalReference: t.ExternalReference,
-				Status:            "assigned",
-				FleetMemberID:     req.FleetMemberID.String(),
-				RiderEmail:        riderEmail,
-				RiderName:         riderName,
-				SourceService:     t.SourceService,
-			})
-		}
-	}
+	s.publishAssigned(ctx, tenantID, taskID, member)
 
 	return assignment, nil
+}
+
+// publishAssigned publishes task.assigned enriched with the rider's contact (resolved from the
+// local user table synced from auth) so notifications-api can alert the rider and ordering can
+// show the customer who is bringing the order.
+func (s *Service) publishAssigned(ctx context.Context, tenantID, taskID uuid.UUID, member *ent.FleetMember) {
+	if s.publisher == nil || member == nil {
+		return
+	}
+	t, _ := s.client.Task.Query().Where(task.ID(taskID)).Only(ctx)
+	if t == nil {
+		return
+	}
+	riderEmail, riderName := "", ""
+	if ru, uerr := s.client.User.Query().Where(entuser.ID(member.UserID)).Only(ctx); uerr == nil && ru != nil {
+		riderEmail = ru.Email
+		riderName = ru.FullName
+	}
+	_ = s.publisher.PublishTaskAssigned(ctx, tenantID, events.TaskEventData{
+		TaskID:            taskID.String(),
+		TrackingCode:      t.TrackingCode,
+		ExternalReference: t.ExternalReference,
+		Status:            "assigned",
+		FleetMemberID:     member.ID.String(),
+		RiderEmail:        riderEmail,
+		RiderName:         riderName,
+		SourceService:     t.SourceService,
+		OrderNumber:       metadataString(t.Metadata, "order_number"),
+	})
 }
 
 // SubmitPoD records proof of delivery and marks task as delivered.
