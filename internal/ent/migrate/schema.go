@@ -3,6 +3,7 @@
 package migrate
 
 import (
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/dialect/sql/schema"
 	"entgo.io/ent/schema/field"
 )
@@ -593,6 +594,14 @@ var (
 				Name:    "proofofdelivery_tenant_id_task_id",
 				Unique:  false,
 				Columns: []*schema.Column{ProofOfDeliveriesColumns[1], ProofOfDeliveriesColumns[15]},
+			},
+			{
+				Name:    "proofofdelivery_cash_outstanding",
+				Unique:  false,
+				Columns: []*schema.Column{ProofOfDeliveriesColumns[1], ProofOfDeliveriesColumns[2], ProofOfDeliveriesColumns[8]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "collection_method = 'cash' AND amount_collected > 0 AND (metadata ->> 'remitted_at') IS NULL",
+				},
 			},
 		},
 	}
