@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"entgo.io/ent"
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
@@ -77,5 +78,10 @@ func (ProofOfDelivery) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("tenant_id"),
 		index.Fields("tenant_id", "task_id"),
+		// Rider cash ledger: only cash not yet handed in. Partial, so it stays as small as the
+		// cash riders hold today however many deliveries pile up (tasks/cash.go notRemitted).
+		index.Fields("tenant_id", "fleet_member_id", "captured_at").
+			StorageKey("proofofdelivery_cash_outstanding").
+			Annotations(entsql.IndexWhere("collection_method = 'cash' AND amount_collected > 0 AND (metadata ->> 'remitted_at') IS NULL")),
 	}
 }
