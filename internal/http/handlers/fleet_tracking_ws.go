@@ -75,7 +75,7 @@ func (h *FleetTrackingHub) Broadcast(tenantID, memberID uuid.UUID, lat, lng floa
 func (h *FleetTrackingHub) ServeWS(ctx context.Context, conn *websocket.Conn, tenantID uuid.UUID) {
 	sub := h.fan.Subscribe(tenantID.String())
 	defer h.fan.Unsubscribe(sub)
-	realtime.Pump(ctx, conn, sub, nil)
+	eventslib.Pump(ctx, realtime.Socket(conn), sub, nil, nil)
 }
 
 // FleetTrackingWSHandler handles the fleet-wide live tracking WebSocket upgrade.
