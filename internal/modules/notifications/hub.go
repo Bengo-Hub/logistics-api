@@ -59,5 +59,5 @@ func (h *Hub) ServeWS(ctx context.Context, conn *websocket.Conn, tenantID uuid.U
 	sub := h.fan.Subscribe(tenantID.String())
 	defer h.fan.Unsubscribe(sub)
 	hello, _ := json.Marshal(Message{Type: "ping"})
-	realtime.Pump(ctx, conn, sub, hello)
+	eventslib.Pump(ctx, realtime.Socket(conn), sub, hello, nil)
 }
