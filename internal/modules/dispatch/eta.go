@@ -2,6 +2,7 @@ package dispatch
 
 import (
 	"context"
+	sharedcache "github.com/Bengo-Hub/cache"
 	"time"
 
 	"github.com/google/uuid"
@@ -85,6 +86,10 @@ func (u *ETAUpdater) ComputeAndPublishETA(ctx context.Context, tenantID, taskID 
 
 // updateActiveETAs recalculates ETA for all in-progress tasks.
 func (u *ETAUpdater) updateActiveETAs(ctx context.Context) {
+	// Runs on every replica's ticker; only the first replica in each period does the work.
+	if !sharedcache.ClaimPeriod(ctx, "logistics:eta-updater", u.interval) {
+		return
+	}
 	// Find all tasks with status accepted or en_route
 	activeTasks, err := u.entClient.Task.Query().
 		Where(task.StatusIn("accepted", "en_route")).

@@ -138,13 +138,24 @@ func (h *EarningsHandler) GetStatement(w http.ResponseWriter, r *http.Request) {
 }
 
 // GenerateStatements handles POST /api/v1/{tenant}/earnings/statements/generate
+// Optional ?date=YYYY-MM-DD (UTC day) selects the statement day; default is yesterday.
+// Members that already have a statement for that day are skipped.
 func (h *EarningsHandler) GenerateStatements(w http.ResponseWriter, r *http.Request) {
 	tenantID := tenantIDFromClaims(r)
 	if tenantID == uuid.Nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	if err := h.earningsSvc.GenerateStatements(r.Context(), tenantID); err != nil {
+	day := time.Now().UTC().Add(-24 * time.Hour)
+	if v := r.URL.Query().Get("date"); v != "" {
+		parsed, err := time.Parse("2006-01-02", v)
+		if err != nil {
+			http.Error(w, "date must be YYYY-MM-DD", http.StatusBadRequest)
+			return
+		}
+		day = parsed
+	}
+	if err := h.earningsSvc.GenerateStatements(r.Context(), tenantID, day); err != nil {
 		h.log.Error("generate statements", zap.Error(err))
 		http.Error(w, "failed to generate statements", http.StatusInternalServerError)
 		return

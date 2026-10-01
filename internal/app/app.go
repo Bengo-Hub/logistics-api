@@ -10,7 +10,6 @@ import (
 
 	"entgo.io/ent/dialect"
 	entsql "entgo.io/ent/dialect/sql"
-	"entgo.io/ent/dialect/sql/schema"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/nats-io/nats.go"
@@ -22,13 +21,12 @@ import (
 	eventslib "github.com/Bengo-Hub/shared-events"
 	"github.com/bengobox/logistics-service/internal/config"
 	"github.com/bengobox/logistics-service/internal/ent"
-	"github.com/bengobox/logistics-service/internal/ent/migrate"
 	handlers "github.com/bengobox/logistics-service/internal/http/handlers"
 	router "github.com/bengobox/logistics-service/internal/http/router"
-	"github.com/bengobox/logistics-service/internal/modules/consumers"
-	"github.com/bengobox/logistics-service/internal/modules/dispatch"
 	backupmod "github.com/bengobox/logistics-service/internal/modules/backup"
 	"github.com/bengobox/logistics-service/internal/modules/backup/destination"
+	"github.com/bengobox/logistics-service/internal/modules/consumers"
+	"github.com/bengobox/logistics-service/internal/modules/dispatch"
 	"github.com/bengobox/logistics-service/internal/modules/earnings"
 	fleetmod "github.com/bengobox/logistics-service/internal/modules/fleet"
 	"github.com/bengobox/logistics-service/internal/modules/identity"
@@ -36,10 +34,9 @@ import (
 	rbacmod "github.com/bengobox/logistics-service/internal/modules/rbac"
 	"github.com/bengobox/logistics-service/internal/modules/routing"
 	"github.com/bengobox/logistics-service/internal/modules/tasks"
-	"github.com/bengobox/logistics-service/internal/modules/tenant"
 	telemetrymod "github.com/bengobox/logistics-service/internal/modules/telemetry"
+	"github.com/bengobox/logistics-service/internal/modules/tenant"
 	zonesmod "github.com/bengobox/logistics-service/internal/modules/zones"
-	"github.com/bengobox/logistics-service/internal/platform/cache"
 	"github.com/bengobox/logistics-service/internal/platform/database"
 	"github.com/bengobox/logistics-service/internal/platform/events"
 	"github.com/bengobox/logistics-service/internal/platform/subscriptions"
@@ -47,19 +44,19 @@ import (
 )
 
 type App struct {
-	cfg             *config.Config
-	log             *zap.Logger
-	httpServer      *http.Server
-	db              *pgxpool.Pool
-	entClient       *ent.Client
-	cache           *redis.Client
-	events          *nats.Conn
-	orderConsumer    *consumers.OrderReadyConsumer
-	transferConsumer *consumers.TransferReadyConsumer
+	cfg                 *config.Config
+	log                 *zap.Logger
+	httpServer          *http.Server
+	db                  *pgxpool.Pool
+	entClient           *ent.Client
+	cache               *redis.Client
+	events              *nats.Conn
+	orderConsumer       *consumers.OrderReadyConsumer
+	transferConsumer    *consumers.TransferReadyConsumer
 	tenantPurgeConsumer *consumers.TenantPurgeConsumer
-	outboxPublisher *eventslib.Publisher
-	etaUpdater      *dispatch.ETAUpdater
-	batchScheduler  *dispatch.BatchScheduler
+	outboxPublisher     *eventslib.Publisher
+	etaUpdater          *dispatch.ETAUpdater
+	batchScheduler      *dispatch.BatchScheduler
 }
 
 func New(ctx context.Context) (*App, error) {
@@ -78,11 +75,28 @@ func New(ctx context.Context) (*App, error) {
 		return nil, fmt.Errorf("postgres init: %w", err)
 	}
 
-	redisClient := cache.NewClient(cfg.Redis)
+	redisClient, redisErr := sharedcache.NewRedis(ctx, sharedcache.RedisConfig{
+		Addr: cfg.Redis.Addr, Username: cfg.Redis.Username, Password: cfg.Redis.Password,
+		DB: cfg.Redis.DB, TLS: cfg.Redis.TLSRequired, DialTimeout: cfg.Redis.DialTimeout,
+	})
+	if redisErr != nil {
+		log.Warn("redis not reachable at startup", zap.Error(redisErr))
+	}
+	// Scheduled jobs run once per period fleet-wide (sharedcache.ClaimPeriod).
+	sharedcache.SetLeaseClient(redisClient)
 
 	natsConn, err := events.Connect(cfg.Events)
 	if err != nil {
 		log.Warn("event bus connection failed", zap.Error(err))
+	}
+	// One cross-replica relay for every realtime hub (fleet map, dispatcher bell, task SSE).
+	var relay *eventslib.Broadcaster
+	if natsConn != nil {
+		relay = eventslib.NewBroadcaster(log, natsConn, "logistics")
+		// Drop revoked/rotated API keys from every validator on this pod at once.
+		_ = eventslib.NewBroadcaster(log, natsConn, "auth").Subscribe("apikey.changed", func(m eventslib.BroadcastMessage) {
+			authclient.InvalidateAPIKeyHash(string(m.Data))
+		})
 	}
 
 	// Ensure logistics JetStream stream exists (for fleet events)
@@ -131,13 +145,9 @@ func New(ctx context.Context) (*App, error) {
 	drv := entsql.OpenDB(dialect.Postgres, sqlDB)
 	entClient := ent.NewClient(ent.Driver(drv))
 
-	// Run versioned migrations on startup (within the pod)
-	if err := entClient.Schema.Create(ctx, 
-		schema.WithDir(migrate.Dir),
-	); err != nil {
-		return nil, fmt.Errorf("ent schema create: %w", err)
-	}
-	log.Info("versioned migrations completed - run 'go run cmd/seed/main.go' to seed initial data (idempotent)")
+	// Schema migrations run once per rollout in logistics-migrate (entrypoint, advisory-locked,
+	// direct DSN). Running them here too, unlocked and through PgBouncer from every pod start,
+	// raced the locked run on other replicas.
 
 	subsClient := subscriptions.NewClient(subscriptions.Config{
 		ServiceURL:     cfg.Subscriptions.ServiceURL,
@@ -213,7 +223,7 @@ func New(ctx context.Context) (*App, error) {
 	taskSvc.SetPublisher(eventPublisher)
 
 	// Earnings: records rider earnings on delivery completion, daily statement generation
-	earningsSvc := earnings.NewService(entClient, log)
+	earningsSvc := earnings.NewService(entClient, log).WithDB(sqlDB)
 	taskSvc.SetEarningsService(earningsSvc)
 	go earningsSvc.StartStatementJob(ctx)
 	log.Info("app: earnings statement job started (daily)")
@@ -247,9 +257,8 @@ func New(ctx context.Context) (*App, error) {
 	telemetryHandler := handlers.NewTelemetryHandler(log, telemetrySvc, entClient)
 
 	// Fleet tracking hub: real-time WebSocket push of rider location updates to
-	// dispatchers on logistics-ui's live tracking map, Redis-relayed across replicas.
-	fleetTrackingHub := handlers.NewFleetTrackingHub(log, redisClient)
-	go fleetTrackingHub.Start(ctx)
+	// dispatchers on logistics-ui's live tracking map, relayed across replicas.
+	fleetTrackingHub := handlers.NewFleetTrackingHub(log, relay)
 	telemetryHandler.SetFleetHub(fleetTrackingHub)
 	fleetTrackingWSHandler := handlers.NewFleetTrackingWSHandler(log, fleetTrackingHub, cfg.HTTP.AllowedOrigins)
 
@@ -257,14 +266,13 @@ func New(ctx context.Context) (*App, error) {
 	// logistics-ui's notification bell. Wired into the auto-dispatcher and SLA monitor so a
 	// task that can't auto-dispatch, or breaches its SLA, actually surfaces to a dispatcher
 	// instead of only a log line.
-	notifHub := notifmod.NewHub(log, redisClient)
-	go notifHub.Start(ctx)
+	notifHub := notifmod.NewHub(log, relay)
 	notifSvc := notifmod.NewService(log, entClient, notifHub)
 	autoDispatcher.SetNotifications(notifSvc)
 	notificationsHandler := handlers.NewNotificationsHandler(log, notifSvc, notifHub, cfg.HTTP.AllowedOrigins)
 
-	// SSE hub: in-process real-time task event bus for logistics-ui / public tracker
-	sseHub := handlers.NewSSEHub(log)
+	// SSE hub: task status/ETA events for logistics-ui, relayed across replicas.
+	sseHub := handlers.NewSSEHub(log, relay)
 	sseHandler := handlers.NewSSEHandler(sseHub, log)
 	taskSvc.SetSSEBroadcaster(sseHub)
 
@@ -328,7 +336,7 @@ func New(ctx context.Context) (*App, error) {
 		Enabled:       cfg.Backup.ScheduleEnabled,
 		Hour:          cfg.Backup.ScheduleHour,
 		RetentionDays: cfg.Backup.RetentionDays,
-	}, log).Start(ctx)
+	}, log).WithRedis(redisClient).Start(ctx)
 
 	chiRouter := router.New(log, healthHandler, authMiddleware, identitySvc, logisticsHandler, routingHandler, trackingHandler, zonesHandler, rbacHandler, redisClient, cfg, cfg.HTTP.AllowedOrigins, serviceConfigHandler, earningsHandler, sseHandler, rbacSvc, telemetryHandler, shipmentHandler, shiftHandler, analyticsHandler, backupsHandler, backupDestHandler, validator, fleetTrackingWSHandler, notificationsHandler)
 
@@ -342,19 +350,19 @@ func New(ctx context.Context) (*App, error) {
 	}
 
 	return &App{
-		cfg:             cfg,
-		log:             log,
-		httpServer:      httpServer,
-		db:              dbPool,
-		entClient:       entClient,
-		cache:           redisClient,
-		events:          natsConn,
-		orderConsumer:    orderConsumer,
-		transferConsumer: transferConsumer,
+		cfg:                 cfg,
+		log:                 log,
+		httpServer:          httpServer,
+		db:                  dbPool,
+		entClient:           entClient,
+		cache:               redisClient,
+		events:              natsConn,
+		orderConsumer:       orderConsumer,
+		transferConsumer:    transferConsumer,
 		tenantPurgeConsumer: tenantPurgeConsumer,
-		outboxPublisher: outboxPub,
-		etaUpdater:      etaUpdater,
-		batchScheduler:  batchScheduler,
+		outboxPublisher:     outboxPub,
+		etaUpdater:          etaUpdater,
+		batchScheduler:      batchScheduler,
 	}, nil
 }
 
