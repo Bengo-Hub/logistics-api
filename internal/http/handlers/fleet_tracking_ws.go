@@ -4,15 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"strings"
-	"sync"
 	"time"
 
+	eventslib "github.com/Bengo-Hub/shared-events"
 	"github.com/google/uuid"
-	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 	"nhooyr.io/websocket"
-	"nhooyr.io/websocket/wsjson"
+
+	"github.com/bengobox/logistics-service/internal/platform/realtime"
 )
 
 // FleetLocationUpdate is one rider's position, shaped to match the "data" field of
@@ -32,96 +31,30 @@ type fleetWSMessage struct {
 	Data FleetLocationUpdate `json:"data"`
 }
 
-const fleetTrackingChannelPrefix = "logistics:tracking:fleet:"
-
-// fleetWSClient is a single connected dispatcher's WebSocket session.
-type fleetWSClient struct {
-	tenantID uuid.UUID
-	send     chan fleetWSMessage
-}
-
 // FleetTrackingHub fans out rider location_update broadcasts to every dispatcher connected
-// to a tenant's live fleet map.
-//
-// With several logistics-api replicas, a dispatcher's WebSocket lands on whichever pod
-// handled its upgrade request, but the rider location POST that triggers a broadcast can
-// land on any replica. Without a cross-pod relay, a broadcast only reaches the (on average
-// 1-in-N) dispatchers who happen to share the broadcasting pod. Broadcast delivers to this
-// pod's own local clients immediately AND relays via Redis pub/sub so every other pod's hub
-// does the same for its own — mirrors pos-api's notifications.Hub, the same pattern already
-// proven on this platform for this exact cross-pod-WebSocket problem.
+// to a tenant's live fleet map. A dispatcher's socket lands on whichever replica handled the
+// upgrade while the rider's location POST can land on any replica, so the shared
+// events.FanoutHub relays every update to all replicas and each delivers to its own sockets.
 type FleetTrackingHub struct {
-	mu       sync.RWMutex
-	clients  map[*fleetWSClient]struct{}
-	log      *zap.Logger
-	redis    *redis.Client
-	originID string
+	fan *eventslib.FanoutHub
+	log *zap.Logger
 }
 
-// NewFleetTrackingHub creates a new hub. rdb may be nil, which degrades to single-pod
+// NewFleetTrackingHub creates a new hub. relay may be nil, which degrades to single-pod
 // delivery only (still correct when there is exactly one replica).
-func NewFleetTrackingHub(log *zap.Logger, rdb *redis.Client) *FleetTrackingHub {
-	return &FleetTrackingHub{
-		clients:  make(map[*fleetWSClient]struct{}),
-		log:      log.Named("fleet-tracking.hub"),
-		redis:    rdb,
-		originID: uuid.NewString(),
-	}
-}
-
-// Start subscribes to the cross-pod relay channel and relays messages to this pod's local
-// clients. Blocks until ctx is cancelled — run in a goroutine.
-func (h *FleetTrackingHub) Start(ctx context.Context) {
-	if h.redis == nil {
-		h.log.Info("fleet-tracking.hub: no Redis client — single-pod broadcast only")
-		return
-	}
-	sub := h.redis.PSubscribe(ctx, fleetTrackingChannelPrefix+"*")
-	defer func() { _ = sub.Close() }()
-	ch := sub.Channel()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case msg, ok := <-ch:
-			if !ok {
-				return
-			}
-			h.relayFromRedis(msg.Channel, msg.Payload)
-		}
-	}
-}
-
-type fleetRelayEnvelope struct {
-	Msg    fleetWSMessage `json:"msg"`
-	Origin string         `json:"origin"`
-}
-
-// relayFromRedis decodes a cross-pod relay message and delivers it to this pod's local
-// clients. Skips messages this same pod originally published — Broadcast already delivers
-// to local clients synchronously before publishing, so relaying our own publish back would
-// double-deliver it.
-func (h *FleetTrackingHub) relayFromRedis(channel, payload string) {
-	idStr := strings.TrimPrefix(channel, fleetTrackingChannelPrefix)
-	tenantID, err := uuid.Parse(idStr)
+func NewFleetTrackingHub(log *zap.Logger, relay *eventslib.Broadcaster) *FleetTrackingHub {
+	l := log.Named("fleet-tracking.hub")
+	fan, err := eventslib.NewFanoutHub(relay, "fleet-tracking", 32)
 	if err != nil {
-		return
+		l.Warn("fleet-tracking.hub: relay subscribe failed, single-pod delivery only", zap.Error(err))
 	}
-	var env fleetRelayEnvelope
-	if err := json.Unmarshal([]byte(payload), &env); err != nil {
-		h.log.Warn("fleet-tracking.hub: failed to decode redis relay message", zap.Error(err))
-		return
-	}
-	if env.Origin == h.originID {
-		return
-	}
-	h.sendLocal(tenantID, env.Msg)
+	return &FleetTrackingHub{fan: fan, log: l}
 }
 
 // Broadcast delivers a rider's location update to every dispatcher watching this tenant's
-// fleet map — locally, and (via Redis) on every other replica too.
+// fleet map, on every replica.
 func (h *FleetTrackingHub) Broadcast(tenantID, memberID uuid.UUID, lat, lng float64, heading, speed *float64) {
-	msg := fleetWSMessage{
+	b, err := json.Marshal(fleetWSMessage{
 		Type: "location_update",
 		Data: FleetLocationUpdate{
 			RiderID:   memberID.String(),
@@ -131,74 +64,18 @@ func (h *FleetTrackingHub) Broadcast(tenantID, memberID uuid.UUID, lat, lng floa
 			Speed:     speed,
 			Timestamp: time.Now().UTC().Format(time.RFC3339),
 		},
-	}
-	h.sendLocal(tenantID, msg)
-	h.publish(tenantID, msg)
-}
-
-func (h *FleetTrackingHub) sendLocal(tenantID uuid.UUID, msg fleetWSMessage) {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	for c := range h.clients {
-		if c.tenantID != tenantID {
-			continue
-		}
-		select {
-		case c.send <- msg:
-		default:
-			h.log.Warn("fleet-tracking.hub: send buffer full, dropping update",
-				zap.Stringer("tenant_id", tenantID))
-		}
-	}
-}
-
-// publish relays msg to every other pod via Redis. No-op when Redis is not configured.
-func (h *FleetTrackingHub) publish(tenantID uuid.UUID, msg fleetWSMessage) {
-	if h.redis == nil {
-		return
-	}
-	payload, err := json.Marshal(fleetRelayEnvelope{Msg: msg, Origin: h.originID})
+	})
 	if err != nil {
-		h.log.Warn("fleet-tracking.hub: failed to marshal redis relay payload", zap.Error(err))
 		return
 	}
-	channel := fleetTrackingChannelPrefix + tenantID.String()
-	if err := h.redis.Publish(context.Background(), channel, payload).Err(); err != nil {
-		h.log.Warn("fleet-tracking.hub: redis publish failed", zap.Error(err), zap.String("channel", channel))
-	}
+	h.fan.Publish(tenantID.String(), "", b)
 }
 
-// ServeWS registers conn as an active client for tenantID and blocks until it disconnects
-// or ctx is cancelled.
+// ServeWS registers conn for tenantID and blocks until it disconnects or ctx is cancelled.
 func (h *FleetTrackingHub) ServeWS(ctx context.Context, conn *websocket.Conn, tenantID uuid.UUID) {
-	c := &fleetWSClient{tenantID: tenantID, send: make(chan fleetWSMessage, 32)}
-
-	h.mu.Lock()
-	h.clients[c] = struct{}{}
-	h.mu.Unlock()
-
-	defer func() {
-		h.mu.Lock()
-		delete(h.clients, c)
-		close(c.send)
-		h.mu.Unlock()
-	}()
-
-	go func() {
-		for msg := range c.send {
-			if err := wsjson.Write(ctx, conn, msg); err != nil {
-				return
-			}
-		}
-	}()
-
-	// Reader loop — this hub is push-only; incoming frames are just discarded, but reading
-	// is required to detect the client closing the connection.
-	for {
-		if _, _, err := conn.Read(ctx); err != nil {
-			return
-		}
-	}
+	sub := h.fan.Subscribe(tenantID.String())
+	defer h.fan.Unsubscribe(sub)
+	realtime.Pump(ctx, conn, sub, nil)
 }
 
 // FleetTrackingWSHandler handles the fleet-wide live tracking WebSocket upgrade.

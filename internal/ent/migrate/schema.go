@@ -904,6 +904,14 @@ var (
 				Unique:  false,
 				Columns: []*schema.Column{TasksColumns[1], TasksColumns[20], TasksColumns[24]},
 			},
+			{
+				Name:    "task_sla_open",
+				Unique:  false,
+				Columns: []*schema.Column{TasksColumns[8]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "sla_due_at IS NOT NULL AND status NOT IN ('completed', 'cancelled', 'failed', 'returned')",
+				},
+			},
 		},
 	}
 	// TaskAssignmentsColumns holds the columns for the "task_assignments" table.

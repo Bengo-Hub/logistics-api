@@ -4,71 +4,55 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"sync"
 	"time"
 
+	"github.com/Bengo-Hub/httpware"
+	eventslib "github.com/Bengo-Hub/shared-events"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
-// SSEHub manages Server-Sent Events connections per task.
-// Dispatchers / riders push status events; clients (logistics-ui, public tracker) receive them.
+// SSEHub fans task status and ETA events out to SSE clients (logistics-ui, trackers).
+//
+// A client's stream lives on whichever replica the load balancer picked, while the status
+// change is published by whichever replica handled the write, so events go through the shared
+// events.FanoutHub, which relays them to every replica (each delivers to its own streams).
+// Before, the hub was in-memory only: a tracker on pod B never saw a change made on pod A.
+// Subscribers hold the scope "task:<id>" and only ever receive their own tenant's events.
 type SSEHub struct {
-	mu          sync.RWMutex
-	subscribers map[string][]chan sseEvent // key: "tenantID:taskID"
-	log         *zap.Logger
+	fan *eventslib.FanoutHub
+	log *zap.Logger
 }
 
 type sseEvent struct {
-	Event string `json:"event"`
-	Data  any    `json:"data"`
+	Event string          `json:"event"`
+	Data  json.RawMessage `json:"data"`
 }
 
-// NewSSEHub creates a new SSEHub.
-func NewSSEHub(log *zap.Logger) *SSEHub {
-	return &SSEHub{
-		subscribers: make(map[string][]chan sseEvent),
-		log:         log.Named("sse.hub"),
+// NewSSEHub creates a new SSEHub. relay may be nil (single replica, local development).
+func NewSSEHub(log *zap.Logger, relay *eventslib.Broadcaster) *SSEHub {
+	l := log.Named("sse.hub")
+	fan, err := eventslib.NewFanoutHub(relay, "task-sse", 8)
+	if err != nil {
+		l.Warn("sse relay subscribe failed, single-replica delivery only", zap.Error(err))
 	}
+	return &SSEHub{fan: fan, log: l}
 }
 
-func (h *SSEHub) subscribe(key string) chan sseEvent {
-	ch := make(chan sseEvent, 8)
-	h.mu.Lock()
-	h.subscribers[key] = append(h.subscribers[key], ch)
-	h.mu.Unlock()
-	return ch
-}
+func taskScope(taskID uuid.UUID) string { return "task:" + taskID.String() }
 
-func (h *SSEHub) unsubscribe(key string, ch chan sseEvent) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	subs := h.subscribers[key]
-	for i, sub := range subs {
-		if sub == ch {
-			h.subscribers[key] = append(subs[:i], subs[i+1:]...)
-			break
-		}
-	}
-	if len(h.subscribers[key]) == 0 {
-		delete(h.subscribers, key)
-	}
-}
-
-// Publish broadcasts an event to all clients subscribed to the given task.
+// Publish broadcasts an event to every client subscribed to the task, on every replica.
 func (h *SSEHub) Publish(tenantID, taskID uuid.UUID, event string, data any) {
-	key := tenantID.String() + ":" + taskID.String()
-	h.mu.RLock()
-	subs := h.subscribers[key]
-	h.mu.RUnlock()
-	for _, ch := range subs {
-		select {
-		case ch <- sseEvent{Event: event, Data: data}:
-		default:
-			// Slow consumer — drop rather than block
-		}
+	raw, err := json.Marshal(data)
+	if err != nil {
+		return
 	}
+	payload, err := json.Marshal(sseEvent{Event: event, Data: raw})
+	if err != nil {
+		return
+	}
+	h.fan.Publish(tenantID.String(), taskScope(taskID), payload)
 }
 
 // SSEHandler handles GET /api/v1/{tenant}/tasks/{taskId}/stream
@@ -87,11 +71,9 @@ func NewSSEHandler(hub *SSEHub, log *zap.Logger) *SSEHandler {
 func (h *SSEHandler) StreamTask(w http.ResponseWriter, r *http.Request) {
 	tenantID := tenantIDFromClaims(r)
 	if tenantID == uuid.Nil {
-		// Public tracking also allowed via tracking code — here we accept uuid.Nil
-		// for unauthenticated access on the public tracking path.
-		// For the auth-gated path the middleware already rejects missing tokens,
-		// so if we reach here without a tenantID the request came from the public
-		// tracker — resolve tenant from the task instead.
+		// The route is tenant- and auth-scoped; without a tenant there is nothing to stream.
+		http.Error(w, "missing tenant", http.StatusUnauthorized)
+		return
 	}
 
 	taskID, err := uuid.Parse(chi.URLParam(r, "taskId"))
@@ -100,26 +82,22 @@ func (h *SSEHandler) StreamTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	flusher, ok := w.(http.Flusher)
-	if !ok {
-		http.Error(w, "streaming not supported", http.StatusInternalServerError)
-		return
-	}
+	httpware.StreamHeaders(w)
+	// Lift the server WriteTimeout for this long-lived response; the heartbeat keeps it alive.
+	httpware.ExtendWriteDeadline(w)
+	flusher := http.NewResponseController(w)
 
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
-	w.Header().Set("X-Accel-Buffering", "no") // disable nginx buffering
-
-	key := tenantID.String() + ":" + taskID.String()
-	ch := h.hub.subscribe(key)
-	defer h.hub.unsubscribe(key, ch)
+	sub := h.hub.fan.Subscribe(tenantID.String(), taskScope(taskID))
+	defer h.hub.fan.Unsubscribe(sub)
 
 	// Send initial connected event
 	writeSSE(w, "connected", map[string]string{"task_id": taskID.String()})
-	flusher.Flush()
+	if err := flusher.Flush(); err != nil {
+		return
+	}
 
-	heartbeat := time.NewTicker(30 * time.Second)
+	// 15s: under the ingress and proxy idle timeouts.
+	heartbeat := time.NewTicker(15 * time.Second)
 	defer heartbeat.Stop()
 
 	for {
@@ -127,14 +105,22 @@ func (h *SSEHandler) StreamTask(w http.ResponseWriter, r *http.Request) {
 		case <-r.Context().Done():
 			return
 		case <-heartbeat.C:
-			fmt.Fprintf(w, ": heartbeat\n\n")
-			flusher.Flush()
-		case evt, ok := <-ch:
+			fmt.Fprint(w, ": heartbeat\n\n")
+			if flusher.Flush() != nil {
+				return
+			}
+		case raw, ok := <-sub.C:
 			if !ok {
 				return
 			}
-			writeSSE(w, evt.Event, evt.Data)
-			flusher.Flush()
+			var evt sseEvent
+			if json.Unmarshal(raw, &evt) != nil {
+				continue
+			}
+			fmt.Fprintf(w, "event: %s\ndata: %s\n\n", evt.Event, evt.Data)
+			if flusher.Flush() != nil {
+				return
+			}
 		}
 	}
 }

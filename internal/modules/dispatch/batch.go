@@ -3,6 +3,7 @@ package dispatch
 import (
 	"context"
 	"fmt"
+	sharedcache "github.com/Bengo-Hub/cache"
 	"sort"
 	"time"
 
@@ -78,6 +79,10 @@ func (s *BatchScheduler) Start(ctx context.Context) {
 // runBatchCycle processes all tenants that have pending tasks.
 // Tenants are processed in pages of 100 to avoid loading the full tenant list into memory.
 func (s *BatchScheduler) runBatchCycle(ctx context.Context) {
+	// Runs on every replica's ticker; only the first replica in each period does the work.
+	if !sharedcache.ClaimPeriod(ctx, "logistics:batch-dispatch", s.interval) {
+		return
+	}
 	const pageSize = 100
 	offset := 0
 	for {

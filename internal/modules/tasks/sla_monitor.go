@@ -3,6 +3,7 @@ package tasks
 import (
 	"context"
 	"fmt"
+	sharedcache "github.com/Bengo-Hub/cache"
 	"time"
 
 	"github.com/google/uuid"
@@ -63,15 +64,25 @@ func (m *SLAMonitor) Start(ctx context.Context) {
 // terminalStatuses are the task statuses where SLA no longer applies.
 var terminalStatuses = []string{"completed", "cancelled", "failed", "returned"}
 
+// maxBreachScan bounds one scan; the oldest breaches come first and the rest are picked up
+// on later ticks.
+const maxBreachScan = 1000
+
 func (m *SLAMonitor) checkBreaches(ctx context.Context) {
+	// Every replica runs this ticker; one replica per interval does the scan.
+	if !sharedcache.ClaimPeriod(ctx, "logistics:sla-monitor", m.interval) {
+		return
+	}
 	now := time.Now().UTC()
 
-	// Find all non-terminal tasks whose SLA due time has passed
+	// Open tasks whose SLA due time has passed (served by the task_sla_open partial index).
 	overdue, err := m.client.Task.Query().
 		Where(
 			task.SLADueAtLTE(now),
 			task.StatusNotIn(terminalStatuses...),
 		).
+		Order(ent.Asc(task.FieldSLADueAt)).
+		Limit(maxBreachScan).
 		All(ctx)
 	if err != nil {
 		m.log.Error("SLA monitor: query failed", zap.Error(err))
@@ -86,6 +97,17 @@ func (m *SLAMonitor) checkBreaches(ctx context.Context) {
 
 	for _, t := range overdue {
 		breachAge := now.Sub(*t.SLADueAt)
+
+		// Act once per escalation step per task (breached, warning, critical, escalated). The
+		// scan repeats every interval for as long as the task stays open; before, every scan
+		// re-published sla_breached for every overdue task, flooding consumers.
+		level := EscalationLevel(t)
+		if level == "" {
+			level = "breached"
+		}
+		if !sharedcache.ClaimOnce(ctx, "logistics:sla:"+t.ID.String()+":"+level, 30*24*time.Hour) {
+			continue
+		}
 
 		m.log.Warn("task SLA breached",
 			zap.String("task_id", t.ID.String()),

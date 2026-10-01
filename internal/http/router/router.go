@@ -3,6 +3,7 @@ package router
 import (
 	"context"
 	"crypto/subtle"
+	ratelimit "github.com/Bengo-Hub/shared-ratelimit"
 	"net/http"
 	"strconv"
 	"strings"
@@ -27,15 +28,18 @@ import (
 )
 
 func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authclient.AuthMiddleware, idSvc *identity.Service, lh *handlers.LogisticsHandler, rh *handlers.RoutingHandler, th *handlers.TrackingHandler, zh *handlers.ZonesHandler, rbacH *handlers.RBACHandler, rdb *redis.Client, cfg *config.Config, allowedOrigins []string, serviceConfigH *handlers.ServiceConfigHandler, earningsH *handlers.EarningsHandler, sseH *handlers.SSEHandler, rbacSvc *rbac.Service, telH *handlers.TelemetryHandler, shipmentH *handlers.ShipmentHandler, shiftH *handlers.ShiftHandler, analyticsH *handlers.AnalyticsHandler, backupsH *handlers.BackupsHandler, backupDestH *handlers.BackupDestinationHandler, validator *authclient.Validator, fleetWSH *handlers.FleetTrackingWSHandler, notifH *handlers.NotificationsHandler) http.Handler {
-	rl := appmw.NewRateLimiter(rdb)
+	quota := ratelimit.NewQuota(rdb)
+	limiter := ratelimit.NewLimiter(rdb, log, "logistics")
 	r := chi.NewRouter()
 
 	r.Use(chimw.RequestID)
-	r.Use(chimw.RealIP)
+	// Never chi RealIP: it trusts client-sent True-Client-IP/X-Forwarded-For.
+	r.Use(ratelimit.TrustedRealIP)
 	r.Use(httpware.RequestID)
 	r.Use(httpware.Logging(log))
 	r.Use(httpware.Recover(log))
-	r.Use(chimw.Timeout(30 * time.Second))
+	// Timeout cancels the request context at 30s, which killed every WebSocket and SSE stream.
+	r.Use(httpware.BypassForStreaming(chimw.Timeout(30 * time.Second)))
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   allowedOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
@@ -44,6 +48,9 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 		AllowCredentials: true,
 		MaxAge:           300,
 	}))
+	// Per-IP abuse limit (logistics had none). After CORS so 429s carry CORS headers;
+	// WebSocket, SSE and health probes are exempt (ratelimit.SkipStreaming).
+	r.Use(limiter.Middleware(ratelimit.IPKey, 300, time.Minute))
 
 	r.Get("/healthz", health.Liveness)
 	r.Get("/readyz", health.Readiness)
@@ -55,8 +62,8 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 
 	// Serve media files
 	if cfg != nil {
-		fs := http.StripPrefix("/media/", http.FileServer(http.Dir(cfg.Media.Root)))
-		r.Handle("/media/*", fs)
+		// No directory listings; immutable caching for fingerprinted uploads.
+		r.Handle("/media/*", http.StripPrefix("/media", httpware.StaticMedia(cfg.Media.Root, httpware.MediaOptions{})))
 	}
 
 	// Public tracking endpoint (no auth required)
@@ -279,7 +286,7 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 
 			if rh != nil {
 				tenant.Route("/routing", func(routeR chi.Router) {
-					routeR.Use(appmw.RequireRateLimit(rl, "routing_requests_per_day", cfg.Subscriptions.ServiceURL+"/upgrade"))
+					routeR.Use(appmw.RequireRateLimit(quota, "routing_requests_per_day", cfg.Subscriptions.ServiceURL+"/upgrade"))
 					// Basic route/ETA stay open (used by guest checkout). The multi-stop
 					// matrix optimisation is the premium "route_optimisation" surface.
 					routeR.Get("/route", rh.GetRoute)
@@ -296,7 +303,7 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 					// Live GPS rider tracking is a premium feature. Customer-facing order
 					// tracking uses the public /api/v1/track/{code} endpoint, which is unaffected.
 					trackR.Use(appmw.RequireFeature("live_tracking", cfg.Subscriptions.ServiceURL+"/upgrade"))
-					trackR.Use(appmw.RequireRateLimit(rl, "live_tracking_requests_per_day", cfg.Subscriptions.ServiceURL+"/upgrade"))
+					trackR.Use(appmw.RequireRateLimit(quota, "live_tracking_requests_per_day", cfg.Subscriptions.ServiceURL+"/upgrade"))
 					if telH != nil {
 						telH.RegisterFleetTrackingRoute(trackR)
 					}

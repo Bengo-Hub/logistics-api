@@ -2,6 +2,7 @@ package fleet
 
 import (
 	"context"
+	sharedcache "github.com/Bengo-Hub/cache"
 	"time"
 
 	"go.uber.org/zap"
@@ -41,6 +42,10 @@ func (s *Service) StartStaleRiderCleanup(ctx context.Context) {
 }
 
 func (s *Service) cleanupStaleRiders(ctx context.Context) {
+	// Runs on every replica's ticker; only the first replica in each period does the work.
+	if !sharedcache.ClaimPeriod(ctx, "logistics:stale-rider-cleanup", CleanupInterval) {
+		return
+	}
 	cutoff := time.Now().Add(-StaleRiderAge)
 
 	stale, err := s.client.FleetMember.Query().
@@ -73,8 +78,8 @@ func (s *Service) cleanupStaleRiders(ctx context.Context) {
 		if s.publisher != nil && email != "" {
 			tenantSlug := s.resolveTenantSlug(ctx, m.FleetID)
 			if pubErr := s.publisher.PublishFleetMemberExpired(ctx, m.TenantID, events.FleetMemberEventData{
-				MemberID:   m.ID.String(), UserID: m.UserID.String(),
-				FleetID:    m.FleetID.String(), UserEmail: email, UserName: name,
+				MemberID: m.ID.String(), UserID: m.UserID.String(),
+				FleetID: m.FleetID.String(), UserEmail: email, UserName: name,
 				TenantSlug: tenantSlug,
 			}); pubErr != nil {
 				s.log.Warn("cleanup: failed to publish expired event", zap.Error(pubErr))

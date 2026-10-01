@@ -2,7 +2,10 @@ package earnings
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
+	sharedcache "github.com/Bengo-Hub/cache"
+	"github.com/bengobox/logistics-service/internal/ent/earningsstatement"
 	"time"
 
 	"github.com/google/uuid"
@@ -15,7 +18,14 @@ import (
 // Service handles earnings calculation and billing event recording.
 type Service struct {
 	client *ent.Client
+	db     *sql.DB // for SQL aggregation (ent here has no raw-query feature)
 	log    *zap.Logger
+}
+
+// WithDB sets the database handle used for statement aggregation.
+func (s *Service) WithDB(db *sql.DB) *Service {
+	s.db = db
+	return s
 }
 
 // NewService creates a new earnings service.
@@ -105,44 +115,38 @@ func (s *Service) createEarningEvent(ctx context.Context, tenantID, taskID, memb
 	return nil
 }
 
-// GenerateStatements aggregates delivery earning billing events into earnings statements.
-// This should be called periodically (e.g., daily cron).
-func (s *Service) GenerateStatements(ctx context.Context, tenantID uuid.UUID) error {
-	// Get all delivery_earning billing events for this tenant
-	events, err := s.client.BillingEvent.Query().
-		Where(
-			billingevent.TenantID(tenantID),
-			billingevent.EventType("delivery_earning"),
-		).
-		All(ctx)
+// GenerateStatements writes one draft earnings statement per fleet member for the UTC day
+// [periodStart, periodStart+24h), from that day's delivery_earning billing events.
+//
+// Fixes over the previous version: it summed EVERY delivery_earning event the tenant ever
+// had and saved the cumulative total as "yesterday", so each day's statement repeated and
+// grew; it loaded all rows into memory to sum in Go; and a re-run (restart, second replica)
+// wrote duplicate statements. Now the sum is a SQL GROUP BY over the bounded day (using the
+// tenant/type/occurred_at filter), and a member that already has a statement for the day is
+// skipped.
+func (s *Service) GenerateStatements(ctx context.Context, tenantID uuid.UUID, periodStart time.Time) error {
+	periodStart = periodStart.UTC().Truncate(24 * time.Hour)
+	periodEnd := periodStart.Add(24 * time.Hour)
+
+	totals, err := s.memberTotals(ctx, tenantID, periodStart, periodEnd)
 	if err != nil {
-		return fmt.Errorf("earnings: query events: %w", err)
+		return fmt.Errorf("earnings: aggregate events: %w", err)
 	}
-
-	if len(events) == 0 {
-		return nil
-	}
-
-	// Group by fleet member (extracted from metadata)
-	grouped := make(map[uuid.UUID]float64)
-	for _, evt := range events {
-		memberIDStr, _ := evt.Metadata["fleet_member_id"].(string)
-		if memberIDStr == "" {
+	for memberID, grossAmount := range totals {
+		exists, err := s.client.EarningsStatement.Query().
+			Where(
+				earningsstatement.TenantID(tenantID),
+				earningsstatement.FleetMemberID(memberID),
+				earningsstatement.PeriodStart(periodStart),
+			).
+			Exist(ctx)
+		if err != nil {
+			return fmt.Errorf("earnings: check existing statement: %w", err)
+		}
+		if exists {
 			continue
 		}
-		memberID, parseErr := uuid.Parse(memberIDStr)
-		if parseErr != nil {
-			continue
-		}
-		grouped[memberID] += evt.Amount
-	}
-
-	now := time.Now()
-	periodStart := now.AddDate(0, 0, -1).Truncate(24 * time.Hour)
-	periodEnd := now.Truncate(24 * time.Hour)
-
-	for memberID, grossAmount := range grouped {
-		_, err := s.client.EarningsStatement.Create().
+		_, err = s.client.EarningsStatement.Create().
 			SetTenantID(tenantID).
 			SetFleetMemberID(memberID).
 			SetPeriodStart(periodStart).
@@ -159,42 +163,79 @@ func (s *Service) GenerateStatements(ctx context.Context, tenantID uuid.UUID) er
 				zap.String("member_id", memberID.String()))
 			continue
 		}
-
 		s.log.Info("earnings statement generated",
 			zap.String("member_id", memberID.String()),
+			zap.Time("period_start", periodStart),
 			zap.Float64("gross_amount", grossAmount),
 		)
 	}
-
 	return nil
 }
 
-// StartStatementJob runs the statement generation job on a daily schedule.
+// memberTotals sums the day's delivery earnings per fleet member in SQL.
+func (s *Service) memberTotals(ctx context.Context, tenantID uuid.UUID, from, to time.Time) (map[uuid.UUID]float64, error) {
+	out := map[uuid.UUID]float64{}
+	if s.db == nil {
+		return out, fmt.Errorf("earnings: database handle not configured")
+	}
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT metadata->>'fleet_member_id' AS member, SUM(amount)
+		FROM billing_events
+		WHERE tenant_id = $1 AND event_type = 'delivery_earning'
+		  AND occurred_at >= $2 AND occurred_at < $3
+		  AND metadata ? 'fleet_member_id'
+		GROUP BY 1`, tenantID, from, to)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var member string
+		var sum float64
+		if err := rows.Scan(&member, &sum); err != nil {
+			return nil, err
+		}
+		if id, err := uuid.Parse(member); err == nil {
+			out[id] = roundCents(sum)
+		}
+	}
+	return out, rows.Err()
+}
+
+// StartStatementJob generates yesterday's statements once per UTC day, fleet-wide. It checks
+// hourly (and at start) rather than on a 24h ticker: a 24h ticker restarts with every deploy,
+// so with deploys more often than daily it never fired. ClaimPeriod gives one run per day
+// across all replicas; GenerateStatements skips statements that already exist.
 func (s *Service) StartStatementJob(ctx context.Context) {
-	ticker := time.NewTicker(24 * time.Hour)
+	ticker := time.NewTicker(time.Hour)
 	defer ticker.Stop()
+	s.log.Info("earnings statement job started (daily, checked hourly)")
 
-	s.log.Info("earnings statement job started (daily)")
-
+	run := func() {
+		if !sharedcache.ClaimPeriod(ctx, "logistics:earnings-statements", 24*time.Hour) {
+			return
+		}
+		tenantIDs, err := s.getDistinctBillingTenantIDs(ctx)
+		if err != nil {
+			s.log.Error("failed to get billing tenant IDs", zap.Error(err))
+			return
+		}
+		yesterday := time.Now().UTC().Add(-24 * time.Hour)
+		for _, tid := range tenantIDs {
+			if err := s.GenerateStatements(ctx, tid, yesterday); err != nil {
+				s.log.Error("failed to generate statements for tenant",
+					zap.String("tenant_id", tid.String()), zap.Error(err))
+			}
+		}
+	}
+	run()
 	for {
 		select {
 		case <-ctx.Done():
 			s.log.Info("earnings statement job stopped")
 			return
 		case <-ticker.C:
-			// Process all tenants — query distinct tenant IDs from billing events
-			tenantIDs, err := s.getDistinctBillingTenantIDs(ctx)
-			if err != nil {
-				s.log.Error("failed to get billing tenant IDs", zap.Error(err))
-				continue
-			}
-			for _, tid := range tenantIDs {
-				if err := s.GenerateStatements(ctx, tid); err != nil {
-					s.log.Error("failed to generate statements for tenant",
-						zap.String("tenant_id", tid.String()),
-						zap.Error(err))
-				}
-			}
+			run()
 		}
 	}
 }
