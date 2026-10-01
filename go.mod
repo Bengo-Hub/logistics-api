@@ -5,8 +5,8 @@ go 1.26.0
 require (
 	ariga.io/atlas v1.1.0
 	entgo.io/ent v0.14.5
-	github.com/Bengo-Hub/cache v0.5.6
-	github.com/Bengo-Hub/httpware v0.6.0
+	github.com/Bengo-Hub/cache v0.5.7
+	github.com/Bengo-Hub/httpware v0.6.1
 	github.com/Bengo-Hub/pagination v0.3.0
 	github.com/Bengo-Hub/shared-auth-client v0.0.0-00010101000000-000000000000
 	github.com/Bengo-Hub/shared-events v0.7.1

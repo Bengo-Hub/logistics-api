@@ -63,7 +63,11 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 	// Serve media files
 	if cfg != nil {
 		// No directory listings; immutable caching for fingerprinted uploads.
-		r.Handle("/media/*", http.StripPrefix("/media", httpware.StaticMedia(cfg.Media.Root, httpware.MediaOptions{})))
+		// Rider KYC documents are personal data: never stored by shared caches, the CDN or
+		// service workers (moving them behind auth is queued in the multi-pod plan, Q4).
+		r.Handle("/media/*", http.StripPrefix("/media", httpware.StaticMedia(cfg.Media.Root, httpware.MediaOptions{
+			Private: func(p string) bool { return strings.HasPrefix(p, "/uploads/kyc/") },
+		})))
 	}
 
 	// Public tracking endpoint (no auth required)
