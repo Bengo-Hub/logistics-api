@@ -494,7 +494,7 @@ func (h *LogisticsHandler) InviteMember(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	respondJSON(w, http.StatusCreated, m)
+	respondJSON(w, http.StatusCreated, signFleetMemberMedia(m))
 }
 
 // ApproveMember handles POST /api/v1/{tenant}/fleet/members/{memberId}/approve
@@ -517,7 +517,7 @@ func (h *LogisticsHandler) ApproveMember(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	respondJSON(w, http.StatusOK, m)
+	respondJSON(w, http.StatusOK, signFleetMemberMedia(m))
 }
 
 // SuspendMember handles POST /api/v1/{tenant}/fleet/members/{memberId}/suspend
@@ -540,7 +540,7 @@ func (h *LogisticsHandler) SuspendMember(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	respondJSON(w, http.StatusOK, m)
+	respondJSON(w, http.StatusOK, signFleetMemberMedia(m))
 }
 
 // RejectMember handles POST /api/v1/{tenant}/fleet/members/{memberId}/reject
@@ -570,7 +570,7 @@ func (h *LogisticsHandler) RejectMember(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	respondJSON(w, http.StatusOK, m)
+	respondJSON(w, http.StatusOK, signFleetMemberMedia(m))
 }
 
 // DeleteMember handles DELETE /api/v1/{tenant}/fleet/members/{memberId}
@@ -640,7 +640,7 @@ func (h *LogisticsHandler) CreateVehicle(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	respondJSON(w, http.StatusCreated, v)
+	respondJSON(w, http.StatusCreated, signVehicleMedia(v))
 }
 
 // AssignVehicle handles POST /api/v1/{tenant}/fleet/members/{memberId}/vehicle
@@ -709,7 +709,7 @@ func (h *LogisticsHandler) UpdateVehicle(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	respondJSON(w, http.StatusOK, v)
+	respondJSON(w, http.StatusOK, signVehicleMedia(v))
 }
 
 // DeleteVehicle handles DELETE /api/v1/{tenant}/fleet/vehicles/{vehicleId}
