@@ -151,7 +151,6 @@ response:
 	// Note: In production, URLBase is defined in values.yaml
 	url := fmt.Sprintf("%s/media/uploads/kyc/%s", h.cfg.Media.URLBase, filename)
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	fmt.Fprintf(w, `{"url": "%s", "filename": "%s"}`, url, filename)
+	// Signed so the form can preview the private file; profile updates store the plain form.
+	respondJSON(w, http.StatusCreated, map[string]string{"url": kycSigner.Sign(url), "filename": filename})
 }

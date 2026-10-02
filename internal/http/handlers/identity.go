@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"github.com/Bengo-Hub/httpware"
 	"net/http"
 
 	authclient "github.com/Bengo-Hub/shared-auth-client"
@@ -68,16 +69,16 @@ func (h *IdentityHandler) GetAuthMe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := map[string]any{
-		"id":               claims.Subject,
-		"email":            claims.Email,
-		"global_roles":     claims.Roles,
-		"service_role":     serviceRole,
-		"permissions":      permCodes,
-		"tenant_id":        claims.TenantID,
-		"tenant_slug":      claims.GetTenantSlug(),
+		"id":                claims.Subject,
+		"email":             claims.Email,
+		"global_roles":      claims.Roles,
+		"service_role":      serviceRole,
+		"permissions":       permCodes,
+		"tenant_id":         claims.TenantID,
+		"tenant_slug":       claims.GetTenantSlug(),
 		"is_platform_owner": claims.IsPlatformOwner,
-		"use_case":         useCase,
-		"enabled_modules":  enabledModules,
+		"use_case":          useCase,
+		"enabled_modules":   enabledModules,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -108,7 +109,7 @@ func (h *IdentityHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 	if len(u.Edges.FleetMemberships) > 0 {
 		fm := u.Edges.FleetMemberships[0]
 		resp["status"] = fm.Status
-		resp["rider"] = fm
+		resp["rider"] = signFleetMemberMedia(fm)
 		if fm.Edges.Vehicle != nil {
 			resp["vehicle"] = fm.Edges.Vehicle
 		}
@@ -135,6 +136,10 @@ func (h *IdentityHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "Invalid request", http.StatusBadRequest)
 		return
 	}
+	// The form re-submits the signed URLs it was given; store the plain form.
+	for _, u := range []*string{&req.IDPassportAttachment, &req.RiderPhoto, &req.ImageLicensePlate, &req.ImageSideView} {
+		*u = httpware.StripMediaSignature(*u)
+	}
 
 	u, err := h.svc.UpdateRiderProfile(r.Context(), authID, tenantID, req)
 	if err != nil {
@@ -150,7 +155,7 @@ func (h *IdentityHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) 
 	if len(u.Edges.FleetMemberships) > 0 {
 		fm := u.Edges.FleetMemberships[0]
 		resp["status"] = fm.Status
-		resp["rider"] = fm
+		resp["rider"] = signFleetMemberMedia(fm)
 		if fm.Edges.Vehicle != nil {
 			resp["vehicle"] = fm.Edges.Vehicle
 		}

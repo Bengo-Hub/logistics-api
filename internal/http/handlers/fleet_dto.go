@@ -47,6 +47,7 @@ type FleetMemberRespEdges struct {
 // toFleetMemberResponse maps an ent.FleetMember (with loaded User + Vehicle edges)
 // to the API response DTO, flattening user identity fields.
 func toFleetMemberResponse(m *ent.FleetMember) *FleetMemberResponse {
+	signFleetMemberMedia(m)
 	resp := &FleetMemberResponse{
 		ID:                   m.ID,
 		TenantID:             m.TenantID,

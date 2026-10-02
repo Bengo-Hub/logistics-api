@@ -57,6 +57,18 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 	r.Get("/metrics", health.Metrics)
 	r.Get("/v1/docs/*", handlers.SwaggerUI)
 
+	// Signed URLs for rider KYC media; every replica shares the secret (MEDIA_SIGNING_SECRET,
+	// falling back to INTERNAL_SERVICE_KEY).
+	var mediaSigner *httpware.MediaSigner
+	if cfg != nil {
+		secret := cfg.Media.SigningSecret
+		if secret == "" {
+			secret = cfg.Subscriptions.APIKey
+		}
+		mediaSigner = httpware.NewMediaSigner(secret, 12*time.Hour)
+		handlers.SetMediaSigner(mediaSigner)
+	}
+
 	mediaHandler := handlers.NewMediaHandler(log, cfg)
 	r.Post("/api/v1/media/upload", mediaHandler.Upload)
 
@@ -64,9 +76,10 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 	if cfg != nil {
 		// No directory listings; immutable caching for fingerprinted uploads.
 		// Rider KYC documents are personal data: never stored by shared caches, the CDN or
-		// service workers (moving them behind auth is queued in the multi-pod plan, Q4).
+		// service workers, and served only with a short-lived signed URL the API issues.
 		r.Handle("/media/*", http.StripPrefix("/media", httpware.StaticMedia(cfg.Media.Root, httpware.MediaOptions{
 			Private: func(p string) bool { return strings.HasPrefix(p, "/uploads/kyc/") },
+			Signer:  mediaSigner,
 		})))
 	}
 
