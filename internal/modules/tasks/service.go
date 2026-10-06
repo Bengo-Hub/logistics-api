@@ -4,13 +4,16 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 	"strconv"
 	"strings"
 	"time"
 
+	sharedcache "github.com/Bengo-Hub/cache"
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
 	"github.com/bengobox/logistics-service/internal/ent"
@@ -19,7 +22,9 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/serviceconfig"
 	"github.com/bengobox/logistics-service/internal/ent/task"
 	"github.com/bengobox/logistics-service/internal/ent/taskassignment"
+	"github.com/bengobox/logistics-service/internal/ent/taskevent"
 	entuser "github.com/bengobox/logistics-service/internal/ent/user"
+	notifmod "github.com/bengobox/logistics-service/internal/modules/notifications"
 	"github.com/bengobox/logistics-service/internal/platform/events"
 )
 
@@ -103,6 +108,8 @@ type CreateTaskFromOrderRequest struct {
 // AssignTaskRequest is the DTO for assigning a task to a fleet member.
 type AssignTaskRequest struct {
 	FleetMemberID uuid.UUID `json:"fleet_member_id"`
+	// Reassign moves a job that another rider holds (before pickup) to this rider.
+	Reassign bool `json:"reassign,omitempty"`
 }
 
 // SubmitPoDRequest is the DTO for submitting proof of delivery.
@@ -157,6 +164,16 @@ func metadataString(m map[string]any, key string) string {
 	}
 	v, _ := m[key].(string)
 	return v
+}
+
+// podPhotoURL returns the photo URL to store for a proof of delivery. Inline data URLs are not
+// stored (inline=true tells the caller one was sent).
+func podPhotoURL(raw string) (url string, inline bool) {
+	raw = strings.TrimSpace(raw)
+	if strings.HasPrefix(strings.ToLower(raw), "data:") {
+		return "", true
+	}
+	return raw, false
 }
 
 // taskCODAmount returns the cash the rider must collect, from the column or (for tasks created
@@ -277,6 +294,38 @@ type Service struct {
 	earningsSvc    EarningsRecorder
 	etaTrigger     ETATrigger
 	sseBroadcaster StatusBroadcaster
+	notifSvc       *notifmod.Service
+	redispatch     func(ctx context.Context, tenantID, taskID uuid.UUID)
+	// locker serialises task intake per upstream reference across replicas, so the same order
+	// arriving twice at once (two ready events, a double click on dispatch) makes one task.
+	locker redis.UniversalClient
+}
+
+// ErrIntakeBusy means another replica is creating the task for the same reference right now;
+// event consumers redeliver later and then find the task.
+var ErrIntakeBusy = errors.New("tasks: this order is being dispatched already")
+
+// SetLocker sets the Redis client used to serialise task intake per reference.
+func (s *Service) SetLocker(rdb redis.UniversalClient) { s.locker = rdb }
+
+// lockIntake takes the per-reference intake lease. Without Redis it proceeds unlocked: a missed
+// delivery is worse than a rare duplicate a dispatcher can cancel.
+func (s *Service) lockIntake(ctx context.Context, tenantID uuid.UUID, ref string) (func(), error) {
+	if ref == "" || s.locker == nil {
+		return func() {}, nil
+	}
+	lock, ok, err := sharedcache.TryLock(ctx, s.locker, "logistics:task-intake:"+tenantID.String()+":"+ref, 30*time.Second)
+	if err != nil {
+		return func() {}, nil
+	}
+	if !ok {
+		return nil, ErrIntakeBusy
+	}
+	return func() {
+		rctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 2*time.Second)
+		defer cancel()
+		_ = lock.Release(rctx)
+	}, nil
 }
 
 // NewService creates a new task service.
@@ -312,8 +361,24 @@ func (s *Service) SetSSEBroadcaster(b StatusBroadcaster) {
 	s.sseBroadcaster = b
 }
 
-// CreateTask creates a new delivery task, optionally with pickup and dropoff steps.
+// CreateTask creates a new delivery task, optionally with pickup and dropoff steps. A request
+// carrying an external_reference that already has an open task returns that task instead of a
+// second one (pos-api dispatching the same order twice, a retried S2S call).
 func (s *Service) CreateTask(ctx context.Context, tenantID uuid.UUID, req CreateTaskRequest) (*ent.Task, error) {
+	unlock, err := s.lockIntake(ctx, tenantID, req.ExternalReference)
+	if err != nil {
+		return nil, err
+	}
+	defer unlock()
+	if req.ExternalReference != "" {
+		if existing, _ := s.FindTaskByReference(ctx, tenantID, req.ExternalReference); existing != nil && !IsTerminal(existing.Status) {
+			return existing, nil
+		}
+	}
+	return s.createTask(ctx, tenantID, req)
+}
+
+func (s *Service) createTask(ctx context.Context, tenantID uuid.UUID, req CreateTaskRequest) (*ent.Task, error) {
 	taskType := req.TaskType
 	if taskType == "" {
 		taskType = "delivery"
@@ -359,6 +424,10 @@ func (s *Service) CreateTask(ctx context.Context, tenantID uuid.UUID, req Create
 			if codAmount := metadataNumber(raw); codAmount > 0 {
 				builder.SetCashOnDelivery(codAmount)
 			}
+		}
+		// The outlet column drives the dispatch board's outlet filter; callers send it in metadata.
+		if oid, perr := uuid.Parse(metadataString(req.Metadata, "outlet_id")); perr == nil {
+			builder.SetOutletID(oid)
 		}
 	}
 
@@ -422,6 +491,7 @@ func (s *Service) CreateTask(ctx context.Context, tenantID uuid.UUID, req Create
 		zap.String("type", taskType),
 		zap.String("ref", req.ExternalReference),
 	)
+	s.recordEvent(ctx, t.ID, "pending", Actor{Type: req.SourceService}, nil)
 
 	if s.publisher != nil {
 		if pubErr := s.publisher.PublishTaskCreated(ctx, tenantID, events.TaskEventData{
@@ -474,7 +544,11 @@ func (s *Service) ListTasks(ctx context.Context, tenantID uuid.UUID, f ListTasks
 	}
 
 	if f.MemberID != uuid.Nil {
-		q = q.Where(task.HasAssignmentsWith(taskassignment.FleetMemberID(f.MemberID)))
+		// A job the rider declined or was taken off (now someone else's) is not theirs.
+		q = q.Where(task.HasAssignmentsWith(
+			taskassignment.FleetMemberID(f.MemberID),
+			taskassignment.StatusNotIn("declined", "unassigned"),
+		))
 	}
 
 	if f.Search != "" {
@@ -504,8 +578,17 @@ func (s *Service) ListTasks(ctx context.Context, tenantID uuid.UUID, f ListTasks
 	return tasks, total, nil
 }
 
-// UpdateStatus transitions a task to a new status.
+// UpdateStatus transitions a task to a new status as the system (no reason, not a rider).
 func (s *Service) UpdateStatus(ctx context.Context, tenantID, taskID uuid.UUID, newStatus string) (*ent.Task, error) {
+	return s.UpdateStatusAs(ctx, tenantID, taskID, newStatus, "", SystemActor)
+}
+
+// UpdateStatusAs transitions a task, recording who did it and why. A rider may only move their
+// own legs forward or report a failed delivery (with a reason); cancelling is a dispatcher or
+// ordering decision (CancelTask). The change is conditional on the status read, so two
+// concurrent updates cannot both apply. Failing a task ends the rider's assignment, which frees
+// the rider; accepting stamps the assignment as accepted.
+func (s *Service) UpdateStatusAs(ctx context.Context, tenantID, taskID uuid.UUID, newStatus, reason string, actor Actor) (*ent.Task, error) {
 	t, err := s.client.Task.Query().
 		Where(task.ID(taskID), task.TenantID(tenantID)).
 		Only(ctx)
@@ -515,31 +598,51 @@ func (s *Service) UpdateStatus(ctx context.Context, tenantID, taskID uuid.UUID, 
 		}
 		return nil, fmt.Errorf("tasks: query for status update: %w", err)
 	}
-
-	// Delivery is only ever recorded through proof of delivery (SubmitPoD), which checks the
-	// customer's code and the cash collected. A plain status change to "delivered" skipped both.
-	if newStatus == "delivered" || newStatus == "completed" {
-		return nil, fmt.Errorf("tasks: submit proof of delivery to complete a delivery")
-	}
-
-	allowed, ok := validTransitions[t.Status]
-	if !ok {
-		return nil, fmt.Errorf("tasks: unknown current status %q", t.Status)
-	}
-	valid := false
-	for _, s := range allowed {
-		if s == newStatus {
-			valid = true
-			break
+	reason = strings.TrimSpace(reason)
+	if newStatus == "cancelled" {
+		if actor.Type == "rider" {
+			return nil, ErrRiderMayNotSetStatus
 		}
+		return s.CancelTask(ctx, tenantID, taskID, reason, actor)
 	}
-	if !valid {
-		return nil, fmt.Errorf("tasks: invalid transition %q → %q", t.Status, newStatus)
+	if err := statusChangeError(t.Status, newStatus, actor.Type == "rider", reason); err != nil {
+		return nil, err
 	}
 
-	if _, err := s.client.Task.UpdateOne(t).SetStatus(newStatus).Save(ctx); err != nil {
+	now := time.Now().UTC()
+	upd := s.client.Task.Update().
+		Where(task.ID(taskID), task.TenantID(tenantID), task.StatusEQ(t.Status)).
+		SetStatus(newStatus)
+	if stamp := reasonMetadata(newStatus, reason, now); len(stamp) > 0 {
+		upd.SetMetadata(mergeMeta(t.Metadata, stamp))
+	}
+	n, err := upd.Save(ctx)
+	if err != nil {
 		return nil, fmt.Errorf("tasks: update status: %w", err)
 	}
+	if n == 0 {
+		return nil, ErrTaskChanged
+	}
+	switch newStatus {
+	case "accepted":
+		_, _ = s.client.TaskAssignment.Update().
+			Where(taskassignment.TaskID(taskID), taskassignment.StatusEQ("assigned")).
+			SetStatus("accepted").
+			SetAcceptedAt(now).
+			Save(ctx)
+	case "failed":
+		if _, cerr := s.closeActiveAssignments(ctx, s.client, taskID, "failed", reason); cerr != nil {
+			s.log.Warn("could not end assignment on failed task", zap.String("task_id", taskID.String()), zap.Error(cerr))
+		}
+		s.alertDispatcher(ctx, tenantID, taskID, "delivery_failed", "Delivery failed",
+			fmt.Sprintf("Order %s could not be delivered: %s", orderLabel(t), reason))
+	}
+	payload := map[string]any{"previous_status": t.Status}
+	if reason != "" {
+		payload["reason"] = reason
+	}
+	s.recordEvent(ctx, taskID, newStatus, actor, payload)
+
 	updated, err := s.client.Task.Query().
 		Where(task.ID(taskID)).
 		WithSteps().
@@ -565,6 +668,7 @@ func (s *Service) UpdateStatus(ctx context.Context, tenantID, taskID uuid.UUID, 
 			PreviousStatus:    t.Status,
 			SourceService:     updated.SourceService,
 			OrderNumber:       metadataString(updated.Metadata, "order_number"),
+			Reason:            reason,
 		})
 	}
 
@@ -572,7 +676,8 @@ func (s *Service) UpdateStatus(ctx context.Context, tenantID, taskID uuid.UUID, 
 	// these are the transitions where location/route data becomes meaningful.
 	if s.etaTrigger != nil && (newStatus == "accepted" || newStatus == "en_route" ||
 		newStatus == "en_route_pickup" || newStatus == "en_route_dropoff") {
-		go s.etaTrigger.ComputeAndPublishETA(ctx, tenantID, taskID)
+		// The request context ends with the response; the ETA work must outlive it.
+		go s.etaTrigger.ComputeAndPublishETA(context.WithoutCancel(ctx), tenantID, taskID)
 	}
 
 	// Broadcast status change to SSE subscribers (logistics-ui, public tracker).
@@ -600,11 +705,15 @@ func (s *Service) AssignTask(ctx context.Context, tenantID, taskID uuid.UUID, re
 		return nil, fmt.Errorf("tasks: verify member: %w", err)
 	}
 
+	if member.Status != "active" {
+		return nil, ErrRiderNotActive
+	}
+
 	// Check for existing active assignment
 	existing, _ := s.client.TaskAssignment.Query().
 		Where(
 			taskassignment.TaskID(taskID),
-			taskassignment.StatusIn("assigned", "accepted"),
+			taskassignment.StatusIn(activeAssignmentStatuses...),
 		).
 		First(ctx)
 	if existing != nil {
@@ -612,7 +721,26 @@ func (s *Service) AssignTask(ctx context.Context, tenantID, taskID uuid.UUID, re
 		if existing.FleetMemberID == req.FleetMemberID {
 			return existing, nil
 		}
-		return nil, fmt.Errorf("tasks: task already assigned to an active member")
+		if !req.Reassign {
+			return nil, fmt.Errorf("tasks: task already assigned to another rider; reassign it instead")
+		}
+		// Reassign = take it off the current rider (only before pickup), then assign below.
+		if _, rerr := s.releaseTask(ctx, tenantID, taskID, "unassigned", "reassigned by dispatcher", Actor{Type: "dispatcher"}, false); rerr != nil {
+			return nil, rerr
+		}
+	}
+
+	// pending -> assigned is one conditional update, so the dispatcher, auto-dispatch, the batch
+	// scheduler and a rider claiming the job cannot all win the same task.
+	won, err := s.client.Task.Update().
+		Where(append(openTaskPredicates(tenantID), task.ID(taskID))...).
+		SetStatus("assigned").
+		Save(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("tasks: assign: %w", err)
+	}
+	if won == 0 {
+		return nil, ErrTaskTaken
 	}
 
 	assignment, err := s.client.TaskAssignment.Create().
@@ -621,11 +749,10 @@ func (s *Service) AssignTask(ctx context.Context, tenantID, taskID uuid.UUID, re
 		SetStatus("assigned").
 		Save(ctx)
 	if err != nil {
+		_, _ = s.client.Task.UpdateOneID(taskID).SetStatus("pending").Save(ctx)
 		return nil, fmt.Errorf("tasks: create assignment: %w", err)
 	}
-
-	// Advance task status to "assigned"
-	_, _ = s.client.Task.UpdateOneID(taskID).SetStatus("assigned").Save(ctx)
+	s.recordEvent(ctx, taskID, "assigned", Actor{Type: "dispatcher"}, map[string]any{"fleet_member_id": req.FleetMemberID.String()})
 
 	s.log.Info("task assigned",
 		zap.String("task_id", taskID.String()),
@@ -658,10 +785,11 @@ func (s *Service) publishAssigned(ctx context.Context, tenantID, taskID uuid.UUI
 			break
 		}
 	}
-	riderEmail, riderName := "", ""
+	riderEmail, riderName, riderPhone := "", "", ""
 	if ru, uerr := s.client.User.Query().Where(entuser.ID(member.UserID)).Only(ctx); uerr == nil && ru != nil {
 		riderEmail = ru.Email
 		riderName = ru.FullName
+		riderPhone = ru.Phone
 	}
 	_ = s.publisher.PublishTaskAssigned(ctx, tenantID, events.TaskEventData{
 		TaskID:            taskID.String(),
@@ -671,6 +799,7 @@ func (s *Service) publishAssigned(ctx context.Context, tenantID, taskID uuid.UUI
 		FleetMemberID:     member.ID.String(),
 		RiderEmail:        riderEmail,
 		RiderName:         riderName,
+		RiderPhone:        riderPhone,
 		SourceService:     t.SourceService,
 		OrderNumber:       metadataString(t.Metadata, "order_number"),
 		RiderUserID:       member.UserID.String(),
@@ -777,8 +906,13 @@ func (s *Service) SubmitPoD(ctx context.Context, tenantID, taskID uuid.UUID, req
 	if req.SignatureURL != "" {
 		builder.SetSignatureURL(req.SignatureURL)
 	}
-	if req.PhotoURL != "" {
-		builder.SetPhotoURL(req.PhotoURL)
+	if photo, inline := podPhotoURL(req.PhotoURL); photo != "" {
+		builder.SetPhotoURL(photo)
+	} else if inline {
+		// Older rider-app builds sent the photo itself as a base64 data URL (100 KB+ per
+		// delivery in the row). The app now uploads it first; an inline photo is dropped
+		// rather than blocking the delivery at the door.
+		meta["photo_dropped"] = "inline photo not stored; upload it to /media/upload first"
 	}
 	if req.OTPCode != "" {
 		builder.SetOtpCode(req.OTPCode)
@@ -822,6 +956,8 @@ func (s *Service) SubmitPoD(ctx context.Context, tenantID, taskID uuid.UUID, req
 			SetCompletedAt(now).
 			Save(ctx)
 	}
+
+	s.recordEvent(ctx, taskID, "delivered", Actor{ID: memberID, Type: "rider"}, map[string]any{"previous_status": t.Status})
 
 	s.log.Info("proof of delivery submitted",
 		zap.String("task_id", taskID.String()),
@@ -880,7 +1016,13 @@ func (s *Service) SubmitPoD(ctx context.Context, tenantID, taskID uuid.UUID, req
 // CreateTaskFromOrder creates a delivery task from an ordering event, including
 // pickup/dropoff TaskSteps with coordinates for auto-dispatch.
 func (s *Service) CreateTaskFromOrder(ctx context.Context, tenantID uuid.UUID, externalRef string, req CreateTaskFromOrderRequest) (*ent.Task, error) {
-	// Idempotent: check if task already exists for this order
+	// Idempotent per order, across replicas: two ready events for the same order (kitchen and
+	// pickup queue) processed on two pods at once used to create two tasks.
+	unlock, lerr := s.lockIntake(ctx, tenantID, externalRef)
+	if lerr != nil {
+		return nil, lerr
+	}
+	defer unlock()
 	existing, err := s.client.Task.Query().
 		Where(task.TenantID(tenantID), task.ExternalReference(externalRef)).
 		WithSteps().
@@ -934,8 +1076,9 @@ func (s *Service) CreateTaskFromOrder(ctx context.Context, tenantID uuid.UUID, e
 		metadata["pickup_lng"] = req.PickupLng
 	}
 
-	// Create the task
-	t, err := s.CreateTask(ctx, tenantID, CreateTaskRequest{
+	// Create the task (createTask sets the outlet column from metadata outlet_id, so a branch
+	// dispatcher filtering by outlet sees it). The intake lease is already held.
+	t, err := s.createTask(ctx, tenantID, CreateTaskRequest{
 		ExternalReference: externalRef,
 		SourceService:     "ordering",
 		TaskType:          "delivery",
@@ -944,15 +1087,10 @@ func (s *Service) CreateTaskFromOrder(ctx context.Context, tenantID uuid.UUID, e
 	if err != nil {
 		return nil, err
 	}
-	// Scope the task to its outlet so a branch dispatcher filtering by outlet sees it.
-	if oid, perr := uuid.Parse(req.OutletID); perr == nil {
-		if upd, uerr := s.client.Task.UpdateOneID(t.ID).SetOutletID(oid).Save(ctx); uerr == nil {
-			t = upd
-		}
-	}
 
-	// Create pickup step (sequence 1)
-	if req.PickupLat != 0 && req.PickupLng != 0 {
+	// Create pickup step (sequence 1). Coordinates are optional: an outlet without a map pin
+	// still has a name, address and phone the rider needs, and they used to be dropped.
+	if hasPickup(req) {
 		_, stepErr := s.client.TaskStep.Create().
 			SetTaskID(t.ID).
 			SetStepType("pickup").
@@ -975,8 +1113,9 @@ func (s *Service) CreateTaskFromOrder(ctx context.Context, tenantID uuid.UUID, e
 		}
 	}
 
-	// Create dropoff step (sequence 2)
-	if req.DropoffLat != 0 && req.DropoffLng != 0 {
+	// Create dropoff step (sequence 2). Same rule: a customer address without coordinates still
+	// carries the customer's name, phone and written address.
+	if hasDropoff(req) {
 		_, stepErr := s.client.TaskStep.Create().
 			SetTaskID(t.ID).
 			SetStepType("dropoff").
@@ -988,6 +1127,7 @@ func (s *Service) CreateTaskFromOrder(ctx context.Context, tenantID uuid.UUID, e
 				"latitude":  req.DropoffLat,
 				"longitude": req.DropoffLng,
 				"name":      req.DropoffName,
+				"address":   req.DropoffName,
 			}).
 			SetMetadata(map[string]any{
 				"instructions": req.Instructions,
@@ -1008,6 +1148,18 @@ func (s *Service) CreateTaskFromOrder(ctx context.Context, tenantID uuid.UUID, e
 	}
 
 	return t, nil
+}
+
+// hasPickup reports whether the order carries anything the rider can use to find the outlet.
+func hasPickup(req CreateTaskFromOrderRequest) bool {
+	return strings.TrimSpace(req.PickupName) != "" || strings.TrimSpace(req.PickupAddress) != "" ||
+		strings.TrimSpace(req.PickupPhone) != "" || (req.PickupLat != 0 && req.PickupLng != 0)
+}
+
+// hasDropoff reports whether the order carries anything the rider can use to reach the customer.
+func hasDropoff(req CreateTaskFromOrderRequest) bool {
+	return strings.TrimSpace(req.DropoffName) != "" || strings.TrimSpace(req.CustomerName) != "" ||
+		strings.TrimSpace(req.CustomerPhone) != "" || (req.DropoffLat != 0 && req.DropoffLng != 0)
 }
 
 func (s *Service) getOrCreateDefaultFleet(ctx context.Context, tenantID uuid.UUID) (*ent.Fleet, error) {
@@ -1034,7 +1186,7 @@ func (s *Service) GetTaskByTrackingCode(ctx context.Context, code string) (*ent.
 			q.Order(ent.Desc(taskassignment.FieldAssignedAt)).Limit(1)
 		}).
 		WithSteps().
-		WithEvents().
+		WithEvents(func(q *ent.TaskEventQuery) { q.Order(ent.Asc(taskevent.FieldOccurredAt)) }).
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {

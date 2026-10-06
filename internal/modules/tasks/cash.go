@@ -29,6 +29,9 @@ import (
 // ErrNothingToRemit means the rider holds no cash from deliveries.
 var ErrNothingToRemit = errors.New("tasks: this rider has no cash to hand in")
 
+// ErrRemittanceChanged means someone recorded this hand-in (or part of it) at the same moment.
+var ErrRemittanceChanged = errors.New("tasks: this hand-in was just recorded by someone else; refresh to see the balance")
+
 // CashDelivery is one cash-on-delivery drop-off whose cash the rider still holds.
 type CashDelivery struct {
 	PoDID       uuid.UUID `json:"pod_id"`
@@ -239,17 +242,29 @@ func (s *Service) RecordRemittance(ctx context.Context, tenantID, memberID uuid.
 	if n := strings.TrimSpace(notes); n != "" {
 		stamp["remittance_notes"] = n
 	}
+	// One transaction, and each delivery is stamped only if it is still unremitted. A double
+	// click, or two managers recording the same hand-in, used to stamp the deliveries twice with
+	// two remittance ids; a failure halfway left half the deliveries stamped.
+	tx, err := s.client.Tx(ctx)
+	if err != nil {
+		return Remittance{}, fmt.Errorf("tasks: begin hand-in: %w", err)
+	}
 	for _, p := range pods {
-		meta := map[string]any{}
-		for k, v := range p.Metadata {
-			meta[k] = v
-		}
-		for k, v := range stamp {
-			meta[k] = v
-		}
-		if _, uerr := s.client.ProofOfDelivery.UpdateOne(p).SetMetadata(meta).Save(ctx); uerr != nil {
+		n, uerr := tx.ProofOfDelivery.Update().
+			Where(proofofdelivery.ID(p.ID), notRemitted()).
+			SetMetadata(mergeMeta(p.Metadata, stamp)).
+			Save(ctx)
+		if uerr != nil {
+			_ = tx.Rollback()
 			return Remittance{}, fmt.Errorf("tasks: record hand-in: %w", uerr)
 		}
+		if n == 0 {
+			_ = tx.Rollback()
+			return Remittance{}, ErrRemittanceChanged
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return Remittance{}, fmt.Errorf("tasks: commit hand-in: %w", err)
 	}
 	s.log.Info("rider cash handed in",
 		zap.String("member_id", memberID.String()),

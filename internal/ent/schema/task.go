@@ -122,6 +122,6 @@ func (Task) Indexes() []ent.Index {
 		// the set of open tasks no matter how many completed tasks accumulate.
 		index.Fields("sla_due_at").
 			StorageKey("task_sla_open").
-			Annotations(entsql.IndexWhere("sla_due_at IS NOT NULL AND status NOT IN ('completed', 'cancelled', 'failed', 'returned')")),
+			Annotations(entsql.IndexWhere("sla_due_at IS NOT NULL AND status NOT IN ('delivered', 'completed', 'cancelled', 'failed', 'returned')")),
 	}
 }

@@ -15,8 +15,8 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/bengobox/logistics-service/internal/ent"
-	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
 	"github.com/bengobox/logistics-service/internal/ent/proofofdelivery"
+	"github.com/bengobox/logistics-service/internal/modules/dispatch"
 	"github.com/bengobox/logistics-service/internal/modules/fleet"
 	"github.com/bengobox/logistics-service/internal/modules/tasks"
 	"github.com/bengobox/logistics-service/internal/platform/subscriptions"
@@ -33,6 +33,8 @@ type LogisticsHandler struct {
 	taskSvc    *tasks.Service
 	fleetSvc   *fleet.Service
 	dispatcher TaskDispatcher
+	perms      permissionChecker
+	tracker    *dispatch.AutoDispatcher
 }
 
 // NewLogisticsHandler creates a new logistics handler.
@@ -174,6 +176,11 @@ func (h *LogisticsHandler) GetTask(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
+	// A rider sees their own jobs and open ones they could claim, not other customers' orders.
+	if member := h.riderOnly(r, tenantID); member != nil && !h.riderMayView(r.Context(), t, member) {
+		http.Error(w, "task not found", http.StatusNotFound)
+		return
+	}
 
 	respondJSON(w, http.StatusOK, toTaskResponse(t))
 }
@@ -194,6 +201,7 @@ func (h *LogisticsHandler) UpdateTaskStatus(w http.ResponseWriter, r *http.Reque
 
 	var body struct {
 		Status string `json:"status"`
+		Reason string `json:"reason"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Status == "" {
 		http.Error(w, "status is required", http.StatusBadRequest)
@@ -204,9 +212,13 @@ func (h *LogisticsHandler) UpdateTaskStatus(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	t, err := h.taskSvc.UpdateStatus(r.Context(), tenantID, taskID, body.Status)
+	actor := h.actor(r, "dispatcher")
+	if member := h.riderOnly(r, tenantID); member != nil {
+		actor = tasks.Actor{ID: member.ID, Type: "rider"}
+	}
+	t, err := h.taskSvc.UpdateStatusAs(r.Context(), tenantID, taskID, body.Status, body.Reason, actor)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeTaskError(w, err)
 		return
 	}
 
@@ -235,7 +247,7 @@ func (h *LogisticsHandler) AssignTask(w http.ResponseWriter, r *http.Request) {
 
 	assignment, err := h.taskSvc.AssignTask(r.Context(), tenantID, taskID, req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeTaskError(w, err)
 		return
 	}
 
@@ -280,19 +292,9 @@ func (h *LogisticsHandler) SubmitPoD(w http.ResponseWriter, r *http.Request) {
 // the tenant could mark another rider's order picked up or delivered. Dispatchers and admins (users
 // who are not fleet members) are unaffected. Writes a 403 and returns false when refused.
 func (h *LogisticsHandler) callerMayWorkTask(w http.ResponseWriter, r *http.Request, tenantID, taskID uuid.UUID) bool {
-	claims, ok := authclient.ClaimsFromContext(r.Context())
-	if !ok || claims.Subject == "" {
-		return true // service calls carry no rider identity
-	}
-	userID, err := uuid.Parse(claims.Subject)
-	if err != nil {
-		return true
-	}
-	member, err := h.taskSvc.Client().FleetMember.Query().
-		Where(fleetmember.UserID(userID), fleetmember.TenantID(tenantID)).
-		Only(r.Context())
-	if err != nil {
-		return true // not a rider: a dispatcher/admin acting on the board
+	member := h.riderOnly(r, tenantID)
+	if member == nil {
+		return true // a dispatcher/admin acting on the board, or a service call
 	}
 	if assignee, assigned := h.taskSvc.ActiveAssignee(r.Context(), taskID); assigned && assignee == member.ID {
 		return true
@@ -777,6 +779,13 @@ func (h *LogisticsHandler) GetPoD(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "invalid task id", http.StatusBadRequest)
 		return
+	}
+
+	if member := h.riderOnly(r, tenantID); member != nil {
+		if t, terr := h.taskSvc.GetTask(r.Context(), tenantID, taskID); terr != nil || t.Status == "pending" || !h.riderMayView(r.Context(), t, member) {
+			http.Error(w, "proof of delivery not found", http.StatusNotFound)
+			return
+		}
 	}
 
 	pod, err := h.taskSvc.Client().ProofOfDelivery.Query().

@@ -2,7 +2,9 @@ package dispatch
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"time"
 	"math"
 	"sort"
 
@@ -21,6 +23,12 @@ const (
 	riderLocationKey = "logistics:riders:geo:%s"
 	// maxDispatchRadiusKm is the maximum distance (km) to consider a rider.
 	maxDispatchRadiusKm = 15.0
+	// riderSeenKey is a sorted set of rider ids scored by the unix time of their last fix.
+	riderSeenKey = "logistics:riders:seen:%s"
+	// taskETAKey holds the latest ETA computed for a task.
+	taskETAKey = "logistics:eta:%s"
+	// maxFixAge is how old a rider's last position may be for auto-dispatch to use it.
+	maxFixAge = 10 * time.Minute
 )
 
 // AutoDispatcher finds and assigns the nearest available rider for a task.
@@ -76,16 +84,91 @@ type RiderLocation struct {
 	MemberID  uuid.UUID
 	Latitude  float64
 	Longitude float64
+	// SeenAt is when the rider last reported a position (zero when unknown).
+	SeenAt time.Time
 }
 
-// UpdateRiderLocation stores a rider's current location in Redis GEO.
+// UpdateRiderLocation stores a rider's current location in Redis GEO and when it was reported.
+// GEO members never expire, so without the last-seen time a rider who switched the app off
+// yesterday still looked like the nearest rider and kept getting auto-assigned.
 func (d *AutoDispatcher) UpdateRiderLocation(ctx context.Context, tenantID, memberID uuid.UUID, lat, lng float64) error {
 	key := fmt.Sprintf(riderLocationKey, tenantID.String())
-	return d.redis.GeoAdd(ctx, key, &redis.GeoLocation{
+	pipe := d.redis.TxPipeline()
+	pipe.GeoAdd(ctx, key, &redis.GeoLocation{
 		Name:      memberID.String(),
 		Longitude: lng,
 		Latitude:  lat,
-	}).Err()
+	})
+	pipe.ZAdd(ctx, fmt.Sprintf(riderSeenKey, tenantID.String()), redis.Z{
+		Score: float64(time.Now().Unix()), Member: memberID.String(),
+	})
+	_, err := pipe.Exec(ctx)
+	return err
+}
+
+// riderSeen returns when each of the given riders last reported a position.
+func (d *AutoDispatcher) riderSeen(ctx context.Context, tenantID uuid.UUID, ids []string) map[string]time.Time {
+	out := map[string]time.Time{}
+	if len(ids) == 0 {
+		return out
+	}
+	scores, err := d.redis.ZMScore(ctx, fmt.Sprintf(riderSeenKey, tenantID.String()), ids...).Result()
+	if err != nil {
+		return out
+	}
+	for i, s := range scores {
+		if s > 0 {
+			out[ids[i]] = time.Unix(int64(s), 0).UTC()
+		}
+	}
+	return out
+}
+
+// freshCandidates keeps riders who reported a position within maxFix of now and who are not
+// excluded (they declined this job). Riders with no last-seen time are dropped too.
+func freshCandidates(cands []riderCandidate, seen map[string]time.Time, exclude map[uuid.UUID]bool, now time.Time, maxFix time.Duration) []riderCandidate {
+	out := make([]riderCandidate, 0, len(cands))
+	for _, c := range cands {
+		if exclude[c.MemberID] {
+			continue
+		}
+		at, ok := seen[c.MemberID.String()]
+		if !ok || now.Sub(at) > maxFix {
+			continue
+		}
+		out = append(out, c)
+	}
+	return out
+}
+
+// ETA is the last computed arrival estimate for a task.
+type ETA struct {
+	Minutes    float64   `json:"minutes"`
+	DistanceKm float64   `json:"distance_km"`
+	At         time.Time `json:"at"`
+}
+
+// SaveETA keeps the latest ETA for a task for the tracking endpoint (10 minute expiry, so a
+// stale estimate disappears once updates stop).
+func (d *AutoDispatcher) SaveETA(ctx context.Context, taskID uuid.UUID, eta ETA) {
+	if d.redis == nil {
+		return
+	}
+	b, _ := json.Marshal(eta)
+	_ = d.redis.Set(ctx, fmt.Sprintf(taskETAKey, taskID.String()), b, 10*time.Minute).Err()
+}
+
+// LastETA returns the latest saved ETA for a task.
+func (d *AutoDispatcher) LastETA(ctx context.Context, taskID uuid.UUID) (ETA, bool) {
+	var eta ETA
+	if d.redis == nil {
+		return eta, false
+	}
+	b, err := d.redis.Get(ctx, fmt.Sprintf(taskETAKey, taskID.String())).Bytes()
+	if err != nil || json.Unmarshal(b, &eta) != nil {
+		return eta, false
+	}
+	return eta, true
 }
 
 // GetRiderLocation retrieves a rider's last known location from Redis.
@@ -102,6 +185,7 @@ func (d *AutoDispatcher) GetRiderLocation(ctx context.Context, tenantID, memberI
 		MemberID:  memberID,
 		Latitude:  positions[0].Latitude,
 		Longitude: positions[0].Longitude,
+		SeenAt:    d.riderSeen(ctx, tenantID, []string{memberID.String()})[memberID.String()],
 	}, nil
 }
 
@@ -156,11 +240,18 @@ func (d *AutoDispatcher) DispatchTask(ctx context.Context, tenantID, taskID uuid
 		candidates = d.fallbackHaversine(ctx, tenantID, members, pickupLat, pickupLng)
 	}
 
+	// Only riders with a recent fix, and never a rider who already declined this job.
+	ids := make([]string, 0, len(candidates))
+	for _, c := range candidates {
+		ids = append(ids, c.MemberID.String())
+	}
+	candidates = freshCandidates(candidates, d.riderSeen(ctx, tenantID, ids), d.taskSvc.DeclinedMembers(ctx, taskID), time.Now(), maxFixAge)
+
 	if len(candidates) == 0 {
 		d.log.Warn("no riders with location available for auto-dispatch",
 			zap.String("task_id", taskID.String()),
 		)
-		d.notifyDispatchFailed(ctx, tenantID, taskID, "No riders have reported a live GPS location yet.")
+		d.notifyDispatchFailed(ctx, tenantID, taskID, "No available rider has reported a live GPS location in the last 10 minutes.")
 		return nil
 	}
 

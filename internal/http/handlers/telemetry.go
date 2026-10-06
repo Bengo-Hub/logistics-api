@@ -1,8 +1,11 @@
 package handlers
 
 import (
+	"context"
+	"database/sql"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	authclient "github.com/Bengo-Hub/shared-auth-client"
@@ -16,19 +19,16 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/taskassignment"
 	"github.com/bengobox/logistics-service/internal/ent/telemetrypoint"
 	"github.com/bengobox/logistics-service/internal/ent/telemetrystream"
+	"github.com/bengobox/logistics-service/internal/modules/tasks"
 	telemetrysvc "github.com/bengobox/logistics-service/internal/modules/telemetry"
 )
-
-// terminalTaskStatuses mirrors the deny-list used by the task service's own completion
-// guard (internal/modules/tasks/service.go) — kept in sync manually since there's no
-// shared status-classification helper yet.
-var terminalTaskStatuses = []string{"delivered", "completed", "cancelled", "failed"}
 
 // TelemetryHandler handles GPS telemetry ingestion and stream query endpoints.
 type TelemetryHandler struct {
 	log      *zap.Logger
 	svc      *telemetrysvc.Service
 	client   *ent.Client
+	db       *sql.DB
 	fleetHub *FleetTrackingHub
 }
 
@@ -111,45 +111,29 @@ func (h *TelemetryHandler) GetSummary(w http.ResponseWriter, r *http.Request) {
 		).
 		Count(ctx)
 
-	// Active riders = fleet members with an active stream
-	activeRiders, _ := h.client.FleetMember.Query().
-		Where(
-			fleetmember.TenantID(tenantID),
-			fleetmember.StatusEQ("active"),
-		).
-		Count(ctx)
+	// Riders online = distinct riders with an active stream. This used to count every approved
+	// rider, online or not.
+	var onlineIDs []uuid.UUID
+	_ = h.client.TelemetryStream.Query().
+		Where(telemetrystream.TenantID(tenantID), telemetrystream.Status("active")).
+		GroupBy(telemetrystream.FieldFleetMemberID).
+		Scan(ctx, &onlineIDs)
+	activeRiders := len(onlineIDs)
 
-	// Completed tasks in the period — use UpdatedAt as proxy for completion time
-	completedTasks, _ := h.client.Task.Query().
-		Where(
-			task.TenantID(tenantID),
-			task.StatusEQ("completed"),
-			task.UpdatedAtGTE(since),
-		).
-		Count(ctx)
-
-	// Average delivery time (created_at → updated_at) for tasks completed in period
-	var avgMins float64
-	completed, err := h.client.Task.Query().
-		Where(
-			task.TenantID(tenantID),
-			task.StatusEQ("completed"),
-			task.UpdatedAtGTE(since),
-		).
-		All(ctx)
-	if err == nil && len(completed) > 0 {
-		var totalMins float64
-		var count int
-		for _, t := range completed {
-			diff := t.UpdatedAt.Sub(t.CreatedAt).Minutes()
-			if diff > 0 {
-				totalMins += diff
-				count++
-			}
+	// Deliveries finished in the period and their average time from task creation to proof of
+	// delivery, aggregated in SQL. Tasks finish as "delivered" (never "completed"), so the old
+	// status filter always reported zero, and it loaded every row to average in Go.
+	completedTasks, avgMins := 0, 0.0
+	if h.db != nil {
+		var avg sql.NullFloat64
+		if err := h.db.QueryRowContext(ctx, `
+			SELECT count(*), avg(EXTRACT(EPOCH FROM (p.captured_at - t.created_at)) / 60)
+			FROM proof_of_deliveries p
+			JOIN tasks t ON t.id = p.task_id
+			WHERE p.tenant_id = $1 AND p.captured_at >= $2`, tenantID, since).Scan(&completedTasks, &avg); err != nil {
+			h.log.Warn("telemetry summary aggregate", zap.Error(err))
 		}
-		if count > 0 {
-			avgMins = totalMins / float64(count)
-		}
+		avgMins = avg.Float64
 	}
 
 	respondJSON(w, http.StatusOK, TelemetrySummary{
@@ -329,37 +313,63 @@ func (h *TelemetryHandler) GetFleetTracking(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	// Three bounded queries for the whole fleet (it used to run three queries per rider):
+	// active streams, the latest point of each (DISTINCT ON over the stream/captured_at index),
+	// and each rider's current job.
+	ids := make([]uuid.UUID, 0, len(members))
+	for _, m := range members {
+		ids = append(ids, m.ID)
+	}
+	streams, err := h.client.TelemetryStream.Query().
+		Where(
+			telemetrystream.TenantID(tenantID),
+			telemetrystream.FleetMemberIDIn(ids...),
+			telemetrystream.Status("active"),
+		).
+		Order(ent.Asc(telemetrystream.FieldStartedAt)).
+		All(ctx)
+	if err != nil {
+		h.log.Error("fleet tracking: list streams", zap.Error(err))
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	streamOf := map[uuid.UUID]uuid.UUID{} // member -> newest active stream
+	streamIDs := make([]uuid.UUID, 0, len(streams))
+	for _, st := range streams {
+		streamOf[st.FleetMemberID] = st.ID
+		streamIDs = append(streamIDs, st.ID)
+	}
+	latest := h.latestPoints(ctx, streamIDs)
+	jobs := map[uuid.UUID]string{}
+	if len(ids) > 0 {
+		active, aerr := h.client.TaskAssignment.Query().
+			Where(
+				taskassignment.FleetMemberIDIn(ids...),
+				taskassignment.StatusIn("assigned", "accepted"),
+				taskassignment.HasTaskWith(task.TenantID(tenantID), task.StatusNotIn(tasks.TerminalStatuses...)),
+			).
+			All(ctx)
+		if aerr == nil {
+			for _, a := range active {
+				jobs[a.FleetMemberID] = a.TaskID.String()
+			}
+		}
+	}
+
 	riders := make([]FleetRiderPosition, 0, len(members))
 	for _, m := range members {
-		stream, err := h.client.TelemetryStream.Query().
-			Where(
-				telemetrystream.TenantID(tenantID),
-				telemetrystream.FleetMemberID(m.ID),
-				telemetrystream.Status("active"),
-			).
-			Only(ctx)
-		if err != nil {
-			continue // no active stream — rider has reported no recent location
+		point, ok := latest[streamOf[m.ID]]
+		if !ok {
+			continue // no active stream or no fix yet
 		}
-
-		point, err := h.client.TelemetryPoint.Query().
-			Where(telemetrypoint.StreamID(stream.ID)).
-			Order(ent.Desc(telemetrypoint.FieldCapturedAt)).
-			First(ctx)
-		if err != nil {
-			continue
-		}
-
 		lat, lng, ok := latLngFromMetadata(point.Metadata)
 		if !ok {
 			continue
 		}
-
 		name := "Rider"
 		if u := m.Edges.User; u != nil && u.FullName != "" {
 			name = u.FullName
 		}
-
 		pos := FleetRiderPosition{
 			RiderID:   m.ID.String(),
 			Name:      name,
@@ -376,18 +386,9 @@ func (h *TelemetryHandler) GetFleetTracking(w http.ResponseWriter, r *http.Reque
 			heading := point.BearingDeg
 			pos.Heading = &heading
 		}
-		if activeTask, err := h.client.Task.Query().
-			Where(
-				task.TenantID(tenantID),
-				task.StatusNotIn(terminalTaskStatuses...),
-				task.HasAssignmentsWith(taskassignment.FleetMemberID(m.ID)),
-			).
-			Order(ent.Desc(task.FieldUpdatedAt)).
-			First(ctx); err == nil {
-			id := activeTask.ID.String()
+		if id, ok := jobs[m.ID]; ok {
 			pos.ActiveTaskID = &id
 		}
-
 		riders = append(riders, pos)
 	}
 
@@ -425,4 +426,50 @@ func (h *TelemetryHandler) resolveFleetMember(r *http.Request, tenantID uuid.UUI
 		return uuid.Nil, err
 	}
 	return member.ID, nil
+}
+
+// SetDB wires the SQL handle used for aggregates and the latest-point lookup.
+func (h *TelemetryHandler) SetDB(db *sql.DB) { h.db = db }
+
+// latestPoints returns the newest point of each stream.
+func (h *TelemetryHandler) latestPoints(ctx context.Context, streamIDs []uuid.UUID) map[uuid.UUID]*ent.TelemetryPoint {
+	out := map[uuid.UUID]*ent.TelemetryPoint{}
+	if len(streamIDs) == 0 {
+		return out
+	}
+	if h.db == nil {
+		for _, id := range streamIDs {
+			if p, err := h.client.TelemetryPoint.Query().
+				Where(telemetrypoint.StreamID(id)).
+				Order(ent.Desc(telemetrypoint.FieldCapturedAt)).
+				First(ctx); err == nil {
+				out[id] = p
+			}
+		}
+		return out
+	}
+	args := make([]string, 0, len(streamIDs))
+	for _, id := range streamIDs {
+		args = append(args, id.String())
+	}
+	rows, err := h.db.QueryContext(ctx, `
+		SELECT DISTINCT ON (stream_id) stream_id, captured_at, COALESCE(speed_kph, 0), COALESCE(bearing_deg, 0), metadata
+		FROM telemetry_points
+		WHERE stream_id = ANY($1::uuid[])
+		ORDER BY stream_id, captured_at DESC`, "{"+strings.Join(args, ",")+"}")
+	if err != nil {
+		h.log.Warn("fleet tracking: latest points", zap.Error(err))
+		return out
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var p ent.TelemetryPoint
+		var raw []byte
+		if err := rows.Scan(&p.StreamID, &p.CapturedAt, &p.SpeedKph, &p.BearingDeg, &raw); err != nil {
+			continue
+		}
+		_ = json.Unmarshal(raw, &p.Metadata)
+		out[p.StreamID] = &p
+	}
+	return out
 }

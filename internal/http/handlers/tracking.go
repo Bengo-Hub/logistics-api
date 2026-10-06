@@ -38,7 +38,8 @@ func (h *TrackingHandler) TrackByCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Build status history from task events
+	// Build status history from task events. This is a public, unauthenticated page reached with
+	// a tracking code, so it never carries the customer's coordinates or contact details.
 	var statusHistory []map[string]any
 	if t.Edges.Events != nil {
 		for _, ev := range t.Edges.Events {
@@ -62,7 +63,7 @@ func (h *TrackingHandler) TrackByCode(w http.ResponseWriter, r *http.Request) {
 
 	// Build step locations from address_json
 	var pickupName, dropoffName string
-	var pickupAddrJSON, dropoffAddrJSON map[string]any
+	var pickupAddrJSON map[string]any
 	if t.Edges.Steps != nil {
 		for _, step := range t.Edges.Steps {
 			if step.StepType == "pickup" {
@@ -70,7 +71,6 @@ func (h *TrackingHandler) TrackByCode(w http.ResponseWriter, r *http.Request) {
 				pickupAddrJSON = step.AddressJSON
 			} else if step.StepType == "dropoff" {
 				dropoffName = step.LocationName
-				dropoffAddrJSON = step.AddressJSON
 			}
 		}
 	}
@@ -89,7 +89,7 @@ func (h *TrackingHandler) TrackByCode(w http.ResponseWriter, r *http.Request) {
 		"pickup_location":        pickupName,
 		"pickup_address":         pickupAddrJSON,
 		"dropoff_location":       dropoffName,
-		"dropoff_address":        dropoffAddrJSON,
+
 		"live_tracking_available": liveTracking,
 		"created_at":             t.CreatedAt,
 		"updated_at":             t.UpdatedAt,

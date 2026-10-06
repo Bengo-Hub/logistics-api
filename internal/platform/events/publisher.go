@@ -149,6 +149,12 @@ type TaskEventData struct {
 	RiderUserID string `json:"rider_user_id,omitempty"`
 	// PickupName is where the rider collects the order (outlet name or address).
 	PickupName string `json:"pickup_name,omitempty"`
+	// RiderPhone lets the customer and outlet call the rider bringing the order.
+	RiderPhone string `json:"rider_phone,omitempty"`
+	// Reason explains a failed, cancelled, declined or unassigned delivery. It is sent as both
+	// "reason" (ordering's cancelled handler) and "failure_reason" (ordering's failed handler and
+	// the notifications delivery_failed template).
+	Reason string `json:"reason,omitempty"`
 }
 
 func (d TaskEventData) toMap() map[string]interface{} {
@@ -198,7 +204,20 @@ func (d TaskEventData) toMap() map[string]interface{} {
 	if d.PickupName != "" {
 		m["pickup_name"] = d.PickupName
 	}
+	if d.RiderPhone != "" {
+		m["rider_phone"] = d.RiderPhone
+	}
+	if d.Reason != "" {
+		m["reason"] = d.Reason
+		m["failure_reason"] = d.Reason
+	}
 	return m
+}
+
+// PublishTaskUnassigned publishes logistics.task.unassigned: the rider declined the job or the
+// dispatcher took it back before pickup, so the task is open again and needs a rider.
+func (p *Publisher) PublishTaskUnassigned(ctx context.Context, tenantID uuid.UUID, data TaskEventData) error {
+	return p.publish(ctx, tenantID, "logistics", "task.unassigned", data.toMap())
 }
 
 // PublishTaskCreated publishes a logistics.task.created event. Consumers (e.g. ordering-backend)

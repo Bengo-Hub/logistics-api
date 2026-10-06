@@ -12,7 +12,6 @@ import (
 
 	"github.com/bengobox/logistics-service/internal/ent"
 	"github.com/bengobox/logistics-service/internal/ent/task"
-	"github.com/bengobox/logistics-service/internal/ent/tenant"
 	"github.com/bengobox/logistics-service/internal/modules/tasks"
 )
 
@@ -83,36 +82,30 @@ func (s *BatchScheduler) runBatchCycle(ctx context.Context) {
 	if !sharedcache.ClaimPeriod(ctx, "logistics:batch-dispatch", s.interval) {
 		return
 	}
-	const pageSize = 100
-	offset := 0
-	for {
-		tenants, err := s.entClient.Tenant.Query().
-			Where(tenant.StatusEQ("active")).
-			Limit(pageSize).
-			Offset(offset).
-			All(ctx)
-		if err != nil {
-			s.log.Warn("batch: failed to query tenants", zap.Error(err))
-			return
+	// Only tenants that have pending tasks, in one grouped query (it used to page through every
+	// active tenant and query each one's tasks, every two minutes).
+	var tenantIDs []uuid.UUID
+	if err := s.entClient.Task.Query().
+		Where(task.StatusEQ("pending")).
+		GroupBy(task.FieldTenantID).
+		Scan(ctx, &tenantIDs); err != nil {
+		s.log.Warn("batch: failed to query tenants with pending tasks", zap.Error(err))
+		return
+	}
+	for _, tid := range tenantIDs {
+		// A business that assigns from its own dispatch board turned auto-assign off; the
+		// batcher used to ignore that and hand its jobs out anyway.
+		if !s.dispatcher.taskSvc.AutoAssignEnabled(ctx, tid) {
+			continue
 		}
-		if len(tenants) == 0 {
-			break
+		if err := s.batchDispatch(ctx, tid); err != nil {
+			s.log.Warn("batch dispatch failed for tenant",
+				zap.String("tenant_id", tid.String()),
+				zap.Error(err),
+			)
 		}
-		for _, t := range tenants {
-			if err := s.batchDispatch(ctx, t.ID); err != nil {
-				s.log.Warn("batch dispatch failed for tenant",
-					zap.String("tenant_id", t.ID.String()),
-					zap.Error(err),
-				)
-			}
-		}
-		if len(tenants) < pageSize {
-			break
-		}
-		offset += pageSize
 	}
 }
-
 // batchDispatch groups nearby pending tasks for a tenant and assigns each group
 // to the nearest available rider.
 func (s *BatchScheduler) batchDispatch(ctx context.Context, tenantID uuid.UUID) error {
@@ -180,6 +173,11 @@ func (s *BatchScheduler) batchDispatch(ctx context.Context, tenantID uuid.UUID) 
 			candidates = s.dispatcher.fallbackHaversine(ctx, tenantID, members, refLat, refLng)
 		}
 
+		ids := make([]string, 0, len(candidates))
+		for _, c := range candidates {
+			ids = append(ids, c.MemberID.String())
+		}
+		candidates = freshCandidates(candidates, s.dispatcher.riderSeen(ctx, tenantID, ids), nil, time.Now(), maxFixAge)
 		if len(candidates) == 0 {
 			continue
 		}
@@ -211,6 +209,9 @@ func (s *BatchScheduler) batchDispatch(ctx context.Context, tenantID uuid.UUID) 
 		// Assign each task in the group to the same rider
 		assignedCount := 0
 		for i := 0; i < batchSize; i++ {
+			if s.dispatcher.taskSvc.DeclinedMembers(ctx, group[i].task.ID)[rider.MemberID] {
+				continue // this rider already turned the job down
+			}
 			_, assignErr := s.dispatcher.taskSvc.AssignTask(ctx, tenantID, group[i].task.ID, tasks.AssignTaskRequest{
 				FleetMemberID: rider.MemberID,
 			})

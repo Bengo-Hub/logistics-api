@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"net/http"
 	"time"
 
@@ -11,10 +12,12 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent"
 	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
 	"github.com/bengobox/logistics-service/internal/ent/task"
+	"github.com/bengobox/logistics-service/internal/modules/tasks"
 )
 
 // AnalyticsHandler handles KPI and analytics endpoints.
 type AnalyticsHandler struct {
+	db     *sql.DB
 	client *ent.Client
 	log    *zap.Logger
 }
@@ -75,73 +78,44 @@ func (h *AnalyticsHandler) GetKPIs(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	// Task counts by status
-	activeStatuses := []string{"assigned", "accepted", "en_route", "en_route_pickup",
-		"arrived_pickup", "picked_up", "en_route_dropoff", "arrived_dropoff"}
-
-	allTasks, err := h.client.Task.Query().
+	// Counts by status in one GROUP BY, and on-time/average from proof of delivery, all in SQL.
+	// The old version loaded every task of the period into memory, and measured delivery time
+	// to the task's last update and "on time" against that, not the actual hand-over time.
+	var byStatus []struct {
+		Status string `json:"status"`
+		Count  int    `json:"count"`
+	}
+	if err := h.client.Task.Query().
 		Where(task.TenantID(tenantID), task.CreatedAtGTE(since)).
-		All(ctx)
-	if err != nil {
-		h.log.Error("analytics: query tasks", zap.Error(err))
+		GroupBy(task.FieldStatus).
+		Aggregate(ent.Count()).
+		Scan(ctx, &byStatus); err != nil {
+		h.log.Error("analytics: count tasks", zap.Error(err))
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
+	k := kpiFromCounts(byStatus)
 
-	var (
-		pending, active, completed, failed, cancelled int
-		onTimeCount, slaCount                         int
-		totalDeliveryMins                             float64
-		deliveryCount                                 int
-	)
-
-	for _, t := range allTasks {
-		switch t.Status {
-		case "pending":
-			pending++
-		case "completed", "delivered":
-			completed++
-			// On-time: completed before SLA due date
-			if t.SLADueAt != nil && !t.UpdatedAt.IsZero() {
-				slaCount++
-				if t.UpdatedAt.Before(*t.SLADueAt) {
-					onTimeCount++
-				}
-			}
-			// Average delivery time: created_at → updated_at (completion)
-			if !t.CreatedAt.IsZero() && !t.UpdatedAt.IsZero() {
-				mins := t.UpdatedAt.Sub(t.CreatedAt).Minutes()
-				if mins > 0 && mins < 1440 { // ignore outliers >24h
-					totalDeliveryMins += mins
-					deliveryCount++
-				}
-			}
-		case "failed":
-			failed++
-		case "cancelled":
-			cancelled++
-		default:
-			for _, s := range activeStatuses {
-				if t.Status == s {
-					active++
-					break
-				}
-			}
+	var onTimePct, avgDeliveryMins float64
+	if h.db != nil {
+		var slaCount, onTime int
+		var avg sql.NullFloat64
+		if err := h.db.QueryRowContext(ctx, `
+			SELECT
+			  count(*) FILTER (WHERE t.sla_due_at IS NOT NULL),
+			  count(*) FILTER (WHERE t.sla_due_at IS NOT NULL AND p.captured_at <= t.sla_due_at),
+			  avg(EXTRACT(EPOCH FROM (p.captured_at - t.created_at)) / 60)
+			    FILTER (WHERE p.captured_at - t.created_at BETWEEN interval '0' AND interval '24 hours')
+			FROM tasks t
+			JOIN proof_of_deliveries p ON p.task_id = t.id
+			WHERE t.tenant_id = $1 AND t.created_at >= $2`, tenantID, since).Scan(&slaCount, &onTime, &avg); err != nil {
+			h.log.Warn("analytics: delivery timing", zap.Error(err))
 		}
+		if slaCount > 0 {
+			onTimePct = float64(onTime) / float64(slaCount) * 100
+		}
+		avgDeliveryMins = avg.Float64
 	}
-
-	total := len(allTasks)
-
-	var onTimePct float64
-	if slaCount > 0 {
-		onTimePct = float64(onTimeCount) / float64(slaCount) * 100
-	}
-
-	var avgDeliveryMins float64
-	if deliveryCount > 0 {
-		avgDeliveryMins = totalDeliveryMins / float64(deliveryCount)
-	}
-
 	// Fleet metrics
 	totalRiders, _ := h.client.FleetMember.Query().
 		Where(fleetmember.TenantID(tenantID)).
@@ -158,12 +132,12 @@ func (h *AnalyticsHandler) GetKPIs(w http.ResponseWriter, r *http.Request) {
 
 	respondJSON(w, http.StatusOK, KPIResponse{
 		Period:          periodStr,
-		TotalTasks:      total,
-		PendingTasks:    pending,
-		ActiveTasks:     active,
-		CompletedTasks:  completed,
-		FailedTasks:     failed,
-		CancelledTasks:  cancelled,
+		TotalTasks:      k.total,
+		PendingTasks:    k.pending,
+		ActiveTasks:     k.active,
+		CompletedTasks:  k.completed,
+		FailedTasks:     k.failed,
+		CancelledTasks:  k.cancelled,
 		OnTimePercent:   onTimePct,
 		ActiveRiders:    activeRiders,
 		TotalRiders:     totalRiders,
@@ -171,3 +145,34 @@ func (h *AnalyticsHandler) GetKPIs(w http.ResponseWriter, r *http.Request) {
 		AvgDeliveryMins: avgDeliveryMins,
 	})
 }
+
+type taskCounts struct {
+	total, pending, active, completed, failed, cancelled int
+}
+
+// kpiFromCounts folds per-status counts into the dashboard buckets.
+func kpiFromCounts(rows []struct {
+	Status string `json:"status"`
+	Count  int    `json:"count"`
+}) taskCounts {
+	var k taskCounts
+	for _, r := range rows {
+		k.total += r.Count
+		switch {
+		case r.Status == "pending":
+			k.pending += r.Count
+		case r.Status == "delivered" || r.Status == "completed":
+			k.completed += r.Count
+		case r.Status == "failed":
+			k.failed += r.Count
+		case r.Status == "cancelled":
+			k.cancelled += r.Count
+		case tasks.IsInProgress(r.Status):
+			k.active += r.Count
+		}
+	}
+	return k
+}
+
+// SetDB wires the SQL handle used for the delivery timing aggregate.
+func (h *AnalyticsHandler) SetDB(db *sql.DB) { h.db = db }

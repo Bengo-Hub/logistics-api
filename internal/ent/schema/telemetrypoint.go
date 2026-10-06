@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"entgo.io/ent/schema/index"
 	"time"
 
 	"entgo.io/ent"
@@ -50,5 +51,15 @@ func (TelemetryPoint) Edges() []ent.Edge {
 			Field("stream_id").
 			Unique().
 			Required(),
+	}
+}
+
+// Indexes of the TelemetryPoint.
+func (TelemetryPoint) Indexes() []ent.Index {
+	return []ent.Index{
+		// Latest fix of a stream (fleet map, DISTINCT ON) and a stream's route.
+		index.Fields("stream_id", "captured_at"),
+		// Daily retention prune by age.
+		index.Fields("captured_at"),
 	}
 }

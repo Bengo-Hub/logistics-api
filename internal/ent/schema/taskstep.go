@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"entgo.io/ent/schema/index"
 	"entgo.io/ent"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
@@ -47,5 +48,13 @@ func (TaskStep) Edges() []ent.Edge {
 			Field("task_id").
 			Unique().
 			Required(),
+	}
+}
+
+// Indexes of the TaskStep.
+func (TaskStep) Indexes() []ent.Index {
+	return []ent.Index{
+		// Eager loading of a page of tasks' steps (WHERE task_id IN ...).
+		index.Fields("task_id"),
 	}
 }

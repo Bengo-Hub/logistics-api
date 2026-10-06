@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"entgo.io/ent/schema/index"
 	"time"
 
 	"entgo.io/ent"
@@ -55,5 +56,15 @@ func (TaskAssignment) Edges() []ent.Edge {
 			Field("fleet_member_id").
 			Unique().
 			Required(),
+	}
+}
+
+// Indexes of the TaskAssignment.
+func (TaskAssignment) Indexes() []ent.Index {
+	return []ent.Index{
+		// Active-assignment lookups per task (assign, claim, ownership checks) and per rider
+		// (rider job lists, fleet map, open-jobs filter).
+		index.Fields("task_id", "status"),
+		index.Fields("fleet_member_id", "status"),
 	}
 }
