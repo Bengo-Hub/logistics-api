@@ -328,8 +328,40 @@ func (h *LogisticsHandler) RateRider(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
+	customerID := ""
+	if claims, ok := authclient.ClaimsFromContext(r.Context()); ok {
+		customerID = claims.Subject
+	}
+	h.rateTaskRider(w, r, tenantID, taskID, customerID, body.Rating, body.Comment)
+}
 
-	// Get the task to find the assigned rider
+// S2SRateRider handles POST /api/v1/s2s/dispatch/{tenant}/tasks/{taskId}/rate (service key): the
+// customer's rider rating relayed by ordering, which owns the customer and the order.
+func (h *LogisticsHandler) S2SRateRider(w http.ResponseWriter, r *http.Request) {
+	tenantID, err := uuid.Parse(chi.URLParam(r, "tenant"))
+	if err != nil {
+		http.Error(w, "invalid tenant", http.StatusBadRequest)
+		return
+	}
+	taskID, err := uuid.Parse(chi.URLParam(r, "taskId"))
+	if err != nil {
+		http.Error(w, "invalid task id", http.StatusBadRequest)
+		return
+	}
+	var body struct {
+		Rating         int    `json:"rating"`
+		Comment        string `json:"comment,omitempty"`
+		CustomerUserID string `json:"customer_user_id,omitempty"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	h.rateTaskRider(w, r, tenantID, taskID, body.CustomerUserID, body.Rating, body.Comment)
+}
+
+// rateTaskRider records a rating for the rider assigned to a task (shared by the tenant and S2S routes).
+func (h *LogisticsHandler) rateTaskRider(w http.ResponseWriter, r *http.Request, tenantID, taskID uuid.UUID, customerID string, ratingValue int, comment string) {
 	t, err := h.taskSvc.GetTask(r.Context(), tenantID, taskID)
 	if err != nil {
 		http.Error(w, "task not found", http.StatusNotFound)
@@ -345,12 +377,6 @@ func (h *LogisticsHandler) RateRider(w http.ResponseWriter, r *http.Request) {
 
 	riderID := assignments[0].FleetMemberID
 
-	// Get customer user ID from claims
-	customerID := ""
-	if claims, ok := authclient.ClaimsFromContext(r.Context()); ok {
-		customerID = claims.Subject
-	}
-
 	// Extract order_id from external_reference
 	orderID := ""
 	if t.ExternalReference != "" {
@@ -361,8 +387,8 @@ func (h *LogisticsHandler) RateRider(w http.ResponseWriter, r *http.Request) {
 		TaskID:         &taskID,
 		OrderID:        orderID,
 		CustomerUserID: customerID,
-		Rating:         body.Rating,
-		Comment:        body.Comment,
+		Rating:         ratingValue,
+		Comment:        comment,
 	})
 	if err != nil {
 		h.log.Error("rate rider", zap.Error(err))
