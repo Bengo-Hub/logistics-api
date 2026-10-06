@@ -217,3 +217,37 @@ Still genuinely not built:
   logistics-ui but the backend has no zone entity backing them)
 - Treasury-app payout disbursement (earnings are computed, never actually paid out through
   treasury-api)
+## Delivery workflow rules (2026-10-06)
+
+Status vocabulary lives in `internal/modules/tasks/statuses.go` (terminal, in progress, before
+pickup); nothing else keeps its own copy.
+
+- **Assignment** is one conditional update (`pending` and no active assignment) for the
+  dispatcher, auto-dispatch, the batch scheduler and rider self-claim. A dispatcher can reassign
+  (`reassign: true`) or unassign before pickup, and cancel with a reason.
+- **Riders** move their own legs, decline before pickup (`riders/me/tasks/{id}/decline`), or report
+  `failed` with a reason after pickup. They cannot cancel. Failing or cancelling ends the
+  assignment, which frees the rider. Dispatcher routes refuse riders (fleet members without
+  `logistics.fleet.manage`), including the task board list and rider cash hand-ins.
+- **History**: every change writes a `task_events` row (public tracking timeline). Reasons and the
+  pickup time are stamped in task metadata and returned as `failure_reason`,
+  `cancellation_reason`, `picked_up_at`.
+- **Events**: `task.unassigned` is new; status events carry `reason` and `failure_reason`;
+  `task.assigned` carries `rider_phone`.
+- **Intake**: one Redis lease per upstream reference, so the same order arriving twice makes one
+  task; steps keep outlet and customer details even without coordinates; S2S create returns the
+  open task for a reference instead of a duplicate. `ordering.order.cancelled` cancels the task.
+- **Tracking**: `GET /{tenant}/tasks/{id}/tracking` and the service-key
+  `GET /api/v1/s2s/dispatch/{tenant}/tasks/{id}/tracking` return rider position (Redis GEO),
+  last-seen time and the latest ETA (Redis, 10 minute expiry). Public tracking by code no longer
+  returns customer coordinates.
+- **Auto-dispatch** ignores riders whose last fix is older than 10 minutes (sorted set
+  `logistics:riders:seen:<tenant>`) and riders who declined the job; the batch scheduler honours
+  `logistics.auto_assign_enabled` and only looks at tenants with pending tasks.
+- **Location history** is pruned daily (`logistics.telemetry_retention_days`, default 30) in
+  batches of 5,000; streams silent for 12 hours are closed.
+- **Reports**: KPIs, the telemetry summary and rider earnings aggregate in SQL; delivery time and
+  on-time use the proof-of-delivery time. Indexes added for assignments, steps, events, telemetry
+  and billing events (migration `20261006090000_delivery_audit_indexes.sql`).
+- **Proof of delivery** photos are private uploads stored unsigned and signed on read; inline
+  base64 photos are not stored.

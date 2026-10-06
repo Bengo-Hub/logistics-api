@@ -277,14 +277,17 @@ func (h *LogisticsHandler) SubmitPoD(w http.ResponseWriter, r *http.Request) {
 	if !h.callerMayWorkTask(w, r, tenantID, taskID) {
 		return
 	}
+	// The photo is a private upload (customer doorsteps); keep the plain URL and sign on read.
+	req.PhotoURL = httpware.StripMediaSignature(req.PhotoURL)
+	req.SignatureURL = httpware.StripMediaSignature(req.SignatureURL)
 
 	pod, err := h.taskSvc.SubmitPoD(r.Context(), tenantID, taskID, req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeTaskError(w, err)
 		return
 	}
 
-	respondJSON(w, http.StatusCreated, pod)
+	respondJSON(w, http.StatusCreated, signPoDMedia(pod))
 }
 
 // callerMayWorkTask stops a rider from moving or delivering a task that is not theirs. Riders hold
@@ -802,7 +805,7 @@ func (h *LogisticsHandler) GetPoD(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
-	respondJSON(w, http.StatusOK, pod)
+	respondJSON(w, http.StatusOK, signPoDMedia(pod))
 }
 
 // --- helpers ---
