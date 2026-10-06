@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"entgo.io/ent/schema/index"
 	"time"
 
 	"entgo.io/ent"
@@ -40,5 +41,13 @@ func (TelemetryStream) Fields() []ent.Field {
 func (TelemetryStream) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("points", TelemetryPoint.Type),
+	}
+}
+
+// Indexes of the TelemetryStream.
+func (TelemetryStream) Indexes() []ent.Index {
+	return []ent.Index{
+		// A rider's active stream (every location ping looks it up).
+		index.Fields("tenant_id", "fleet_member_id", "status"),
 	}
 }

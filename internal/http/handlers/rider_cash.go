@@ -88,6 +88,9 @@ func (h *LogisticsHandler) RecordCashRemittance(w http.ResponseWriter, r *http.R
 	case errors.Is(err, tasks.ErrNothingToRemit):
 		http.Error(w, "This rider has no delivery cash to hand in.", http.StatusConflict)
 		return
+	case errors.Is(err, tasks.ErrRemittanceChanged):
+		http.Error(w, "This hand-in was just recorded by someone else. Refresh to see the balance.", http.StatusConflict)
+		return
 	case err != nil:
 		h.log.Error("record cash remittance", zap.String("member_id", memberID.String()), zap.Error(err))
 		http.Error(w, err.Error(), http.StatusBadRequest)

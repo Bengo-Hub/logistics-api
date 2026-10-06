@@ -397,36 +397,20 @@ func (h *EarningsHandler) GetMyEarnings(w http.ResponseWriter, r *http.Request) 
 	weekStart := todayStart.AddDate(0, 0, -int(todayStart.Weekday()))
 	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
 
-	sumEvents := func(from, to time.Time) float64 {
-		events, err := h.client.BillingEvent.Query().
-			Where(
-				billingevent.TenantID(tenantID),
-				billingevent.EventType("delivery_earning"),
-				billingevent.OccurredAtGTE(from),
-				billingevent.OccurredAtLTE(to),
-			).All(r.Context())
-		if err != nil {
-			return 0
-		}
-		var total float64
-		memberIDStr := member.ID.String()
-		for _, e := range events {
-			if mid, ok := e.Metadata["fleet_member_id"].(string); ok && mid == memberIDStr {
-				total += e.Amount
-			}
-		}
-		return total
+	today, week, month, err := h.earningsSvc.RiderTotals(r.Context(), tenantID, member.ID, todayStart, weekStart, monthStart)
+	if err != nil {
+		h.log.Error("rider earnings totals", zap.Error(err))
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
 	}
-
 	respondJSON(w, http.StatusOK, map[string]any{
 		"member_id": member.ID,
-		"today":     sumEvents(todayStart, now),
-		"week":      sumEvents(weekStart, now),
-		"month":     sumEvents(monthStart, now),
+		"today":     today,
+		"week":      week,
+		"month":     month,
 		"currency":  "KES",
 	})
 }
-
 // ListMyStatements handles GET /api/v1/{tenant}/riders/me/earnings/statements
 func (h *EarningsHandler) ListMyStatements(w http.ResponseWriter, r *http.Request) {
 	tenantID := tenantIDFromClaims(r)
@@ -515,7 +499,7 @@ func (h *EarningsHandler) ListMyBillingEvents(w http.ResponseWriter, r *http.Req
 	}
 
 	q := h.client.BillingEvent.Query().
-		Where(billingevent.TenantID(tenantID)).
+		Where(billingevent.TenantID(tenantID), earnings.ForMember(member.ID)).
 		Order(ent.Desc(billingevent.FieldOccurredAt))
 
 	if taskIDStr := r.URL.Query().Get("task_id"); taskIDStr != "" {
@@ -541,16 +525,7 @@ func (h *EarningsHandler) ListMyBillingEvents(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// Filter to the current rider's events only (mirrors GetMyEarnings).
-	memberIDStr := member.ID.String()
-	mine := make([]*ent.BillingEvent, 0, len(events))
-	for _, e := range events {
-		if mid, ok := e.Metadata["fleet_member_id"].(string); ok && mid == memberIDStr {
-			mine = append(mine, e)
-		}
-	}
-
-	respondJSON(w, http.StatusOK, mine)
+	respondJSON(w, http.StatusOK, events)
 }
 
 type createPricingRuleRequest struct {

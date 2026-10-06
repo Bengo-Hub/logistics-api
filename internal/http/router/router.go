@@ -237,6 +237,8 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 			s2sKey := requireServiceKey(cfg.Treasury.InternalServiceKey)
 			api.With(s2sKey).Post("/s2s/dispatch/{tenant}/tasks", lh.S2SCreateTask)
 			api.With(s2sKey).Post("/s2s/dispatch/{tenant}/tasks/{taskId}/assign", lh.S2SAssignTask)
+			// Live rider position and ETA for ordering's customer order tracker.
+			api.With(s2sKey).Get("/s2s/dispatch/{tenant}/tasks/{taskId}/tracking", lh.S2SGetTaskTracking)
 		}
 
 		api.Route("/{tenant}", func(tenant chi.Router) {
@@ -327,7 +329,7 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 					if fleetWSH != nil {
 						trackR.Get("/fleet/ws", fleetWSH.ServeFleetWS)
 					}
-					trackR.Get("/{taskId}", th.TrackByCode)
+
 				})
 			}
 
@@ -400,21 +402,28 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 				// Ownership is the caller's own fleet membership, so no task-manage permission.
 				tenant.Get("/riders/me/open-tasks", lh.ListOpenJobs)
 				tenant.Post("/riders/me/tasks/{taskId}/claim", lh.ClaimJob)
+				// Hand a job back before pickup; it goes to the next rider.
+				tenant.Post("/riders/me/tasks/{taskId}/decline", lh.DeclineJob)
 				// Cash on delivery the rider holds until it is handed in at the outlet.
 				tenant.Get("/riders/me/cash", lh.GetMyCash)
 				tenant.Route("/cash/riders", func(cashR chi.Router) {
 					if rbacSvc != nil {
 						cashR.Use(appmw.RequirePermission(rbacSvc, rbac.PermTaskManage))
 					}
+					// Riders hold tasks.manage too; they must not record their own hand-in.
+					cashR.Use(lh.DispatcherOnly)
 					cashR.Get("/", lh.ListCashWithRiders)
 					cashR.Post("/{memberId}/remit", lh.RecordCashRemittance)
 				})
 
 				tenant.Route("/tasks", func(taskR chi.Router) {
-					// Read-only task access
-					taskR.Get("/", lh.ListTasks)
+					// Read-only task access. The board list is for dispatchers; riders read their
+					// own jobs (riders/me/tasks) and a single task only when they hold it or could
+					// claim it (checked in GetTask/GetPoD).
+					taskR.With(lh.DispatcherOnly).Get("/", lh.ListTasks)
 					taskR.Get("/{taskId}", lh.GetTask)
 					taskR.Get("/{taskId}/pod", lh.GetPoD)
+					taskR.Get("/{taskId}/tracking", lh.GetTaskTracking)
 					if sseH != nil {
 						taskR.Get("/{taskId}/stream", sseH.StreamTask)
 					}
@@ -424,12 +433,19 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 						if rbacSvc != nil {
 							mut.Use(appmw.RequirePermission(rbacSvc, rbac.PermTaskManage))
 						}
-						mut.Post("/", lh.CreateTask)
+						// Riders work their own jobs here (ownership checked in the handlers).
 						mut.Patch("/{taskId}/status", lh.UpdateTaskStatus)
-						mut.Post("/{taskId}/assign", lh.AssignTask)
-						mut.Post("/{taskId}/dispatch", lh.DispatchTask)
 						mut.Post("/{taskId}/pod", lh.SubmitPoD)
-						mut.Post("/{taskId}/rate", lh.RateRider)
+						// Dispatcher actions.
+						mut.Group(func(disp chi.Router) {
+							disp.Use(lh.DispatcherOnly)
+							disp.Post("/", lh.CreateTask)
+							disp.Post("/{taskId}/assign", lh.AssignTask)
+							disp.Post("/{taskId}/unassign", lh.UnassignTask)
+							disp.Post("/{taskId}/cancel", lh.CancelTask)
+							disp.Post("/{taskId}/dispatch", lh.DispatchTask)
+							disp.Post("/{taskId}/rate", lh.RateRider)
+						})
 					})
 				})
 

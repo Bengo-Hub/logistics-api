@@ -10,6 +10,7 @@ import (
 
 	"entgo.io/ent/dialect"
 	entsql "entgo.io/ent/dialect/sql"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/nats-io/nats.go"
@@ -52,6 +53,7 @@ type App struct {
 	cache               *redis.Client
 	events              *nats.Conn
 	orderConsumer       *consumers.OrderReadyConsumer
+	orderCancelled      *consumers.OrderCancelledConsumer
 	transferConsumer    *consumers.TransferReadyConsumer
 	tenantPurgeConsumer *consumers.TenantPurgeConsumer
 	outboxPublisher     *eventslib.Publisher
@@ -221,6 +223,7 @@ func New(ctx context.Context) (*App, error) {
 
 	taskSvc := tasks.NewService(entClient, log)
 	taskSvc.SetPublisher(eventPublisher)
+	taskSvc.SetLocker(redisClient)
 
 	// Earnings: records rider earnings on delivery completion, daily statement generation
 	earningsSvc := earnings.NewService(entClient, log).WithDB(sqlDB)
@@ -235,6 +238,14 @@ func New(ctx context.Context) (*App, error) {
 	autoDispatcher := dispatch.NewAutoDispatcher(log, fleetSvc, taskSvc, redisClient)
 
 	logisticsHandler := handlers.NewLogisticsHandler(log, taskSvc, fleetSvc, autoDispatcher)
+	logisticsHandler.SetTracker(autoDispatcher)
+	// A job a rider declines goes straight to the next nearest rider when auto-assign is on.
+	taskSvc.SetRedispatcher(func(ctx context.Context, tenantID, taskID uuid.UUID) {
+		if err := autoDispatcher.DispatchTask(ctx, tenantID, taskID); err != nil {
+			log.Warn("re-dispatch after decline failed", zap.String("task_id", taskID.String()), zap.Error(err))
+		}
+	})
+	orderCancelledConsumer := consumers.NewOrderCancelledConsumer(log, taskSvc)
 
 	orderConsumer := consumers.NewOrderReadyConsumer(log, taskSvc, autoDispatcher)
 	orderConsumer.SetFeatureGate(consumerFeatureGate)
@@ -255,6 +266,8 @@ func New(ctx context.Context) (*App, error) {
 	// Telemetry: GPS ingestion, stream management, Redis GEO update
 	telemetrySvc := telemetrymod.NewService(log, entClient, autoDispatcher)
 	telemetryHandler := handlers.NewTelemetryHandler(log, telemetrySvc, entClient)
+	telemetryHandler.SetDB(sqlDB)
+	go telemetrySvc.StartRetentionJob(ctx, sqlDB)
 
 	// Fleet tracking hub: real-time WebSocket push of rider location updates to
 	// dispatchers on logistics-ui's live tracking map, relayed across replicas.
@@ -269,6 +282,7 @@ func New(ctx context.Context) (*App, error) {
 	notifHub := notifmod.NewHub(log, relay)
 	notifSvc := notifmod.NewService(log, entClient, notifHub)
 	autoDispatcher.SetNotifications(notifSvc)
+	taskSvc.SetNotifications(notifSvc)
 	notificationsHandler := handlers.NewNotificationsHandler(log, notifSvc, notifHub, cfg.HTTP.AllowedOrigins)
 
 	// SSE hub: task status/ETA events for logistics-ui, relayed across replicas.
@@ -303,6 +317,7 @@ func New(ctx context.Context) (*App, error) {
 	rbacRepo := rbacmod.NewEntRepository(entClient)
 	rbacSvc := rbacmod.NewService(rbacRepo, log, tenantSyncer)
 	rbacHandler := handlers.NewRBACHandler(log, rbacSvc, rbacRepo)
+	logisticsHandler.SetPermissionChecker(rbacSvc)
 
 	// Initialize service config handler for platform admin + tenant settings
 	serviceConfigHandler := handlers.NewServiceConfigHandler(entClient, log)
@@ -315,6 +330,7 @@ func New(ctx context.Context) (*App, error) {
 
 	// Analytics KPI endpoint
 	analyticsHandler := handlers.NewAnalyticsHandler(entClient, log)
+	analyticsHandler.SetDB(sqlDB)
 
 	earningsHandler := handlers.NewEarningsHandler(log, entClient, earningsSvc)
 
@@ -358,6 +374,7 @@ func New(ctx context.Context) (*App, error) {
 		cache:               redisClient,
 		events:              natsConn,
 		orderConsumer:       orderConsumer,
+		orderCancelled:      orderCancelledConsumer,
 		transferConsumer:    transferConsumer,
 		tenantPurgeConsumer: tenantPurgeConsumer,
 		outboxPublisher:     outboxPub,
@@ -389,6 +406,17 @@ func (a *App) Run(ctx context.Context) error {
 				}
 			}()
 			a.log.Info("order ready consumer started")
+		}
+	}
+
+	// Close delivery tasks whose order ordering cancelled.
+	if a.orderCancelled != nil && a.events != nil {
+		if js, err := a.events.JetStream(); err == nil {
+			go func() {
+				if err := a.orderCancelled.Start(ctx, js); err != nil {
+					a.log.Error("order cancelled consumer stopped", zap.Error(err))
+				}
+			}()
 		}
 	}
 

@@ -3,6 +3,8 @@ package earnings
 import (
 	"context"
 	"database/sql"
+
+	entsql "entgo.io/ent/dialect/sql"
 	"fmt"
 	sharedcache "github.com/Bengo-Hub/cache"
 	"github.com/bengobox/logistics-service/internal/ent/earningsstatement"
@@ -13,6 +15,7 @@ import (
 
 	"github.com/bengobox/logistics-service/internal/ent"
 	"github.com/bengobox/logistics-service/internal/ent/billingevent"
+	"github.com/bengobox/logistics-service/internal/ent/predicate"
 )
 
 // Service handles earnings calculation and billing event recording.
@@ -247,4 +250,49 @@ func (s *Service) getDistinctBillingTenantIDs(ctx context.Context) ([]uuid.UUID,
 		GroupBy(billingevent.FieldTenantID).
 		Scan(ctx, &ids)
 	return ids, err
+}
+
+// memberMeta is the metadata containment value that selects one rider's events. It matches the
+// GIN (jsonb_path_ops) index on billing_events.metadata.
+func memberMeta(memberID uuid.UUID) string {
+	return `{"fleet_member_id":"` + memberID.String() + `"}`
+}
+
+// ForMember restricts a billing event query to one rider's events, in SQL. The rider screens
+// used to fetch the latest 200 events of the whole tenant and filter in Go, so a rider in a busy
+// fleet saw an empty or partial history.
+func ForMember(memberID uuid.UUID) predicate.BillingEvent {
+	val := memberMeta(memberID)
+	return predicate.BillingEvent(func(s *entsql.Selector) {
+		s.Where(entsql.P(func(b *entsql.Builder) {
+			b.WriteString(s.C(billingevent.FieldMetadata))
+			b.WriteString(" @> ")
+			b.Arg(val)
+			b.WriteString("::jsonb")
+		}))
+	})
+}
+
+// RiderTotals returns a rider's delivery earnings since each of the given times, in one query.
+func (s *Service) RiderTotals(ctx context.Context, tenantID, memberID uuid.UUID, today, week, month time.Time) (float64, float64, float64, error) {
+	if s.db == nil {
+		return 0, 0, 0, fmt.Errorf("earnings: database handle not configured")
+	}
+	earliest := month
+	for _, t := range []time.Time{today, week} {
+		if t.Before(earliest) {
+			earliest = t
+		}
+	}
+	var d, w, m float64
+	err := s.db.QueryRowContext(ctx, `
+		SELECT
+		  COALESCE(SUM(amount) FILTER (WHERE occurred_at >= $3), 0),
+		  COALESCE(SUM(amount) FILTER (WHERE occurred_at >= $4), 0),
+		  COALESCE(SUM(amount) FILTER (WHERE occurred_at >= $5), 0)
+		FROM billing_events
+		WHERE tenant_id = $1 AND event_type = 'delivery_earning'
+		  AND metadata @> $2::jsonb AND occurred_at >= $6`,
+		tenantID, memberMeta(memberID), today, week, month, earliest).Scan(&d, &w, &m)
+	return roundCents(d), roundCents(w), roundCents(m), err
 }

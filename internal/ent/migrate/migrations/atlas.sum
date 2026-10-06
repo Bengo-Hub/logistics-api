@@ -1,4 +1,4 @@
-h1:KLA+02/+0QCGDn8pLBAPPiaS9G5umLpErCeqHmbJGUk=
+h1:tYxrWWtLF3lK4dVmK5qZJaEIpwmW3w92qmCoJ02ZaKw=
 20260314184847_initial_schema.sql h1:L0wAADcTDNVU6BeR2ScWX5poErpcRylCO9xWQakqX+M=
 20260320140940_add_tracking_code_and_routing.sql h1:kfFLd/S6aqmD3l6l5aHN+44M18ct8inCdUO/ebQVzPs=
 20260320144356_add_geo_fence_zones.sql h1:DIWWryUDFzragzPYE4N/Qag94zVyu/XejorTCXB5eUc=
@@ -19,3 +19,4 @@ h1:KLA+02/+0QCGDn8pLBAPPiaS9G5umLpErCeqHmbJGUk=
 20260919054926_add_logistics_notification.sql h1:zI9DqkEAsrwbSvAWHdH1r8hqsVB/2mWlUymDjLUWwag=
 20260926040000_add_pod_cash_outstanding_index.sql h1:9YgJoT9Z6GpaFvktVcpKzYgwg2GscWf9wRWc/NKDAQI=
 20261001090000_add_task_sla_open_index.sql h1:oN0cqQneLUshxHuQHJ3fKAx81eV0d+M7xaA8bNBPyJQ=
+20261006090000_delivery_audit_indexes.sql h1:sKr4RIYx8kjGxz4OqL9RMDqkMyRoeRkRI4RqEJf87RI=

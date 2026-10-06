@@ -3,7 +3,9 @@ package consumers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	eventslib "github.com/Bengo-Hub/shared-events"
@@ -218,11 +220,21 @@ func (c *OrderReadyConsumer) handleMessage(msg *nats.Msg) {
 		if name, ok := addr["contact_name"].(string); ok && name != "" {
 			req.CustomerName = name
 		}
+		// Gate codes, landmarks and floor numbers live on the saved address; they used to be
+		// dropped, so the rider only saw the order notes.
+		if note, ok := addr["instructions"].(string); ok && strings.TrimSpace(note) != "" {
+			req.Instructions = joinNotes(req.Instructions, note)
+		}
 	}
 
 	// Create delivery task (idempotent — uses external_reference to deduplicate)
 	externalRef := fmt.Sprintf("order:%s", orderID)
 	t, err := c.taskSvc.CreateTaskFromOrder(ctx, tenantID, externalRef, req)
+	if errors.Is(err, tasks.ErrIntakeBusy) {
+		// Another replica is creating this order's task right now; retry shortly and find it.
+		_ = msg.NakWithDelay(3 * time.Second)
+		return
+	}
 	if err != nil {
 		c.log.Error("order ready: create task failed",
 			zap.Error(err),
@@ -278,7 +290,7 @@ func toFloat64(v interface{}) (float64, bool) {
 // buildAddressLabel constructs a human-readable address from the address map.
 func buildAddressLabel(addr map[string]interface{}) string {
 	parts := []string{}
-	for _, key := range []string{"address_line1", "city", "county"} {
+	for _, key := range []string{"address_line1", "address_line2", "city", "county"} {
 		if v, ok := addr[key].(string); ok && v != "" {
 			parts = append(parts, v)
 		}
@@ -291,4 +303,17 @@ func buildAddressLabel(addr map[string]interface{}) string {
 		result += p
 	}
 	return result
+}
+
+// joinNotes combines the order notes and the address instructions without repeating either.
+func joinNotes(a, b string) string {
+	a, b = strings.TrimSpace(a), strings.TrimSpace(b)
+	switch {
+	case a == "":
+		return b
+	case b == "" || strings.Contains(a, b):
+		return a
+	default:
+		return a + ". " + b
+	}
 }

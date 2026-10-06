@@ -69,6 +69,22 @@ var (
 		Name:       "billing_events",
 		Columns:    BillingEventsColumns,
 		PrimaryKey: []*schema.Column{BillingEventsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "billingevent_tenant_id_event_type_occurred_at",
+				Unique:  false,
+				Columns: []*schema.Column{BillingEventsColumns[1], BillingEventsColumns[3], BillingEventsColumns[6]},
+			},
+			{
+				Name:    "billingevent_metadata_gin",
+				Unique:  false,
+				Columns: []*schema.Column{BillingEventsColumns[7]},
+				Annotation: &entsql.IndexAnnotation{
+					OpClass: "jsonb_path_ops",
+					Type:    "GIN",
+				},
+			},
+		},
 	}
 	// CarrierJobsColumns holds the columns for the "carrier_jobs" table.
 	CarrierJobsColumns = []*schema.Column{
@@ -909,7 +925,7 @@ var (
 				Unique:  false,
 				Columns: []*schema.Column{TasksColumns[8]},
 				Annotation: &entsql.IndexAnnotation{
-					Where: "sla_due_at IS NOT NULL AND status NOT IN ('completed', 'cancelled', 'failed', 'returned')",
+					Where: "sla_due_at IS NOT NULL AND status NOT IN ('delivered', 'completed', 'cancelled', 'failed', 'returned')",
 				},
 			},
 		},
@@ -946,6 +962,18 @@ var (
 				OnDelete:   schema.NoAction,
 			},
 		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "taskassignment_task_id_status",
+				Unique:  false,
+				Columns: []*schema.Column{TaskAssignmentsColumns[9], TaskAssignmentsColumns[1]},
+			},
+			{
+				Name:    "taskassignment_fleet_member_id_status",
+				Unique:  false,
+				Columns: []*schema.Column{TaskAssignmentsColumns[8], TaskAssignmentsColumns[1]},
+			},
+		},
 	}
 	// TaskEventsColumns holds the columns for the "task_events" table.
 	TaskEventsColumns = []*schema.Column{
@@ -968,6 +996,13 @@ var (
 				Columns:    []*schema.Column{TaskEventsColumns[6]},
 				RefColumns: []*schema.Column{TasksColumns[0]},
 				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "taskevent_task_id_occurred_at",
+				Unique:  false,
+				Columns: []*schema.Column{TaskEventsColumns[6], TaskEventsColumns[5]},
 			},
 		},
 	}
@@ -998,6 +1033,13 @@ var (
 				OnDelete:   schema.NoAction,
 			},
 		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "taskstep_task_id",
+				Unique:  false,
+				Columns: []*schema.Column{TaskStepsColumns[10]},
+			},
+		},
 	}
 	// TelemetryPointsColumns holds the columns for the "telemetry_points" table.
 	TelemetryPointsColumns = []*schema.Column{
@@ -1025,6 +1067,18 @@ var (
 				OnDelete:   schema.NoAction,
 			},
 		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "telemetrypoint_stream_id_captured_at",
+				Unique:  false,
+				Columns: []*schema.Column{TelemetryPointsColumns[9], TelemetryPointsColumns[1]},
+			},
+			{
+				Name:    "telemetrypoint_captured_at",
+				Unique:  false,
+				Columns: []*schema.Column{TelemetryPointsColumns[1]},
+			},
+		},
 	}
 	// TelemetryStreamsColumns holds the columns for the "telemetry_streams" table.
 	TelemetryStreamsColumns = []*schema.Column{
@@ -1042,6 +1096,13 @@ var (
 		Name:       "telemetry_streams",
 		Columns:    TelemetryStreamsColumns,
 		PrimaryKey: []*schema.Column{TelemetryStreamsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "telemetrystream_tenant_id_fleet_member_id_status",
+				Unique:  false,
+				Columns: []*schema.Column{TelemetryStreamsColumns[1], TelemetryStreamsColumns[2], TelemetryStreamsColumns[6]},
+			},
+		},
 	}
 	// TenantsColumns holds the columns for the "tenants" table.
 	TenantsColumns = []*schema.Column{

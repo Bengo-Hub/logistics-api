@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"entgo.io/ent/schema/index"
 	"time"
 
 	"entgo.io/ent"
@@ -42,5 +43,13 @@ func (TaskEvent) Edges() []ent.Edge {
 			Field("task_id").
 			Unique().
 			Required(),
+	}
+}
+
+// Indexes of the TaskEvent.
+func (TaskEvent) Indexes() []ent.Index {
+	return []ent.Index{
+		// A task's history in order (public tracking timeline).
+		index.Fields("task_id", "occurred_at"),
 	}
 }

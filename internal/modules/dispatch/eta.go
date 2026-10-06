@@ -2,6 +2,7 @@ package dispatch
 
 import (
 	"context"
+	"math"
 	sharedcache "github.com/Bengo-Hub/cache"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/task"
 	"github.com/bengobox/logistics-service/internal/ent/taskassignment"
 	"github.com/bengobox/logistics-service/internal/modules/routing"
+	"github.com/bengobox/logistics-service/internal/modules/tasks"
 	"github.com/bengobox/logistics-service/internal/platform/events"
 )
 
@@ -72,8 +74,7 @@ func (u *ETAUpdater) ComputeAndPublishETA(ctx context.Context, tenantID, taskID 
 		Where(task.ID(taskID), task.TenantID(tenantID)).
 		WithSteps().
 		WithAssignments(func(q *ent.TaskAssignmentQuery) {
-			q.Where(taskassignment.StatusIn("assigned", "accepted")).
-				Limit(1)
+			q.Where(taskassignment.StatusIn("assigned", "accepted"))
 		}).
 		Only(ctx)
 	if err != nil {
@@ -90,15 +91,17 @@ func (u *ETAUpdater) updateActiveETAs(ctx context.Context) {
 	if !sharedcache.ClaimPeriod(ctx, "logistics:eta-updater", u.interval) {
 		return
 	}
-	// Find all tasks with status accepted or en_route
+	// Every moving leg. This used to look only at the legacy accepted/en_route statuses, so
+	// riders on the per-leg flow never got a periodic ETA. The assignment eager load also had
+	// Limit(1), which limits the whole eager query, so only one task in the batch got its rider.
 	activeTasks, err := u.entClient.Task.Query().
-		Where(task.StatusIn("accepted", "en_route")).
+		Where(task.StatusIn("accepted", "en_route", "en_route_pickup", "arrived_pickup", "picked_up", "en_route_dropoff")).
 		WithSteps().
 		WithAssignments(func(q *ent.TaskAssignmentQuery) {
-			q.Where(taskassignment.StatusIn("assigned", "accepted")).
-				Limit(1)
+			q.Where(taskassignment.StatusIn("assigned", "accepted"))
 		}).
-		Limit(100).
+		Order(ent.Asc(task.FieldUpdatedAt)).
+		Limit(200).
 		All(ctx)
 	if err != nil {
 		u.log.Warn("eta: failed to query active tasks", zap.Error(err))
@@ -130,10 +133,16 @@ func (u *ETAUpdater) computeETAForTask(ctx context.Context, t *ent.Task) {
 		return // Rider has no location, skip
 	}
 
-	// Get dropoff location
-	dropLat, dropLng, ok := extractDropoffLocation(t)
+	// Before pickup the rider is heading to the outlet; after it, to the customer.
+	var dropLat, dropLng float64
+	var ok bool
+	if tasks.IsPrePickup(t.Status) {
+		dropLat, dropLng, ok = extractPickupLocation(t)
+	} else {
+		dropLat, dropLng, ok = extractDropoffLocation(t)
+	}
 	if !ok {
-		return // No dropoff location, skip
+		return
 	}
 
 	// Calculate route via routing service
@@ -152,7 +161,13 @@ func (u *ETAUpdater) computeETAForTask(ctx context.Context, t *ent.Task) {
 	etaMinutes := route.DurationSeconds / 60
 	distanceKm := route.DistanceMeters / 1000
 
-	// Publish ETA update event
+	// Keep the latest ETA for the tracking endpoint, and publish only when it moved by a
+	// minute or more: one outbox event per task every 30 seconds was pure churn.
+	prev, hadPrev := u.dispatcher.LastETA(ctx, t.ID)
+	u.dispatcher.SaveETA(ctx, t.ID, ETA{Minutes: etaMinutes, DistanceKm: distanceKm, At: time.Now().UTC()})
+	if hadPrev && math.Abs(prev.Minutes-etaMinutes) < 1 {
+		return
+	}
 	if u.publisher != nil {
 		if pubErr := u.publisher.PublishTaskETAUpdated(ctx, t.TenantID, events.TaskETAEventData{
 			TaskID:            t.ID.String(),

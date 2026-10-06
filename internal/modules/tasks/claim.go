@@ -101,6 +101,7 @@ func (s *Service) ClaimTask(ctx context.Context, tenantID, taskID, memberID uuid
 		_, _ = s.client.Task.UpdateOneID(taskID).SetStatus("pending").Save(ctx)
 		return nil, fmt.Errorf("tasks: record claim: %w", err)
 	}
+	s.recordEvent(ctx, taskID, "assigned", Actor{ID: memberID, Type: "rider"}, map[string]any{"claimed": true})
 	s.log.Info("task claimed by rider",
 		zap.String("task_id", taskID.String()),
 		zap.String("member_id", memberID.String()))

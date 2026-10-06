@@ -101,21 +101,14 @@ func (s *Service) IngestLocation(ctx context.Context, tenantID, memberID uuid.UU
 
 // EndStream marks the active stream as ended.
 func (s *Service) EndStream(ctx context.Context, tenantID, memberID uuid.UUID) error {
-	stream, err := s.client.TelemetryStream.Query().
+	// End every active stream for the rider (there can be more than one after a race).
+	now := time.Now().UTC()
+	if _, err := s.client.TelemetryStream.Update().
 		Where(
 			telemetrystream.TenantID(tenantID),
 			telemetrystream.FleetMemberID(memberID),
 			telemetrystream.Status("active"),
-		).Only(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil // no active stream — nothing to end
-		}
-		return fmt.Errorf("telemetry: find active stream: %w", err)
-	}
-
-	now := time.Now().UTC()
-	if _, err := s.client.TelemetryStream.UpdateOne(stream).
+		).
 		SetStatus("ended").
 		SetEndedAt(now).
 		Save(ctx); err != nil {
@@ -125,13 +118,19 @@ func (s *Service) EndStream(ctx context.Context, tenantID, memberID uuid.UUID) e
 }
 
 // activeStream returns the current active stream for the member, creating one if necessary.
+//
+// It takes the newest active stream rather than demanding exactly one: two first pings landing
+// on two replicas at once can open two streams, and Only() then failed every later ping for
+// that rider with "not singular" until someone ended a stream by hand.
 func (s *Service) activeStream(ctx context.Context, tenantID, memberID uuid.UUID, deviceID string) (*ent.TelemetryStream, error) {
 	stream, err := s.client.TelemetryStream.Query().
 		Where(
 			telemetrystream.TenantID(tenantID),
 			telemetrystream.FleetMemberID(memberID),
 			telemetrystream.Status("active"),
-		).Only(ctx)
+		).
+		Order(ent.Desc(telemetrystream.FieldStartedAt)).
+		First(ctx)
 	if err == nil {
 		return stream, nil
 	}

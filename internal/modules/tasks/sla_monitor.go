@@ -61,9 +61,6 @@ func (m *SLAMonitor) Start(ctx context.Context) {
 	}
 }
 
-// terminalStatuses are the task statuses where SLA no longer applies.
-var terminalStatuses = []string{"completed", "cancelled", "failed", "returned"}
-
 // maxBreachScan bounds one scan; the oldest breaches come first and the rest are picked up
 // on later ticks.
 const maxBreachScan = 1000
@@ -79,7 +76,7 @@ func (m *SLAMonitor) checkBreaches(ctx context.Context) {
 	overdue, err := m.client.Task.Query().
 		Where(
 			task.SLADueAtLTE(now),
-			task.StatusNotIn(terminalStatuses...),
+			task.StatusNotIn(TerminalStatuses...),
 		).
 		Order(ent.Asc(task.FieldSLADueAt)).
 		Limit(maxBreachScan).
@@ -198,7 +195,7 @@ func GetOverdueTasks(ctx context.Context, client *ent.Client, tenantID uuid.UUID
 		Where(
 			task.TenantID(tenantID),
 			task.SLADueAtLTE(time.Now().UTC()),
-			task.StatusNotIn(terminalStatuses...),
+			task.StatusNotIn(TerminalStatuses...),
 		).
 		Order(ent.Asc(task.FieldSLADueAt)).
 		All(ctx)

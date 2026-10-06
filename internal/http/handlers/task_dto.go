@@ -96,6 +96,12 @@ func toTaskResponse(t *ent.Task) *TaskResponse {
 		} else if n, ok := t.Metadata["item_count"].(int); ok {
 			resp.ItemCount = n
 		}
+		// Why a delivery failed or was cancelled, and when the order left the outlet (stamped by
+		// the task service on those status changes).
+		resp.FailureReason, _ = t.Metadata["failure_reason"].(string)
+		resp.CancellationReason, _ = t.Metadata["cancellation_reason"].(string)
+		resp.PickedUpAt = metaTime(t.Metadata, "picked_up_at")
+		resp.CancelledAt = metaTime(t.Metadata, "cancelled_at")
 		// Tasks created from an order carry the COD amount in metadata; older rows never set the
 		// column, so the rider saw no "collect cash" banner.
 		if resp.CashOnDelivery == 0 {
@@ -147,6 +153,10 @@ func toTaskResponse(t *ent.Task) *TaskResponse {
 	// Latest assignment (by assigned_at) drives assigned_rider_id/assigned_at/accepted_at.
 	var latest *ent.TaskAssignment
 	for _, a := range t.Edges.Assignments {
+		// A rider who declined or was taken off the job no longer holds it.
+		if a.Status == "declined" || a.Status == "unassigned" {
+			continue
+		}
 		if latest == nil || a.AssignedAt.After(latest.AssignedAt) {
 			latest = a
 		}
@@ -160,6 +170,19 @@ func toTaskResponse(t *ent.Task) *TaskResponse {
 	}
 
 	return resp
+}
+
+// metaTime reads an RFC3339 timestamp stored in task metadata.
+func metaTime(m map[string]any, key string) *time.Time {
+	s, _ := m[key].(string)
+	if s == "" {
+		return nil
+	}
+	t, err := time.Parse(time.RFC3339, s)
+	if err != nil {
+		return nil
+	}
+	return &t
 }
 
 func toTaskResponses(list []*ent.Task) []*TaskResponse {
