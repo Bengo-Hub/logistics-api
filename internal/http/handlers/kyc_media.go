@@ -32,3 +32,13 @@ func signVehicleMedia(v *ent.Vehicle) *ent.Vehicle {
 	v.ImageSideView = kycSigner.Sign(v.ImageSideView)
 	return v
 }
+
+// signPoDMedia signs the proof-of-delivery photo and signature, which are private uploads too.
+func signPoDMedia(p *ent.ProofOfDelivery) *ent.ProofOfDelivery {
+	if p == nil {
+		return p
+	}
+	p.PhotoURL = kycSigner.Sign(p.PhotoURL)
+	p.SignatureURL = kycSigner.Sign(p.SignatureURL)
+	return p
+}
