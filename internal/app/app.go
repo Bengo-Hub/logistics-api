@@ -178,6 +178,9 @@ func New(ctx context.Context) (*App, error) {
 	// Subscribe to auth-service events for identity sync and outlet sync
 	if natsConn != nil {
 		identityEventHandler := identity.NewEventHandler(identitySvc, log)
+		identityEventHandler.ProductActive = func(ctx context.Context, tenantID string) bool {
+			return consumerActiveProductGate(ctx, tenantID, "logistics")
+		}
 		if err := identityEventHandler.SubscribeToAuthEvents(natsConn); err != nil {
 			log.Warn("app: failed to subscribe to auth events", zap.Error(err))
 		}

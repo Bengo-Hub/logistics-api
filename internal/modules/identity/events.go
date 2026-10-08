@@ -33,6 +33,9 @@ const authStream = "auth"
 type EventHandler struct {
 	service *Service
 	logger  *zap.Logger
+	// ProductActive reports whether the tenant has logistics active on its subscription.
+	// Nil admits every tenant.
+	ProductActive func(ctx context.Context, tenantID string) bool
 }
 
 // NewEventHandler creates a new identity event handler.
@@ -331,6 +334,12 @@ func (h *EventHandler) handleUserCreated(ctx context.Context, evt *sharedevents.
 		if s, ok := r.(string); ok {
 			roles = append(roles, s)
 		}
+	}
+
+	// A tenant that has not activated logistics is never projected here, neither the tenant row
+	// nor its people. The gate fails open, and demo and PAYG tenants always pass.
+	if h.ProductActive != nil && evt.TenantID != uuid.Nil && !h.ProductActive(ctx, evt.TenantID.String()) {
+		return nil
 	}
 
 	tenantID, err := h.service.tenantSyncer.SyncTenant(ctx, tenantSlug)
