@@ -14,6 +14,7 @@ COPY . .
 RUN GOTOOLCHAIN=auto CGO_ENABLED=0 go build -o /out/logistics-api ./cmd/api
 RUN GOTOOLCHAIN=auto CGO_ENABLED=0 go build -o /out/logistics-migrate ./cmd/migrate
 RUN GOTOOLCHAIN=auto CGO_ENABLED=0 go build -o /out/logistics-seed ./cmd/seed
+RUN GOTOOLCHAIN=auto CGO_ENABLED=0 go build -o /out/logistics-prune-users ./cmd/prune-users
 
 FROM alpine:3.20
 # ca-certificates: TLS trust for HTTPS remotes (S3/OneDrive/GDrive/WebDAV).
@@ -26,6 +27,7 @@ WORKDIR /app
 COPY --from=builder /out/logistics-api /usr/local/bin/logistics-api
 COPY --from=builder /out/logistics-migrate /usr/local/bin/logistics-migrate
 COPY --from=builder /out/logistics-seed /usr/local/bin/logistics-seed
+COPY --from=builder /out/logistics-prune-users /usr/local/bin/logistics-prune-users
 
 # Migrations and entrypoint
 COPY internal/ent/migrate/migrations ./internal/ent/migrate/migrations
