@@ -16,6 +16,7 @@ import (
 
 	"github.com/bengobox/logistics-service/internal/ent"
 	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
+	entoutlet "github.com/bengobox/logistics-service/internal/ent/outlet"
 	"github.com/bengobox/logistics-service/internal/ent/riderrating"
 	"github.com/bengobox/logistics-service/internal/ent/taskassignment"
 	"github.com/bengobox/logistics-service/internal/ent/user"
@@ -351,6 +352,22 @@ func (h *EventHandler) handleUserCreated(ctx context.Context, evt *sharedevents.
 		Where(user.TenantID(tenantID), user.Email(email)).
 		First(ctx)
 
+	// An invited rider (stub) is always ours; anyone else must belong to logistics (shared
+	// UserRelevance): admin roles, an outlet logistics mirrors, or a logistics role. Without this
+	// every member of a mixed tenant was created here, and resolveRole made them drivers.
+	if stub == nil {
+		r := sharedevents.UserRelevance{
+			ServiceRoles: logisticsServiceRoles,
+			OutletKnown: func(ctx context.Context, tid, outletID uuid.UUID) bool {
+				ok, err := h.service.client.Outlet.Query().Where(entoutlet.ID(outletID), entoutlet.TenantID(tid)).Exist(ctx)
+				return err == nil && ok
+			},
+		}
+		if !r.Relevant(ctx, tenantID, evt.Payload) {
+			return nil
+		}
+	}
+
 	role := resolveRole(roles, tenantSlug)
 
 	if stub != nil {
@@ -479,6 +496,11 @@ func (h *EventHandler) handleUserUpdated(ctx context.Context, evt *sharedevents.
 	}
 
 	return nil
+}
+
+// logisticsServiceRoles are role names only logistics uses.
+var logisticsServiceRoles = map[string]bool{
+	"driver": true, "rider": true, "delivery_coordinator": true, "dispatcher": true, "fleet_manager": true, "courier": true,
 }
 
 // resolveRole determines the service-level role from auth-service roles.
