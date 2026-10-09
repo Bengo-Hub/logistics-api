@@ -13,6 +13,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent"
 	"github.com/bengobox/logistics-service/internal/ent/task"
 	"github.com/bengobox/logistics-service/internal/modules/tasks"
+	"github.com/bengobox/logistics-service/internal/modules/zones/geo"
 )
 
 const (
@@ -106,6 +107,7 @@ func (s *BatchScheduler) runBatchCycle(ctx context.Context) {
 		}
 	}
 }
+
 // batchDispatch groups nearby pending tasks for a tenant and assigns each group
 // to the nearest available rider.
 func (s *BatchScheduler) batchDispatch(ctx context.Context, tenantID uuid.UUID) error {
@@ -258,7 +260,7 @@ func groupByProximity(located []locatedTask, radiusKm float64) [][]locatedTask {
 			}
 			// Check if task j is within radius of any task already in the group
 			for _, member := range group {
-				dist := haversineKm(member.lat, member.lng, located[j].lat, located[j].lng)
+				dist := geo.HaversineKm(member.lat, member.lng, located[j].lat, located[j].lng)
 				if dist <= radiusKm {
 					visited[j] = true
 					group = append(group, located[j])

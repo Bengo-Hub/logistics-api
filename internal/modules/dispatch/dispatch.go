@@ -4,18 +4,19 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
-	"math"
 	"sort"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
 	"github.com/bengobox/logistics-service/internal/ent"
+	"github.com/bengobox/logistics-service/internal/ent/ridershift"
 	"github.com/bengobox/logistics-service/internal/modules/fleet"
 	notifmod "github.com/bengobox/logistics-service/internal/modules/notifications"
 	"github.com/bengobox/logistics-service/internal/modules/tasks"
+	"github.com/bengobox/logistics-service/internal/modules/zones/geo"
 )
 
 const (
@@ -38,7 +39,12 @@ type AutoDispatcher struct {
 	taskSvc  *tasks.Service
 	redis    *redis.Client
 	notifSvc *notifmod.Service
+	// client reads active rider shifts so riders covering the task's zone go first.
+	client *ent.Client
 }
+
+// SetShiftSource enables zone-aware dispatch from active rider shifts.
+func (d *AutoDispatcher) SetShiftSource(c *ent.Client) { d.client = c }
 
 // NewAutoDispatcher creates a new auto-dispatcher.
 func NewAutoDispatcher(log *zap.Logger, fleetSvc *fleet.Service, taskSvc *tasks.Service, rdb *redis.Client) *AutoDispatcher {
@@ -255,10 +261,14 @@ func (d *AutoDispatcher) DispatchTask(ctx context.Context, tenantID, taskID uuid
 		return nil
 	}
 
-	// 5. Sort by distance (nearest first)
+	// 5. Sort by distance (nearest first); riders whose active shift covers the drop-off
+	// zone go ahead of riders who do not.
 	sort.Slice(candidates, func(i, j int) bool {
 		return candidates[i].DistanceKm < candidates[j].DistanceKm
 	})
+	if zoneID, zerr := uuid.Parse(metadataStr(t.Metadata, "zone_id")); zerr == nil {
+		candidates = preferZoneRiders(candidates, d.ridersCoveringZone(ctx, tenantID, zoneID, time.Now()))
+	}
 
 	// 6. Filter by max radius
 	var eligible []riderCandidate
@@ -379,7 +389,7 @@ func (d *AutoDispatcher) fallbackHaversine(ctx context.Context, tenantID uuid.UU
 		if err != nil || len(positions) == 0 || positions[0] == nil {
 			continue
 		}
-		dist := haversineKm(lat, lng, positions[0].Latitude, positions[0].Longitude)
+		dist := geo.HaversineKm(lat, lng, positions[0].Latitude, positions[0].Longitude)
 		candidates = append(candidates, riderCandidate{
 			MemberID:   m.ID,
 			DistanceKm: dist,
@@ -469,21 +479,51 @@ func toFloat64(v any) (float64, bool) {
 	}
 }
 
-// haversineKm calculates the great-circle distance between two points in kilometers.
-func haversineKm(lat1, lng1, lat2, lng2 float64) float64 {
-	const earthRadiusKm = 6371.0
-
-	dLat := degToRad(lat2 - lat1)
-	dLng := degToRad(lng2 - lng1)
-
-	a := math.Sin(dLat/2)*math.Sin(dLat/2) +
-		math.Cos(degToRad(lat1))*math.Cos(degToRad(lat2))*
-			math.Sin(dLng/2)*math.Sin(dLng/2)
-
-	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
-	return earthRadiusKm * c
+// ridersCoveringZone returns the members on an active shift that lists zoneID.
+func (d *AutoDispatcher) ridersCoveringZone(ctx context.Context, tenantID, zoneID uuid.UUID, now time.Time) map[uuid.UUID]bool {
+	out := map[uuid.UUID]bool{}
+	if d.client == nil {
+		return out
+	}
+	shifts, err := d.client.RiderShift.Query().
+		Where(
+			ridershift.TenantID(tenantID),
+			ridershift.StatusIn(ridershift.StatusActive, ridershift.StatusScheduled),
+			ridershift.ShiftStartLTE(now),
+			ridershift.ShiftEndGTE(now),
+		).
+		All(ctx)
+	if err != nil {
+		d.log.Debug("zone shift lookup failed", zap.Error(err))
+		return out
+	}
+	for _, sh := range shifts {
+		for _, z := range sh.ZoneIds {
+			if z == zoneID {
+				out[sh.FleetMemberID] = true
+				break
+			}
+		}
+	}
+	return out
 }
 
-func degToRad(deg float64) float64 {
-	return deg * math.Pi / 180
+// preferZoneRiders moves riders covering the zone to the front, keeping distance order
+// inside each group.
+func preferZoneRiders(cands []riderCandidate, covering map[uuid.UUID]bool) []riderCandidate {
+	if len(covering) == 0 {
+		return cands
+	}
+	sort.SliceStable(cands, func(i, j int) bool {
+		return covering[cands[i].MemberID] && !covering[cands[j].MemberID]
+	})
+	return cands
+}
+
+func metadataStr(m map[string]any, key string) string {
+	if m == nil {
+		return ""
+	}
+	v, _ := m[key].(string)
+	return v
 }

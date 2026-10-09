@@ -17,11 +17,25 @@ import (
 const authStream = "auth"
 
 // OutletSubscriber syncs auth.outlet.* JetStream events from auth-api into the
-// local logistics-api outlets table. Only outlets with use_case="logistics" are
-// accepted; all others are ACKed and skipped.
+// local logistics-api outlets table. Logistics hubs are always mirrored; outlets of any
+// other use case (a cafe, a pharmacy) are mirrored when their tenant exists in logistics,
+// because those outlets dispatch deliveries and anchor delivery quotes.
 type OutletSubscriber struct {
-	client *ent.Client
-	logger *zap.Logger
+	client   *ent.Client
+	logger   *zap.Logger
+	onChange func(ctx context.Context, tenantID uuid.UUID)
+}
+
+// OnChange registers a callback run after an outlet is created, moved or archived.
+// The zones service uses it to drop cached quotes and coverage for the tenant.
+func (s *OutletSubscriber) OnChange(f func(ctx context.Context, tenantID uuid.UUID)) {
+	s.onChange = f
+}
+
+func (s *OutletSubscriber) changed(ctx context.Context, tenantID uuid.UUID) {
+	if s.onChange != nil {
+		s.onChange(ctx, tenantID)
+	}
 }
 
 // NewOutletSubscriber constructs an OutletSubscriber.
@@ -123,15 +137,6 @@ func (s *OutletSubscriber) handleUpsert(ctx context.Context, evt *sharedevents.E
 		status = "active"
 	}
 
-	// Accept any logistics-adjacent use_case; skip POS/retail/hospitality outlets.
-	// Empty use_case is also accepted (backwards compat with tenants that haven't set it).
-	if useCase != "" && !logisticsUseCases[useCase] {
-		s.logger.Debug("skipping outlet: not a logistics hub",
-			zap.String("outlet_id", outletIDStr),
-			zap.String("use_case", useCase))
-		return nil
-	}
-
 	outletID, err := uuid.Parse(outletIDStr)
 	if err != nil {
 		return fmt.Errorf("invalid outlet_id %q: %w", outletIDStr, err)
@@ -139,6 +144,22 @@ func (s *OutletSubscriber) handleUpsert(ctx context.Context, evt *sharedevents.E
 	if evt.TenantID == uuid.Nil {
 		return fmt.Errorf("missing tenant_id in outlet event")
 	}
+
+	// Logistics hubs (or an unset use_case) are always mirrored. Any other outlet is
+	// mirrored only for tenants that already use logistics, so a shop that offers
+	// delivery gets its pickup point without pulling in every tenant's branches.
+	if useCase != "" && !logisticsUseCases[useCase] {
+		exists, terr := s.client.Tenant.Get(ctx, evt.TenantID)
+		if terr != nil || exists == nil {
+			s.logger.Debug("skipping outlet: tenant does not use logistics",
+				zap.String("outlet_id", outletIDStr), zap.String("use_case", useCase))
+			return nil
+		}
+	}
+	if useCase == "" {
+		useCase = "logistics"
+	}
+	lat, lng, hasLoc := outletLocation(evt.Payload)
 
 	existing, err := s.client.Outlet.Get(ctx, outletID)
 	if err != nil {
@@ -153,26 +174,39 @@ func (s *OutletSubscriber) handleUpsert(ctx context.Context, evt *sharedevents.E
 		if address != "" {
 			create = create.SetAddress(address)
 		}
+		if hasLoc {
+			create = create.SetLatitude(lat).SetLongitude(lng)
+		}
 		if _, createErr := create.Save(ctx); createErr != nil {
 			return fmt.Errorf("create logistics outlet mirror: %w", createErr)
 		}
 		s.logger.Info("logistics outlet created from auth event",
 			zap.String("outlet_id", outletIDStr), zap.String("code", code))
+		s.changed(ctx, evt.TenantID)
 		return nil
 	}
 
 	upd := s.client.Outlet.UpdateOne(existing).
 		SetName(name).
+		SetUseCase(useCase).
 		SetIsHq(isHQ).
 		SetStatus(status)
+	if code != "" {
+		upd = upd.SetCode(code)
+	}
 	if address != "" {
 		upd = upd.SetAddress(address)
+	}
+	// A missing location in the event keeps the stored one; auth only sends it when set.
+	if hasLoc {
+		upd = upd.SetLatitude(lat).SetLongitude(lng)
 	}
 	if _, updErr := upd.Save(ctx); updErr != nil {
 		return fmt.Errorf("update logistics outlet mirror: %w", updErr)
 	}
 	s.logger.Info("logistics outlet updated from auth event",
 		zap.String("outlet_id", outletIDStr), zap.String("code", code))
+	s.changed(ctx, evt.TenantID)
 	return nil
 }
 
@@ -195,6 +229,27 @@ func (s *OutletSubscriber) handleArchive(ctx context.Context, evt *sharedevents.
 	if n > 0 {
 		s.logger.Info("logistics outlet archived from auth event",
 			zap.String("outlet_id", outletIDStr))
+		s.changed(ctx, evt.TenantID)
 	}
 	return nil // n==0 means outlet was never a logistics hub — safe to ignore
+}
+
+// outletLocation reads the outlet pin from an auth.outlet.* payload. auth-api sends it as
+// top-level latitude/longitude; older events may only carry it inside metadata.
+func outletLocation(payload map[string]any) (lat, lng float64, ok bool) {
+	read := func(m map[string]any) (float64, float64, bool) {
+		la, ok1 := m["latitude"].(float64)
+		lo, ok2 := m["longitude"].(float64)
+		if !ok1 || !ok2 || (la == 0 && lo == 0) || la < -90 || la > 90 || lo < -180 || lo > 180 {
+			return 0, 0, false
+		}
+		return la, lo, true
+	}
+	if la, lo, ok := read(payload); ok {
+		return la, lo, true
+	}
+	if md, isMap := payload["metadata"].(map[string]any); isMap {
+		return read(md)
+	}
+	return 0, 0, false
 }

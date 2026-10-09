@@ -18,9 +18,9 @@ import (
 )
 
 const (
-	orderReadyConsumer    = "logistics-service-order-ready"
-	orderReadyAckWait     = 30 * time.Second
-	orderReadyMaxDeliver  = 5
+	orderReadyConsumer   = "logistics-service-order-ready"
+	orderReadyAckWait    = 30 * time.Second
+	orderReadyMaxDeliver = 5
 )
 
 // OrderReadyConsumer subscribes to ordering.order.ready and creates delivery tasks.
@@ -108,23 +108,27 @@ func (c *OrderReadyConsumer) Start(ctx context.Context, js nats.JetStreamContext
 type orderReadyEvent struct {
 	TenantID string `json:"tenant_id"`
 	Data     struct {
-		TenantID        string                 `json:"tenant_id"`
-		OrderID         string                 `json:"order_id"`
-		OrderNumber     string                 `json:"order_number"`
-		OutletID        string                 `json:"outlet_id"`
-		CustomerID      string                 `json:"customer_id"`
-		PaymentMethod   string                 `json:"payment_method"`
-		CashOnDelivery  float64                `json:"cash_on_delivery"`
-		DeliveryFee     float64                `json:"delivery_fee"`
-		GrandTotal      float64                `json:"grand_total"`
-		CustomerName    string                 `json:"customer_name"`
-		CustomerPhone   string                 `json:"customer_phone"`
-		Instructions    string                 `json:"instructions"`
+		TenantID        string                   `json:"tenant_id"`
+		OrderID         string                   `json:"order_id"`
+		OrderNumber     string                   `json:"order_number"`
+		OutletID        string                   `json:"outlet_id"`
+		CustomerID      string                   `json:"customer_id"`
+		PaymentMethod   string                   `json:"payment_method"`
+		CashOnDelivery  float64                  `json:"cash_on_delivery"`
+		DeliveryFee     float64                  `json:"delivery_fee"`
+		GrandTotal      float64                  `json:"grand_total"`
+		CustomerName    string                   `json:"customer_name"`
+		CustomerPhone   string                   `json:"customer_phone"`
+		Instructions    string                   `json:"instructions"`
 		FulfillmentType string                   `json:"fulfillment_type"`
 		OutletLocation  map[string]interface{}   `json:"outlet_location"`
 		DeliveryAddress map[string]interface{}   `json:"delivery_address"`
 		PODCode         string                   `json:"pod_code"`
 		Items           []map[string]interface{} `json:"items"`
+		// Delivery area and trip distance from ordering's checkout quote.
+		DeliveryZoneID   string  `json:"delivery_zone_id"`
+		DeliveryZoneName string  `json:"delivery_zone_name"`
+		DistanceKm       float64 `json:"distance_km"`
 	} `json:"payload"` // shared-events nests business fields under `payload`, not `data`
 }
 
@@ -198,6 +202,9 @@ func (c *OrderReadyConsumer) handleMessage(msg *nats.Msg) {
 		DeliveryFee:     envelope.Data.DeliveryFee,
 		PaymentMethod:   envelope.Data.PaymentMethod,
 		Items:           envelope.Data.Items,
+		ZoneID:          envelope.Data.DeliveryZoneID,
+		ZoneName:        envelope.Data.DeliveryZoneName,
+		DistanceKm:      envelope.Data.DistanceKm,
 	}
 
 	// Extract pickup location from outlet

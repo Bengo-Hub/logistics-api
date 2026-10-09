@@ -31,7 +31,9 @@ const (
 	PermZoneView     = "logistics.zones.view"
 	PermZoneManage   = "logistics.zones.manage"
 	PermEarningsView = "logistics.earnings.view"
-	PermConfigManage = "logistics.config.manage"
+	// PermPricingManage edits customer delivery pricing (quote policy) and rider pricing rules.
+	PermPricingManage = "logistics.pricing.manage"
+	PermConfigManage  = "logistics.config.manage"
 )
 
 // LogisticsPermission represents a logistics service permission.

@@ -26,6 +26,10 @@ Logistics-api owns **fleets, riders (fleet members), vehicles, tasks, routes, pr
 
 ---
 
+### Delivery quotes (added 2026-10-09)
+
+Ordering no longer prices deliveries itself. At checkout it calls `POST /api/v1/s2s/zones/{tenant}/quote` with the drop-off pin and outlet, charges the returned fee, and sends `delivery_zone_id`, `delivery_zone_name` and `distance_km` in `ordering.order.ready`. Customer UIs use the public coverage, quote and geocode endpoints. Full contract in `docs/delivery-zones.md`.
+
 ## Inbound: Auth-Service
 
 - **JWT validation**: All protected routes require a valid Bearer token from auth-service (JWKS).

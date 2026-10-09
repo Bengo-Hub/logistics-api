@@ -31,6 +31,7 @@ func NewAnalyticsHandler(client *ent.Client, log *zap.Logger) *AnalyticsHandler 
 func (h *AnalyticsHandler) RegisterRoutes(r chi.Router) {
 	r.Route("/analytics", func(a chi.Router) {
 		a.Get("/kpis", h.GetKPIs)
+		a.Get("/zones", h.GetZoneStats)
 	})
 }
 
@@ -172,6 +173,96 @@ func kpiFromCounts(rows []struct {
 		}
 	}
 	return k
+}
+
+// ZoneStat is one delivery area's performance over a period.
+type ZoneStat struct {
+	ZoneID          string  `json:"zone_id"`
+	ZoneName        string  `json:"zone_name"`
+	Tasks           int     `json:"tasks"`
+	Delivered       int     `json:"delivered"`
+	Failed          int     `json:"failed"`
+	Cancelled       int     `json:"cancelled"`
+	DeliveryFees    float64 `json:"delivery_fees"`
+	AvgDistanceKm   float64 `json:"avg_distance_km"`
+	AvgDeliveryMins float64 `json:"avg_delivery_minutes"`
+	OnTimePercent   float64 `json:"on_time_percent"`
+}
+
+// GetZoneStats godoc
+// @Summary Deliveries by zone
+// @Description Task counts, fees, distance and timing grouped by delivery area, aggregated in SQL.
+// @Tags Analytics
+// @Produce json
+// @Param tenant path string true "Tenant slug"
+// @Param period query string false "today | 7d | 30d | 90d (default 30d)"
+// @Success 200 {array} ZoneStat
+// @Router /{tenant}/analytics/zones [get]
+func (h *AnalyticsHandler) GetZoneStats(w http.ResponseWriter, r *http.Request) {
+	tenantID := tenantIDFromClaims(r)
+	if tenantID == uuid.Nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	if h.db == nil {
+		respondJSON(w, http.StatusOK, []ZoneStat{})
+		return
+	}
+	since := time.Now().AddDate(0, 0, -30)
+	switch r.URL.Query().Get("period") {
+	case "today":
+		now := time.Now()
+		since = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	case "7d":
+		since = time.Now().AddDate(0, 0, -7)
+	case "90d":
+		since = time.Now().AddDate(0, 0, -90)
+	}
+	// One grouped scan over the tenant's tasks of the period, served by the
+	// (tenant_id, created_at) index; tasks without a zone report as "Unzoned".
+	rows, err := h.db.QueryContext(r.Context(), `
+		SELECT
+		  COALESCE(t.metadata->>'zone_id', '') AS zone_id,
+		  COALESCE(max(t.metadata->>'zone_name'), 'Unzoned') AS zone_name,
+		  count(*),
+		  count(*) FILTER (WHERE t.status IN ('delivered', 'completed')),
+		  count(*) FILTER (WHERE t.status = 'failed'),
+		  count(*) FILTER (WHERE t.status = 'cancelled'),
+		  COALESCE(sum((t.metadata->>'delivery_fee')::numeric) FILTER (WHERE t.status IN ('delivered', 'completed')
+		      AND (t.metadata->>'delivery_fee') ~ '^[0-9.]+$'), 0),
+		  COALESCE(avg((t.metadata->>'distance_km')::numeric) FILTER (WHERE (t.metadata->>'distance_km') ~ '^[0-9.]+$'), 0),
+		  COALESCE(avg(EXTRACT(EPOCH FROM (p.captured_at - t.created_at)) / 60)
+		      FILTER (WHERE p.captured_at - t.created_at BETWEEN interval '0' AND interval '24 hours'), 0),
+		  count(*) FILTER (WHERE t.sla_due_at IS NOT NULL AND p.captured_at IS NOT NULL),
+		  count(*) FILTER (WHERE t.sla_due_at IS NOT NULL AND p.captured_at <= t.sla_due_at)
+		FROM tasks t
+		LEFT JOIN proof_of_deliveries p ON p.task_id = t.id
+		WHERE t.tenant_id = $1 AND t.created_at >= $2 AND t.task_type = 'delivery'
+		GROUP BY 1
+		ORDER BY 3 DESC
+		LIMIT 500`, tenantID, since)
+	if err != nil {
+		h.log.Error("analytics: zone stats", zap.Error(err))
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+	out := []ZoneStat{}
+	for rows.Next() {
+		var zs ZoneStat
+		var slaCount, onTime int
+		if err := rows.Scan(&zs.ZoneID, &zs.ZoneName, &zs.Tasks, &zs.Delivered, &zs.Failed, &zs.Cancelled,
+			&zs.DeliveryFees, &zs.AvgDistanceKm, &zs.AvgDeliveryMins, &slaCount, &onTime); err != nil {
+			h.log.Error("analytics: zone stats scan", zap.Error(err))
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+		if slaCount > 0 {
+			zs.OnTimePercent = float64(onTime) / float64(slaCount) * 100
+		}
+		out = append(out, zs)
+	}
+	respondJSON(w, http.StatusOK, out)
 }
 
 // SetDB wires the SQL handle used for the delivery timing aggregate.

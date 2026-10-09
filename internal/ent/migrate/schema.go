@@ -921,6 +921,11 @@ var (
 				Columns: []*schema.Column{TasksColumns[1], TasksColumns[20], TasksColumns[24]},
 			},
 			{
+				Name:    "task_tenant_id_task_type_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{TasksColumns[1], TasksColumns[5], TasksColumns[24]},
+			},
+			{
 				Name:    "task_sla_open",
 				Unique:  false,
 				Columns: []*schema.Column{TasksColumns[8]},

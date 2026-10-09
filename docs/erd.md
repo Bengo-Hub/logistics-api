@@ -98,8 +98,7 @@ Ent schemas model the domain and power migrations.
 | Table | Key Columns | Description |
 |-------|-------------|-------------|
 | `earnings_statements` | `id`, `tenant_id`, `fleet_member_id`, `period_start`, `period_end`, `gross_amount`, `net_amount`, `bonus_amount`, `deduction_amount`, `status`, `generated_at`, `metadata` | Rider/driver payouts exported to treasury. |
-| `tariff_profiles` | `id`, `tenant_id`, `name`, `base_fare`, `per_km_rate`, `per_minute_rate`, `surcharge_json`, `is_active`, `created_at`, `updated_at` | Tariff rules. |
-| `tariff_applications` | `id`, `tariff_profile_id`, `task_id`, `calculated_amount`, `calculated_at`, `metadata` | Fare calculation history. |
+| (customer tariff) | `service_configs` key `logistics.delivery_quote_policy` plus zone fees in `geo_fences.metadata` | Customer delivery pricing. Each priced order keeps its quote snapshot in the ordering service. |
 | `billing_events` | `id`, `tenant_id`, `task_id`, `event_type`, `amount`, `currency`, `occurred_at`, `metadata` | Events forwarded to `treasury-app` (payout, surcharge, penalty). |
 
 ## Reverse & Internal Logistics
@@ -125,7 +124,7 @@ Ent schemas model the domain and power migrations.
 
 | Table | Key Columns | Description |
 |-------|-------------|-------------|
-| `geo_fences` | `id`, `tenant_id`, `name`, `fence_type`, `geometry`, `metadata`, `created_at`, `updated_at` | Delivery zones, depots, restricted areas. |
+| `geo_fences` | `id`, `tenant_id`, `name`, `zone_type`, `status`, `boundary` (JSONB polygon, `[[lng,lat],...]`), `color`, `metadata` (zone delivery contract), `created_at`, `updated_at` | Delivery zones and no-go areas. Contract and quote rule in `delivery-zones.md`. |
 | `device_configs` | `id`, `tenant_id`, `device_type`, `config_json`, `version`, `effective_from`, `effective_to` | Mobile/IoT configuration delivered to riders. |
 | `telemetry_rules` | `id`, `tenant_id`, `rule_name`, `rule_type`, `thresholds_json`, `is_active`, `created_at`, `updated_at` | Alert thresholds (offline detection, speeding). |
 
@@ -228,8 +227,8 @@ This section defines how Logistics Service entities relate to other services to 
 
 - Demo fleets (`urban_internal`, `third_party`) seeded for Urban Café pilot.
 - Default dispatch rules: nearest driver, batch route, and marketplace fallback.
-- Sample tariff profiles (standard delivery, express, bulk) for testing treasury integrations.
-- RBAC permissions seeded for 11 modules (tasks, fleet, vehicles, zones, geofences, carriers, routing, telemetry, earnings, config, users) with 9 actions each (99 permissions total).
+- Tenant delivery presets via `cmd/seed-delivery-zones` (urban-loft: Busia zones and policy).
+- RBAC permissions seeded for 11 modules (tasks, fleet, vehicles, zones, pricing, carriers, routing, telemetry, earnings, config, users) with 9 actions each (99 permissions total). The retired `geofences.*` module and its role grants are removed by the seed.
 - Rate limit configs for tenant, IP, user, and per-endpoint patterns.
 - Service configs for task timeouts, fleet sizes, geofence radii, telemetry intervals, and more.
 

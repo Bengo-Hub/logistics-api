@@ -118,6 +118,8 @@ func (Task) Indexes() []ent.Index {
 		index.Fields("tracking_code"),
 		index.Fields("tenant_id", "status", "created_at"),
 		index.Fields("tenant_id", "outlet_id", "created_at"),
+		// Period reports over one task type (deliveries by zone, delivery KPIs).
+		index.Fields("tenant_id", "task_type", "created_at"),
 		// SLA monitor scan: open tasks past their due time. Partial, so it stays as small as
 		// the set of open tasks no matter how many completed tasks accumulate.
 		index.Fields("sla_due_at").

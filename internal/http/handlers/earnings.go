@@ -25,7 +25,12 @@ type EarningsHandler struct {
 	client         *ent.Client
 	earningsSvc    *earnings.Service
 	treasuryClient *earnings.TreasuryClient
+	// pricingGate guards rider pricing-rule writes (logistics.pricing.manage).
+	pricingGate func(http.Handler) http.Handler
 }
+
+// SetPricingGate sets the middleware that guards pricing-rule mutations.
+func (h *EarningsHandler) SetPricingGate(mw func(http.Handler) http.Handler) { h.pricingGate = mw }
 
 // NewEarningsHandler creates a new EarningsHandler.
 func NewEarningsHandler(log *zap.Logger, client *ent.Client, earningsSvc *earnings.Service) *EarningsHandler {
@@ -49,9 +54,14 @@ func (h *EarningsHandler) RegisterRoutes(r chi.Router) {
 		e.Post("/statements/generate", h.GenerateStatements)
 		e.Get("/events", h.ListBillingEvents)
 		e.Get("/pricing-rules", h.ListPricingRules)
-		e.Post("/pricing-rules", h.CreatePricingRule)
-		e.Patch("/pricing-rules/{ruleId}", h.UpdatePricingRule)
-		e.Delete("/pricing-rules/{ruleId}", h.DeletePricingRule)
+		e.Group(func(pr chi.Router) {
+			if h.pricingGate != nil {
+				pr.Use(h.pricingGate)
+			}
+			pr.Post("/pricing-rules", h.CreatePricingRule)
+			pr.Patch("/pricing-rules/{ruleId}", h.UpdatePricingRule)
+			pr.Delete("/pricing-rules/{ruleId}", h.DeletePricingRule)
+		})
 		// Statement settlement → rider payout disbursement via treasury-api
 		e.Post("/statements/{statementID}/settle", h.SettleEarningsStatement)
 	})
@@ -411,6 +421,7 @@ func (h *EarningsHandler) GetMyEarnings(w http.ResponseWriter, r *http.Request) 
 		"currency":  "KES",
 	})
 }
+
 // ListMyStatements handles GET /api/v1/{tenant}/riders/me/earnings/statements
 func (h *EarningsHandler) ListMyStatements(w http.ResponseWriter, r *http.Request) {
 	tenantID := tenantIDFromClaims(r)

@@ -241,6 +241,12 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 			api.With(s2sKey).Get("/s2s/dispatch/{tenant}/tasks/{taskId}/tracking", lh.S2SGetTaskTracking)
 			api.With(s2sKey).Post("/s2s/dispatch/{tenant}/tasks/{taskId}/rate", lh.S2SRateRider)
 		}
+		// Delivery quotes and coverage for checkout in ordering, pos and any other service.
+		if zh != nil && cfg != nil && cfg.Treasury.InternalServiceKey != "" {
+			s2sKey := requireServiceKey(cfg.Treasury.InternalServiceKey)
+			api.With(s2sKey).Post("/s2s/zones/{tenant}/quote", zh.S2SQuote)
+			api.With(s2sKey).Get("/s2s/zones/{tenant}/coverage", zh.S2SCoverage)
+		}
 
 		api.Route("/{tenant}", func(tenant chi.Router) {
 			tenant.Use(httpware.TenantV2(httpware.TenantConfig{
@@ -290,8 +296,12 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 			}
 
 			if zh != nil {
+				// Public, per-IP throttled: customer maps and checkout call these as guests.
+				publicGeo := limiter.Middleware(ratelimit.ValueKey("geo", ratelimit.ClientIP), 120, time.Minute)
 				tenant.Route("/zones", func(zoneR chi.Router) {
 					zoneR.Get("/", zh.ListZones)
+					zoneR.With(publicGeo).Get("/coverage", zh.Coverage)
+					zoneR.With(publicGeo).Get("/quote", zh.Quote)
 					zoneR.Get("/{zoneId}", zh.GetZone)
 					zoneR.Group(func(mut chi.Router) {
 						if rbacSvc != nil {
@@ -301,6 +311,15 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 						mut.Patch("/{zoneId}", zh.UpdateZone)
 						mut.Delete("/{zoneId}", zh.DeleteZone)
 					})
+				})
+				tenant.Route("/delivery-policy", func(polR chi.Router) {
+					if rbacSvc != nil {
+						polR.With(appmw.RequirePermission(rbacSvc, rbac.PermZoneView)).Get("/", zh.GetPolicy)
+						polR.With(appmw.RequirePermission(rbacSvc, rbac.PermPricingManage)).Put("/", zh.SavePolicy)
+					} else {
+						polR.Get("/", zh.GetPolicy)
+						polR.Put("/", zh.SavePolicy)
+					}
 				})
 			}
 
@@ -315,6 +334,12 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 						Post("/matrix", rh.GetMatrix)
 					routeR.Get("/isochrone", rh.GetIsochrone)
 					routeR.Get("/health", rh.HealthCheck)
+					// Place search and reverse lookup proxy (public, per-IP throttled).
+					if zh != nil {
+						geocodeLimit := limiter.Middleware(ratelimit.ValueKey("geocode", ratelimit.ClientIP), 60, time.Minute)
+						routeR.With(geocodeLimit).Get("/geocode/search", zh.GeocodeSearch)
+						routeR.With(geocodeLimit).Get("/geocode/reverse", zh.GeocodeReverse)
+					}
 				})
 			}
 
@@ -372,6 +397,9 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 			}
 
 			if earningsH != nil {
+				if rbacSvc != nil {
+					earningsH.SetPricingGate(appmw.RequirePermission(rbacSvc, rbac.PermPricingManage))
+				}
 				earningsH.RegisterRoutes(tenant)
 			}
 
