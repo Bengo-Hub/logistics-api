@@ -52,6 +52,10 @@ type RoutingConfig struct {
 	RequestTimeout time.Duration `envconfig:"ROUTING_REQUEST_TIMEOUT" default:"10s"`
 	// Cache TTL for route results in Redis
 	CacheTTL time.Duration `envconfig:"ROUTING_CACHE_TTL" default:"5m"`
+	// Geocoder (Nominatim-compatible) used by the place search and reverse lookup proxy.
+	GeocoderURL string `envconfig:"GEOCODER_URL" default:"https://nominatim.openstreetmap.org"`
+	// GeocoderUserAgent identifies the platform to the geocoder, as Nominatim's usage policy requires.
+	GeocoderUserAgent string `envconfig:"GEOCODER_USER_AGENT" default:"codevertex-logistics/1.0 (+https://codevertexafrica.com)"`
 }
 
 // SubscriptionsConfig holds configuration for the subscriptions enforcement client.

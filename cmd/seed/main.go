@@ -18,6 +18,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/logisticspermission"
 	"github.com/bengobox/logistics-service/internal/ent/logisticsrole"
 	"github.com/bengobox/logistics-service/internal/ent/ratelimitconfig"
+	"github.com/bengobox/logistics-service/internal/ent/rolepermission"
 	"github.com/bengobox/logistics-service/internal/ent/serviceconfig"
 	"github.com/bengobox/logistics-service/internal/ent/user"
 	"github.com/bengobox/logistics-service/internal/ent/userroleassignment"
@@ -80,8 +81,53 @@ func runSeed(ctx context.Context, client *ent.Client) error {
 	if err := seedRateLimitConfigs(ctx, client); err != nil {
 		return fmt.Errorf("seed rate limit configs: %w", err)
 	}
+	if err := removeRetiredSeedRows(ctx, client); err != nil {
+		log.Fatalf("remove retired seed rows: %v", err)
+	}
 	if err := seedServiceConfigs(ctx, client); err != nil {
 		return fmt.Errorf("seed service configs: %w", err)
+	}
+	return nil
+}
+
+// retiredPermissionPrefixes are permission modules that nothing enforces any more.
+// "geofences" duplicated "zones" (zones.* is what the API checks).
+var retiredPermissionPrefixes = []string{"logistics.geofences."}
+
+// retiredConfigKeys are platform config rows no code reads any more. Geofence behaviour
+// now lives in the per-tenant zones.PolicyConfigKey policy.
+var retiredConfigKeys = []string{"logistics.geofence_radius_meters"}
+
+// removeRetiredSeedRows deletes permissions (and their role grants) and config rows that
+// earlier seeds created but the service no longer uses. Idempotent.
+func removeRetiredSeedRows(ctx context.Context, client *ent.Client) error {
+	for _, prefix := range retiredPermissionPrefixes {
+		ids, err := client.LogisticsPermission.Query().
+			Where(logisticspermission.PermissionCodeHasPrefix(prefix)).
+			IDs(ctx)
+		if err != nil {
+			return fmt.Errorf("find retired permissions %s: %w", prefix, err)
+		}
+		if len(ids) == 0 {
+			continue
+		}
+		if _, err := client.RolePermission.Delete().Where(rolepermission.PermissionIDIn(ids...)).Exec(ctx); err != nil {
+			return fmt.Errorf("drop grants for %s: %w", prefix, err)
+		}
+		n, err := client.LogisticsPermission.Delete().Where(logisticspermission.IDIn(ids...)).Exec(ctx)
+		if err != nil {
+			return fmt.Errorf("drop retired permissions %s: %w", prefix, err)
+		}
+		log.Printf("removed %d retired permissions (%s*)", n, prefix)
+	}
+	n, err := client.ServiceConfig.Delete().
+		Where(serviceconfig.ConfigKeyIn(retiredConfigKeys...), serviceconfig.TenantIDIsNil()).
+		Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("drop retired configs: %w", err)
+	}
+	if n > 0 {
+		log.Printf("removed %d retired service configs", n)
 	}
 	return nil
 }
@@ -89,7 +135,7 @@ func runSeed(ctx context.Context, client *ent.Client) error {
 // seedPermissions seeds all logistics permissions (idempotent via upsert).
 func seedPermissions(ctx context.Context, client *ent.Client) error {
 	modules := []string{
-		"tasks", "fleet", "vehicles", "zones", "geofences",
+		"tasks", "fleet", "vehicles", "zones", "pricing",
 		"carriers", "routing", "telemetry", "earnings", "config", "users",
 	}
 	actions := []string{
@@ -203,7 +249,6 @@ func seedServiceConfigs(ctx context.Context, client *ent.Client) error {
 		{"logistics.max_concurrent_tasks", "50", "int", "Maximum concurrent tasks per rider", false},
 		{"logistics.max_fleet_size", "500", "int", "Maximum fleet members per tenant", false},
 		{"logistics.auto_assign_enabled", "true", "bool", "Whether auto-assignment of tasks is enabled", false},
-		{"logistics.geofence_radius_meters", "500", "int", "Default geofence radius in meters", false},
 		{"logistics.telemetry_interval_seconds", "10", "int", "Telemetry reporting interval in seconds", false},
 		{"logistics.pod_required", "true", "bool", "Whether proof of delivery is required", false},
 		{"logistics.max_route_waypoints", "25", "int", "Maximum waypoints per routing request", false},
@@ -348,7 +393,6 @@ var driverPermissionCodes = []string{
 	"logistics.fleet.view",
 	"logistics.vehicles.view",
 	"logistics.zones.view",
-	"logistics.geofences.view",
 	"logistics.routing.view",
 	"logistics.telemetry.add",
 	"logistics.telemetry.view",

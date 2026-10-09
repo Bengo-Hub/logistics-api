@@ -175,6 +175,12 @@ func New(ctx context.Context) (*App, error) {
 	// Publisher will be set after NATS initialization
 	identitySvc := identity.NewService(entClient, tenantSyncer, nil, log)
 
+	// Cache helper for read-heavy queries, and the zones service that owns delivery
+	// areas and quotes. Created before the event subscribers so outlet moves refresh it.
+	cacheAside := sharedcache.New(redisClient, log)
+	zoneSvc := zonesmod.NewService(entClient, log)
+	zoneSvc.SetCache(cacheAside)
+
 	// Subscribe to auth-service events for identity sync and outlet sync
 	if natsConn != nil {
 		identityEventHandler := identity.NewEventHandler(identitySvc, log)
@@ -185,9 +191,10 @@ func New(ctx context.Context) (*App, error) {
 			log.Warn("app: failed to subscribe to auth events", zap.Error(err))
 		}
 
-		// Outlet sync: mirrors auth.outlet.* events where use_case="logistics" into
-		// the local outlets table so dispatch tasks can reference hub locations.
+		// Outlet sync: mirrors auth.outlet.* events (with their map pin) into the local
+		// outlets table so dispatch and delivery quotes can use outlet locations.
 		outletSub := tenant.NewOutletSubscriber(entClient, log)
+		outletSub.OnChange(zoneSvc.Invalidate)
 		if err := outletSub.Start(natsConn); err != nil {
 			log.Warn("app: failed to start outlet event subscriber", zap.Error(err))
 		}
@@ -227,9 +234,11 @@ func New(ctx context.Context) (*App, error) {
 	taskSvc := tasks.NewService(entClient, log)
 	taskSvc.SetPublisher(eventPublisher)
 	taskSvc.SetLocker(redisClient)
+	taskSvc.SetAreaTagger(zoneSvc)
 
 	// Earnings: records rider earnings on delivery completion, daily statement generation
 	earningsSvc := earnings.NewService(entClient, log).WithDB(sqlDB)
+	earningsSvc.SetFallbackPricer(zoneSvc.DistanceFee)
 	taskSvc.SetEarningsService(earningsSvc)
 	go earningsSvc.StartStatementJob(ctx)
 	log.Info("app: earnings statement job started (daily)")
@@ -239,6 +248,7 @@ func New(ctx context.Context) (*App, error) {
 
 	// Auto-dispatch: find nearest rider and assign tasks automatically
 	autoDispatcher := dispatch.NewAutoDispatcher(log, fleetSvc, taskSvc, redisClient)
+	autoDispatcher.SetShiftSource(entClient)
 
 	logisticsHandler := handlers.NewLogisticsHandler(log, taskSvc, fleetSvc, autoDispatcher)
 	logisticsHandler.SetTracker(autoDispatcher)
@@ -308,13 +318,11 @@ func New(ctx context.Context) (*App, error) {
 	// Public tracking handler (no auth)
 	trackingHandler := handlers.NewTrackingHandler(taskSvc, log)
 
-	// Initialize cache helper for read-heavy queries
-	cacheAside := sharedcache.New(redisClient, log)
-
-	// Zone management
-	zoneSvc := zonesmod.NewService(entClient, log)
-	zoneSvc.SetCache(cacheAside)
+	// Zone management (service created earlier so the outlet subscriber can refresh it)
+	zoneSvc.SetDistanceProvider(routing.ZoneDistance{Svc: routingSvc})
 	zonesHandler := handlers.NewZonesHandler(zoneSvc, log)
+	zonesHandler.SetGeocoder(zonesmod.NewGeocoder(cfg.Routing.GeocoderURL, cfg.Routing.GeocoderUserAgent, zoneSvc, cacheAside, log))
+	zonesHandler.SetSlugResolver(identitySvc.ResolveTenantSlug)
 
 	// RBAC
 	rbacRepo := rbacmod.NewEntRepository(entClient)

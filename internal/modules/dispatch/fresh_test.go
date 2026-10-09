@@ -36,3 +36,16 @@ func TestFreshCandidatesKeepsOrderAndNilExclude(t *testing.T) {
 		t.Fatalf("got %v", got)
 	}
 }
+
+func TestPreferZoneRiders(t *testing.T) {
+	a, b, c := uuid.New(), uuid.New(), uuid.New()
+	cands := []riderCandidate{{MemberID: a, DistanceKm: 1}, {MemberID: b, DistanceKm: 2}, {MemberID: c, DistanceKm: 3}}
+	got := preferZoneRiders(cands, map[uuid.UUID]bool{c: true})
+	if got[0].MemberID != c || got[1].MemberID != a || got[2].MemberID != b {
+		t.Fatalf("zone rider first, then distance order: %+v", got)
+	}
+	same := preferZoneRiders([]riderCandidate{{MemberID: a}, {MemberID: b}}, nil)
+	if same[0].MemberID != a {
+		t.Fatal("no covering riders keeps order")
+	}
+}

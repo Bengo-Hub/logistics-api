@@ -125,11 +125,346 @@ paths:
           description: Route not found
         '500':
           description: Internal server error
+  /api/v1/{tenant}/zones:
+    get:
+      tags: [Zones]
+      summary: List delivery zones
+      description: All service areas of the tenant with their delivery settings.
+      parameters:
+        - name: tenant
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Tenant slug
+      responses:
+        '200':
+          description: Zones
+    post:
+      tags: [Zones]
+      summary: Create a delivery zone
+      description: "Circle uses settings.center and settings.radius_m. Polygon uses boundary as [[lng,lat],...]. Requires logistics.zones.manage."
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: tenant
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Tenant slug
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ZoneInput'
+      responses:
+        '201':
+          description: Created
+        '400':
+          description: Invalid geometry or settings
+        '409':
+          description: Name already used
+  /api/v1/{tenant}/zones/{zoneId}:
+    patch:
+      tags: [Zones]
+      summary: Update a delivery zone
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: tenant
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Tenant slug
+        - name: zoneId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Updated
+    delete:
+      tags: [Zones]
+      summary: Delete a delivery zone
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: tenant
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Tenant slug
+        - name: zoneId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Deleted
+  /api/v1/{tenant}/zones/coverage:
+    get:
+      tags: [Zones]
+      summary: Public delivery coverage
+      description: Active zones, outlets, bounds and centre for customer maps. Public, throttled per IP.
+      parameters:
+        - name: tenant
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Tenant slug
+        - name: outlet_id
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Coverage
+  /api/v1/{tenant}/zones/quote:
+    get:
+      tags: [Zones]
+      summary: Delivery quote for a location
+      description: Public. Serviceable flag, fee, method, matched or nearest area, distance and ETA. The fee is authoritative.
+      parameters:
+        - name: tenant
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Tenant slug
+        - name: lat
+          in: query
+          required: true
+          schema:
+            type: number
+        - name: lng
+          in: query
+          required: true
+          schema:
+            type: number
+        - name: outlet_id
+          in: query
+          schema:
+            type: string
+        - name: order_total
+          in: query
+          schema:
+            type: number
+      responses:
+        '200':
+          description: Quote
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Quote'
+  /api/v1/{tenant}/delivery-policy:
+    get:
+      tags: [Zones]
+      summary: Delivery quote policy
+      description: Per-km fallback, geofence buffer, maximum radius, rounding and distance source. Requires logistics.zones.view.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: tenant
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Tenant slug
+      responses:
+        '200':
+          description: Policy and its source (tenant, platform or default)
+    put:
+      tags: [Zones]
+      summary: Save the delivery quote policy
+      description: Requires logistics.pricing.manage.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: tenant
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Tenant slug
+      responses:
+        '200':
+          description: Saved
+  /api/v1/{tenant}/routing/geocode/search:
+    get:
+      tags: [Routing]
+      summary: Search places
+      description: Tenant delivery areas first, then geocoder results biased to the coverage. Public, throttled per IP.
+      parameters:
+        - name: tenant
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Tenant slug
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Places
+  /api/v1/{tenant}/routing/geocode/reverse:
+    get:
+      tags: [Routing]
+      summary: Name the place at a location
+      description: Place name plus the delivery area it falls in or is nearest to. Public, throttled per IP.
+      parameters:
+        - name: tenant
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Tenant slug
+        - name: lat
+          in: query
+          required: true
+          schema:
+            type: number
+        - name: lng
+          in: query
+          required: true
+          schema:
+            type: number
+      responses:
+        '200':
+          description: Place
+  /api/v1/{tenant}/analytics/zones:
+    get:
+      tags: [Analytics]
+      summary: Deliveries by zone
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: tenant
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Tenant slug
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [today, 7d, 30d, 90d]
+      responses:
+        '200':
+          description: Per-zone counts, fees, distance and timing
+  /api/v1/s2s/zones/{tenant}/quote:
+    post:
+      tags: [S2S]
+      summary: Delivery quote (service-to-service)
+      description: Authoritative quote for checkout in ordering, pos and other services. Tenant may be a UUID or slug.
+      security:
+        - serviceKey: []
+      parameters:
+        - name: tenant
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                lat: {type: number}
+                lng: {type: number}
+                outlet_id: {type: string}
+                order_total: {type: number}
+      responses:
+        '200':
+          description: Quote
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Quote'
+  /api/v1/s2s/zones/{tenant}/coverage:
+    get:
+      tags: [S2S]
+      summary: Delivery coverage (service-to-service)
+      security:
+        - serviceKey: []
+      parameters:
+        - name: tenant
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Coverage
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: JWT token from auth-service. Format: Bearer {token}
-
+      description: "JWT token from auth-service. Format: Bearer {token}"
+    serviceKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+  schemas:
+    ZoneSettings:
+      type: object
+      properties:
+        shape: {type: string, enum: [circle, polygon]}
+        center:
+          type: object
+          properties:
+            lat: {type: number}
+            lng: {type: number}
+        radius_m: {type: number}
+        fee: {type: number}
+        free: {type: boolean}
+        currency: {type: string}
+        min_order: {type: number}
+        eta_minutes: {type: integer}
+        priority: {type: integer, description: Higher wins when zones overlap and ties go to the smaller zone}
+        outlet_ids: {type: array, items: {type: string}}
+        aliases: {type: array, items: {type: string}}
+        notes: {type: string}
+    ZoneInput:
+      type: object
+      required: [name]
+      properties:
+        name: {type: string}
+        zone_type: {type: string, enum: [delivery, exclusion, pickup, surge]}
+        status: {type: string, enum: [active, inactive, draft]}
+        color: {type: string}
+        boundary: {type: array, items: {type: array, items: {type: number}}}
+        settings: {$ref: '#/components/schemas/ZoneSettings'}
+    Quote:
+      type: object
+      properties:
+        serviceable: {type: boolean}
+        reason: {type: string, enum: [excluded_area, outside_delivery_area, beyond_max_radius, no_outlet_location, no_delivery_coverage, invalid_location]}
+        method: {type: string, enum: [zone, per_km]}
+        fee: {type: number}
+        free: {type: boolean}
+        currency: {type: string}
+        zone: {type: object, properties: {id: {type: string}, name: {type: string}}}
+        nearest_area: {type: object, properties: {id: {type: string}, name: {type: string}}}
+        nearest_area_km: {type: number}
+        distance_km: {type: number}
+        distance_type: {type: string, enum: [road, estimated, straight]}
+        eta_minutes: {type: integer}
+        min_order: {type: number}
+        below_min_order: {type: boolean}
+        policy_version: {type: string}
+        cache_seconds: {type: integer}

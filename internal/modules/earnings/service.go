@@ -23,6 +23,8 @@ type Service struct {
 	client *ent.Client
 	db     *sql.DB // for SQL aggregation (ent here has no raw-query feature)
 	log    *zap.Logger
+	// fallbackPricer prices a distance when the tenant has no rider pricing rule.
+	fallbackPricer func(ctx context.Context, tenantID uuid.UUID, distanceKm float64) (float64, error)
 }
 
 // WithDB sets the database handle used for statement aggregation.
@@ -32,6 +34,12 @@ func (s *Service) WithDB(db *sql.DB) *Service {
 }
 
 // NewService creates a new earnings service.
+// SetFallbackPricer sets the per-distance price used when a tenant has no active rider
+// pricing rule. app.go wires the zones delivery policy here.
+func (s *Service) SetFallbackPricer(f func(ctx context.Context, tenantID uuid.UUID, distanceKm float64) (float64, error)) {
+	s.fallbackPricer = f
+}
+
 func NewService(client *ent.Client, log *zap.Logger) *Service {
 	return &Service{
 		client: client,
@@ -44,11 +52,16 @@ func (s *Service) RecordEarning(ctx context.Context, tenantID, taskID, memberID 
 	// Calculate the delivery fee using pricing rules
 	fee, err := CalculateDeliveryFee(ctx, s.client, tenantID, distanceKm)
 	if err != nil {
-		s.log.Warn("could not calculate delivery fee, using distance-based fallback",
-			zap.Error(err),
-			zap.Float64("distance_km", distanceKm))
-		// Fallback: simple per-km rate
-		fee = roundCents(50.0 + (distanceKm * 20.0)) // base 50 + 20/km
+		// No rider pricing rule: pay what the tenant's delivery policy would charge for
+		// this distance, so every tenant setting lives in one place (logistics-ui).
+		if s.fallbackPricer == nil {
+			return fmt.Errorf("earnings: no pricing rule and no fallback pricer: %w", err)
+		}
+		fee, err = s.fallbackPricer(ctx, tenantID, distanceKm)
+		if err != nil {
+			return fmt.Errorf("earnings: fallback pricing: %w", err)
+		}
+		fee = roundCents(fee)
 	}
 
 	// Create billing event (fleet_member_id stored in metadata since schema uses generic metadata JSON)

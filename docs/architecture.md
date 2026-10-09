@@ -207,14 +207,14 @@ Live as of 2026-09, despite still being listed here as forward-looking:
   treasury-integration half (actually disbursing a payout, not just computing one) is not
   built
 - SLA monitoring and breach alerts (`internal/modules/tasks/sla_monitor.go`)
+- Delivery zones, geofencing and delivery quotes for every tenant and service, with task
+  zone tagging and zone-aware dispatch (`internal/modules/zones`, see `docs/delivery-zones.md`)
 
 Still genuinely not built:
 
-- PostGIS geo-queries / zone-based dispatch - the Task schema carries no zone association
-  at all; auto-dispatch has no pickup-location routing until outlet coordinates exist
-  upstream in auth-api (see the open items note in the order-to-delivery workflow plan)
-- Delivery zone configuration (the `/zones` page and `Hexagon`/zone nav items exist in
-  logistics-ui but the backend has no zone entity backing them)
+- PostGIS geo-queries. Zones are polygons in JSONB with in-process containment checks
+  (see `docs/delivery-zones.md`), which is fast for the tens to hundreds of zones a tenant
+  has; PostGIS only becomes worth it for very large zone sets
 - Treasury-app payout disbursement (earnings are computed, never actually paid out through
   treasury-api)
 ## Delivery workflow rules (2026-10-06)

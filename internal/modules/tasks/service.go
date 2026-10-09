@@ -93,6 +93,10 @@ type CreateTaskFromOrderRequest struct {
 	DropoffName     string  `json:"dropoff_name"`
 	DropoffLat      float64 `json:"dropoff_lat"`
 	DropoffLng      float64 `json:"dropoff_lng"`
+	// Delivery area and distance from the checkout quote (optional).
+	ZoneID     string  `json:"zone_id,omitempty"`
+	ZoneName   string  `json:"zone_name,omitempty"`
+	DistanceKm float64 `json:"distance_km,omitempty"`
 	// Outlet (pickup point) details for the rider: which branch, where the counter is, who to call.
 	OutletID      string `json:"outlet_id"`
 	PickupAddress string `json:"pickup_address"`
@@ -299,7 +303,18 @@ type Service struct {
 	// locker serialises task intake per upstream reference across replicas, so the same order
 	// arriving twice at once (two ready events, a double click on dispatch) makes one task.
 	locker redis.UniversalClient
+	// areaTagger resolves the delivery zone and trip distance of a drop-off at intake.
+	areaTagger DropoffAreaTagger
 }
+
+// DropoffAreaTagger is implemented by the zones service. Kept as an interface so the
+// tasks module does not depend on zones internals.
+type DropoffAreaTagger interface {
+	TagTaskDropoff(ctx context.Context, tenantID, outletID uuid.UUID, pickupLat, pickupLng, dropLat, dropLng float64) (zoneID, zoneName string, distanceKm float64, err error)
+}
+
+// SetAreaTagger wires delivery-zone tagging for new tasks.
+func (s *Service) SetAreaTagger(t DropoffAreaTagger) { s.areaTagger = t }
 
 // ErrIntakeBusy means another replica is creating the task for the same reference right now;
 // event consumers redeliver later and then find the task.
@@ -429,6 +444,9 @@ func (s *Service) createTask(ctx context.Context, tenantID uuid.UUID, req Create
 		if oid, perr := uuid.Parse(metadataString(req.Metadata, "outlet_id")); perr == nil {
 			builder.SetOutletID(oid)
 		}
+	}
+	if meta := s.tagDropoffArea(ctx, tenantID, req); meta != nil {
+		builder.SetMetadata(meta)
 	}
 
 	t, err := builder.Save(ctx)
@@ -1002,8 +1020,8 @@ func (s *Service) SubmitPoD(ctx context.Context, tenantID, taskID uuid.UUID, req
 				}
 				return
 			}
-			// TODO: Calculate actual distance from task steps once routing is integrated
-			var distanceKm float64 = 5.0 // default fallback
+			// Trip distance recorded at intake (road distance when routing was up).
+			distanceKm := metadataNumber(t.Metadata["distance_km"])
 			if earnErr := s.earningsSvc.RecordEarning(earnCtx, tenantID, taskID, earnMemberID, distanceKm); earnErr != nil {
 				s.log.Warn("failed to record delivery earning", zap.Error(earnErr))
 			}
@@ -1074,6 +1092,18 @@ func (s *Service) CreateTaskFromOrder(ctx context.Context, tenantID uuid.UUID, e
 	if req.PickupLat != 0 && req.PickupLng != 0 {
 		metadata["pickup_lat"] = req.PickupLat
 		metadata["pickup_lng"] = req.PickupLng
+	}
+	if req.DropoffLat != 0 && req.DropoffLng != 0 {
+		metadata["dropoff_lat"] = req.DropoffLat
+		metadata["dropoff_lng"] = req.DropoffLng
+	}
+	// Delivery area from ordering's checkout quote, when it sent one.
+	if req.ZoneID != "" {
+		metadata["zone_id"] = req.ZoneID
+		metadata["zone_name"] = req.ZoneName
+	}
+	if req.DistanceKm > 0 {
+		metadata["distance_km"] = req.DistanceKm
 	}
 
 	// Create the task (createTask sets the outlet column from metadata outlet_id, so a branch
@@ -1214,4 +1244,46 @@ func generateTrackingCode() string {
 	}
 
 	return b.String()
+}
+
+// tagDropoffArea records the delivery zone and trip distance on a new task's metadata.
+// An upstream quote (ordering sends zone_id, zone_name and distance_km) is trusted as is;
+// otherwise the zones service resolves them. Returns nil when nothing changes.
+func (s *Service) tagDropoffArea(ctx context.Context, tenantID uuid.UUID, req CreateTaskRequest) map[string]any {
+	if s.areaTagger == nil {
+		return nil
+	}
+	meta := req.Metadata
+	if meta == nil {
+		meta = map[string]any{}
+	}
+	if metadataString(meta, "zone_id") != "" && metadataNumber(meta["distance_km"]) > 0 {
+		return nil
+	}
+	dropLat, dropLng := req.DropoffLat, req.DropoffLng
+	if dropLat == 0 && dropLng == 0 {
+		dropLat, dropLng = metadataNumber(meta["dropoff_lat"]), metadataNumber(meta["dropoff_lng"])
+	}
+	if dropLat == 0 && dropLng == 0 {
+		return nil
+	}
+	pickLat, pickLng := req.PickupLat, req.PickupLng
+	if pickLat == 0 && pickLng == 0 {
+		pickLat, pickLng = metadataNumber(meta["pickup_lat"]), metadataNumber(meta["pickup_lng"])
+	}
+	outletID, _ := uuid.Parse(metadataString(meta, "outlet_id"))
+	tctx, cancel := context.WithTimeout(ctx, 4*time.Second)
+	defer cancel()
+	zoneID, zoneName, km, err := s.areaTagger.TagTaskDropoff(tctx, tenantID, outletID, pickLat, pickLng, dropLat, dropLng)
+	if err != nil {
+		s.log.Debug("delivery area tagging skipped", zap.Error(err))
+		return nil
+	}
+	if zoneID != "" && metadataString(meta, "zone_id") == "" {
+		meta["zone_id"], meta["zone_name"] = zoneID, zoneName
+	}
+	if km > 0 && metadataNumber(meta["distance_km"]) <= 0 {
+		meta["distance_km"] = km
+	}
+	return meta
 }
