@@ -99,6 +99,11 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 		if serviceConfigH != nil {
 			serviceConfigH.RegisterPlatformRoutes(admin)
 		}
+		// The platform default delivery policy (validated; drops tenants' cached quotes).
+		if zh != nil {
+			admin.Get("/delivery-policy", zh.GetPlatformPolicy)
+			admin.Put("/delivery-policy", zh.SavePlatformPolicy)
+		}
 		// Platform-default backup destination (OneDrive/GDrive/S3/WebDAV/SFTP/SMB).
 		if backupDestH != nil {
 			backupDestH.RegisterPlatformRoutes(admin)
@@ -318,9 +323,11 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 					if rbacSvc != nil {
 						polR.With(appmw.RequirePermission(rbacSvc, rbac.PermZoneView)).Get("/", zh.GetPolicy)
 						polR.With(appmw.RequirePermission(rbacSvc, rbac.PermPricingManage)).Put("/", zh.SavePolicy)
+						polR.With(appmw.RequirePermission(rbacSvc, rbac.PermPricingManage)).Delete("/", zh.ResetPolicy)
 					} else {
 						polR.Get("/", zh.GetPolicy)
 						polR.Put("/", zh.SavePolicy)
+						polR.Delete("/", zh.ResetPolicy)
 					}
 				})
 			}

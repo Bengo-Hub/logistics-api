@@ -374,6 +374,66 @@ func (h *ZonesHandler) SavePolicy(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, pv)
 }
 
+// ResetPolicy godoc
+// @Summary Drop the tenant's own delivery policy and follow the platform default
+// @Tags Zones
+// @Produce json
+// @Param tenant path string true "Tenant slug"
+// @Success 200 {object} zones.PolicyView
+// @Router /{tenant}/delivery-policy [delete]
+func (h *ZonesHandler) ResetPolicy(w http.ResponseWriter, r *http.Request) {
+	tenantID := tenantIDFromClaims(r)
+	if tenantID == uuid.Nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	pv, err := h.svc.ResetPolicy(r.Context(), tenantID)
+	if err != nil {
+		h.log.Error("reset policy", zap.Error(err))
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, pv)
+}
+
+// GetPlatformPolicy godoc
+// @Summary Platform default delivery policy (platform owners)
+// @Tags Zones
+// @Produce json
+// @Success 200 {object} zones.PolicyView
+// @Router /admin/delivery-policy [get]
+func (h *ZonesHandler) GetPlatformPolicy(w http.ResponseWriter, r *http.Request) {
+	pv, err := h.svc.GetPlatformPolicy(r.Context())
+	if err != nil {
+		h.log.Error("get platform policy", zap.Error(err))
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, pv)
+}
+
+// SavePlatformPolicy godoc
+// @Summary Save the platform default delivery policy (used by tenants without their own)
+// @Tags Zones
+// @Accept json
+// @Produce json
+// @Param body body zones.Policy true "Policy"
+// @Success 200 {object} zones.PolicyView
+// @Router /admin/delivery-policy [put]
+func (h *ZonesHandler) SavePlatformPolicy(w http.ResponseWriter, r *http.Request) {
+	p := zones.DefaultPolicy()
+	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+		respondJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		return
+	}
+	pv, err := h.svc.SavePlatformPolicy(r.Context(), p)
+	if err != nil {
+		h.zoneError(w, err)
+		return
+	}
+	respondJSON(w, http.StatusOK, pv)
+}
+
 // GeocodeSearch godoc
 // @Summary Search places
 // @Description Tenant delivery areas first, then geocoder results biased to the coverage. Public.

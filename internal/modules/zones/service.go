@@ -307,22 +307,82 @@ func (s *Service) GetPolicy(ctx context.Context, tenantID uuid.UUID) (PolicyView
 
 // SavePolicy validates and upserts the tenant's policy.
 func (s *Service) SavePolicy(ctx context.Context, tenantID uuid.UUID, p Policy) (PolicyView, error) {
-	if err := p.Validate(); err != nil {
+	if err := s.upsertPolicy(ctx, &tenantID, p); err != nil {
 		return PolicyView{}, err
+	}
+	s.Invalidate(ctx, tenantID)
+	return s.GetPolicy(ctx, tenantID)
+}
+
+// ResetPolicy drops the tenant's own policy so it follows the platform default again.
+func (s *Service) ResetPolicy(ctx context.Context, tenantID uuid.UUID) (PolicyView, error) {
+	if _, err := s.client.ServiceConfig.Delete().
+		Where(serviceconfig.ConfigKey(PolicyConfigKey), serviceconfig.TenantID(tenantID)).
+		Exec(ctx); err != nil {
+		return PolicyView{}, fmt.Errorf("zones: reset policy: %w", err)
+	}
+	s.Invalidate(ctx, tenantID)
+	return s.GetPolicy(ctx, tenantID)
+}
+
+// GetPlatformPolicy returns the platform default policy (the nil-tenant row), else the
+// built-in defaults.
+func (s *Service) GetPlatformPolicy(ctx context.Context) (PolicyView, error) {
+	row, err := s.client.ServiceConfig.Query().
+		Where(serviceconfig.ConfigKey(PolicyConfigKey), serviceconfig.TenantIDIsNil()).
+		Only(ctx)
+	if ent.IsNotFound(err) {
+		return PolicyView{Policy: DefaultPolicy(), Source: "default"}, nil
+	}
+	if err != nil {
+		return PolicyView{}, fmt.Errorf("zones: load platform policy: %w", err)
+	}
+	p, perr := ParsePolicy(row.ConfigValue)
+	if perr != nil {
+		return PolicyView{Policy: DefaultPolicy(), Source: "default"}, nil
+	}
+	t := row.UpdatedAt
+	return PolicyView{Policy: p, Source: "platform", UpdatedAt: &t}, nil
+}
+
+// SavePlatformPolicy stores the platform default that every tenant without its own policy
+// uses, then drops cached snapshots so those tenants quote with it straight away.
+func (s *Service) SavePlatformPolicy(ctx context.Context, p Policy) (PolicyView, error) {
+	if err := s.upsertPolicy(ctx, nil, p); err != nil {
+		return PolicyView{}, err
+	}
+	// Only tenants with delivery areas have quote snapshots worth dropping.
+	var tenantIDs []uuid.UUID
+	if err := s.client.GeoFence.Query().GroupBy(geofence.FieldTenantID).Scan(ctx, &tenantIDs); err == nil {
+		for _, id := range tenantIDs {
+			s.Invalidate(ctx, id)
+		}
+	}
+	return s.GetPlatformPolicy(ctx)
+}
+
+// upsertPolicy validates and writes one policy row; tenantID nil is the platform default.
+func (s *Service) upsertPolicy(ctx context.Context, tenantID *uuid.UUID, p Policy) error {
+	if err := p.Validate(); err != nil {
+		return err
 	}
 	raw, err := json.Marshal(p)
 	if err != nil {
-		return PolicyView{}, err
+		return err
 	}
-	existing, err := s.client.ServiceConfig.Query().
-		Where(serviceconfig.ConfigKey(PolicyConfigKey), serviceconfig.TenantID(tenantID)).
-		Only(ctx)
+	q := s.client.ServiceConfig.Query().Where(serviceconfig.ConfigKey(PolicyConfigKey))
+	if tenantID == nil {
+		q = q.Where(serviceconfig.TenantIDIsNil())
+	} else {
+		q = q.Where(serviceconfig.TenantID(*tenantID))
+	}
+	existing, err := q.Only(ctx)
 	switch {
 	case err == nil:
 		_, err = existing.Update().SetConfigValue(string(raw)).Save(ctx)
 	case ent.IsNotFound(err):
 		_, err = s.client.ServiceConfig.Create().
-			SetTenantID(tenantID).
+			SetNillableTenantID(tenantID).
 			SetConfigKey(PolicyConfigKey).
 			SetConfigValue(string(raw)).
 			SetConfigType("json").
@@ -330,10 +390,9 @@ func (s *Service) SavePolicy(ctx context.Context, tenantID uuid.UUID, p Policy) 
 			Save(ctx)
 	}
 	if err != nil {
-		return PolicyView{}, fmt.Errorf("zones: save policy: %w", err)
+		return fmt.Errorf("zones: save policy: %w", err)
 	}
-	s.Invalidate(ctx, tenantID)
-	return s.GetPolicy(ctx, tenantID)
+	return nil
 }
 
 // ── Quote and coverage ───────────────────────────────────────────────────────
