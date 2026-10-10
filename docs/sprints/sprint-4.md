@@ -31,8 +31,7 @@
   - Deduplication: use `device_id` + `timestamp` as key
 
 ### 5.2 Geofencing & Adherence
-- [ ] Geofence definitions (`geo_fences` table, see ERD):
-  - `name`, `fence_type` (delivery_zone/depot/restricted), `geometry` (PostGIS Polygon), `metadata`
+- [x] Geofence definitions (`geo_fences`), done 2026-10-10: delivery and no-delivery (exclusion) areas, used by the delivery quote and task tagging (`docs/delivery-zones.md`)
 - [ ] Geofence detection:
   - Background job: check `telemetry_points` against `geo_fences` using PostGIS `ST_Within`
   - Emit `geo_fence_events`: entry/exit events stored in `geo_fence_events` table

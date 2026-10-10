@@ -59,14 +59,11 @@
 - [ ] Route templates (`internal/ent/schema/route_template.go`):
   - `route_templates` table: `tenant_id`, `name`, `zone_id`, `route_plan_json`, `created_at`
   - Store common routes (e.g., "Morning CBD Route") for reuse
-- [ ] Zones/territories (`internal/ent/schema/zone.go`):
-  - `zones` table: `id`, `tenant_id`, `name`, `geometry` (PostGIS Polygon), `metadata`
-  - Link tasks to zones: `tasks.zone_id` (optional)
-  - Zone-based dispatch: prefer drivers assigned to zone
-- [ ] Zone API:
-  - `POST /v1/{tenant}/zones` → create zone (polygon from GeoJSON)
-  - `GET /v1/{tenant}/zones` → list zones
-  - `GET /v1/{tenant}/zones/{id}/tasks` → tasks in zone
+- [x] Zones/territories, done 2026-10-10 as `geo_fences` (JSONB polygon, circle or polygon, delivery contract in `metadata`; see `docs/delivery-zones.md`). PostGIS was not needed at tenant scale.
+  - [x] Tasks link to zones through `metadata.zone_id` / `zone_name` at intake
+  - [x] Zone-based dispatch: riders whose active shift lists the zone are offered the job first
+- [x] Zone API: CRUD at `/api/v1/{tenant}/zones`, plus coverage, quote, delivery policy and S2S quote
+  - [ ] `GET /v1/{tenant}/zones/{id}/tasks` (not built; deliveries by zone are in `/analytics/zones`)
 - [ ] Route planning:
   - `POST /v1/{tenant}/routes/plan` → generate route for multiple tasks
   - Input: `task_ids[]`, `optimization_mode` (distance/time/cost)
