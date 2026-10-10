@@ -42,23 +42,22 @@ func (h *IdentityHandler) GetAuthMe(w http.ResponseWriter, r *http.Request) {
 	var serviceRole *roleInfo
 	var permCodes []string
 
-	fullAccess := claims.IsPlatformOwner || claims.IsSuperuser() || claims.IsAdmin()
-	if h.rbacSvc != nil && fullAccess {
-		// Mirrors RequirePermission: admins pass every check without a logistics role row.
-		if codes, err := h.rbacSvc.AllPermissionCodes(r.Context()); err == nil {
+	if h.rbacSvc != nil && tenantID != uuid.Nil {
+		codes, full, err := h.rbacSvc.EffectivePermissions(r.Context(), tenantID, authID)
+		switch {
+		case err != nil:
+		case full:
+			// Same rule as RequirePermission: admins pass every check.
+			if all, aerr := h.rbacSvc.AllPermissionCodes(r.Context()); aerr == nil {
+				permCodes = all
+			}
+			serviceRole = &roleInfo{Code: rbac.RoleAdmin, Name: "Administrator"}
+		default:
 			permCodes = codes
-		}
-		serviceRole = &roleInfo{Code: "admin", Name: "Administrator"}
-	} else if h.rbacSvc != nil && tenantID != uuid.Nil {
-		roles, err := h.rbacSvc.GetUserRoles(r.Context(), tenantID, authID)
-		if err == nil && len(roles) > 0 {
-			r0 := roles[0]
-			serviceRole = &roleInfo{ID: r0.ID.String(), Code: r0.RoleCode, Name: r0.Name}
-		}
-		perms, err := h.rbacSvc.GetUserPermissions(r.Context(), tenantID, authID)
-		if err == nil {
-			for _, p := range perms {
-				permCodes = append(permCodes, p.PermissionCode)
+			if roles, rerr := h.rbacSvc.GetUserRoles(r.Context(), tenantID, authID); rerr == nil && len(roles) > 0 {
+				serviceRole = &roleInfo{ID: roles[0].ID.String(), Code: roles[0].RoleCode, Name: roles[0].Name}
+			} else if mapped := rbac.SystemRolesForSSO(claims.Roles); len(mapped) > 0 {
+				serviceRole = &roleInfo{Code: mapped[0], Name: mapped[0]}
 			}
 		}
 	}

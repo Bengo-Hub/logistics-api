@@ -147,10 +147,10 @@ func (h *ServiceConfigHandler) UpsertPlatformSetting(w http.ResponseWriter, r *h
 func (h *ServiceConfigHandler) ListTenantSettings(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	tenantIDStr := chi.URLParam(r, "tenant")
-	tenantID, err := uuid.Parse(tenantIDStr)
-	if err != nil {
-		respondJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid tenant ID"})
+	// The tenant comes from the resolved request context, so a slug or UUID path both work.
+	tenantID := tenantIDFromClaims(r)
+	if tenantID == uuid.Nil {
+		respondJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 		return
 	}
 
@@ -196,14 +196,18 @@ func (h *ServiceConfigHandler) ListTenantSettings(w http.ResponseWriter, r *http
 // UpsertTenantSetting creates or updates a tenant-specific config override.
 // PUT /api/v1/{tenant}/settings/{key}
 func (h *ServiceConfigHandler) UpsertTenantSetting(w http.ResponseWriter, r *http.Request) {
-	tenantIDStr := chi.URLParam(r, "tenant")
-	tenantID, err := uuid.Parse(tenantIDStr)
-	if err != nil {
-		respondJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid tenant ID"})
+	// The tenant comes from the resolved request context, so a slug or UUID path both work.
+	tenantID := tenantIDFromClaims(r)
+	if tenantID == uuid.Nil {
+		respondJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 		return
 	}
 
 	key := chi.URLParam(r, "key")
+	if path, ok := dedicatedConfigKeys[key]; ok {
+		respondJSON(w, http.StatusBadRequest, map[string]string{"error": "this setting is saved through " + path})
+		return
+	}
 	if key == "" {
 		respondJSON(w, http.StatusBadRequest, map[string]string{"error": "config key is required"})
 		return
@@ -238,6 +242,7 @@ func (h *ServiceConfigHandler) UpsertTenantSetting(w http.ResponseWriter, r *htt
 		First(ctx)
 
 	var cfg *ent.ServiceConfig
+	var err error
 	if existing != nil {
 		cfg, err = existing.Update().SetConfigValue(req.ConfigValue).Save(ctx)
 	} else {
@@ -269,10 +274,10 @@ func (h *ServiceConfigHandler) UpsertTenantSetting(w http.ResponseWriter, r *htt
 // GetTenantModules returns the enabled modules for a tenant with available module list.
 // GET /api/v1/{tenant}/settings/modules
 func (h *ServiceConfigHandler) GetTenantModules(w http.ResponseWriter, r *http.Request) {
-	tenantIDStr := chi.URLParam(r, "tenant")
-	tenantID, err := uuid.Parse(tenantIDStr)
-	if err != nil {
-		respondJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid tenant ID"})
+	// The tenant comes from the resolved request context, so a slug or UUID path both work.
+	tenantID := tenantIDFromClaims(r)
+	if tenantID == uuid.Nil {
+		respondJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 		return
 	}
 
@@ -297,10 +302,10 @@ func (h *ServiceConfigHandler) GetTenantModules(w http.ResponseWriter, r *http.R
 // UpdateTenantModules sets the enabled modules override for a tenant.
 // PUT /api/v1/{tenant}/settings/modules
 func (h *ServiceConfigHandler) UpdateTenantModules(w http.ResponseWriter, r *http.Request) {
-	tenantIDStr := chi.URLParam(r, "tenant")
-	tenantID, err := uuid.Parse(tenantIDStr)
-	if err != nil {
-		respondJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid tenant ID"})
+	// The tenant comes from the resolved request context, so a slug or UUID path both work.
+	tenantID := tenantIDFromClaims(r)
+	if tenantID == uuid.Nil {
+		respondJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 		return
 	}
 
@@ -350,12 +355,20 @@ func (h *ServiceConfigHandler) RegisterPlatformRoutes(r chi.Router) {
 	r.Put("/config/{key}", h.UpsertPlatformSetting)
 }
 
-// RegisterTenantRoutes registers tenant-scoped settings routes.
-func (h *ServiceConfigHandler) RegisterTenantRoutes(r chi.Router) {
+// RegisterTenantRoutes registers tenant-scoped settings routes. manage guards every write
+// (logistics.config.manage); reads stay open to the tenant's users.
+func (h *ServiceConfigHandler) RegisterTenantRoutes(r chi.Router, manage func(http.Handler) http.Handler) {
 	r.Route("/settings", func(s chi.Router) {
 		s.Get("/", h.ListTenantSettings)
-		s.Put("/{key}", h.UpsertTenantSetting)
 		s.Get("/modules", h.GetTenantModules)
-		s.Put("/modules", h.UpdateTenantModules)
+		s.With(manage).Put("/modules", h.UpdateTenantModules)
+		s.With(manage).Put("/{key}", h.UpsertTenantSetting)
 	})
+}
+
+// dedicatedConfigKeys have their own validated endpoints; the generic setting write refuses
+// them so validation and cache invalidation can never be skipped.
+var dedicatedConfigKeys = map[string]string{
+	"logistics.delivery_quote_policy": "/{tenant}/delivery-policy",
+	"logistics.enabled_modules":       "/{tenant}/settings/modules",
 }

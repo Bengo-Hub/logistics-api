@@ -10,34 +10,28 @@ import (
 	"github.com/google/uuid"
 )
 
-type denyAll struct{ calls int }
+type fixedChecker bool
 
-func (d *denyAll) HasPermission(context.Context, uuid.UUID, uuid.UUID, string) (bool, error) {
-	d.calls++
-	return false, nil
+func (f fixedChecker) HasPermission(context.Context, uuid.UUID, uuid.UUID, string) (bool, error) {
+	return bool(f), nil
 }
 
-func TestRequirePermissionTenantAdminBypass(t *testing.T) {
-	tenant := uuid.NewString()
-	run := func(roles []string) (int, int) {
-		checker := &denyAll{}
-		h := RequirePermission(checker, "logistics.fleet.manage")(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+func TestRequirePermissionDelegatesToService(t *testing.T) {
+	run := func(allow bool) int {
+		h := RequirePermission(fixedChecker(allow), "logistics.fleet.manage")(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusNoContent)
 		}))
-		claims := &authclient.Claims{TenantID: tenant, Roles: roles}
+		claims := &authclient.Claims{TenantID: uuid.NewString()}
 		claims.Subject = uuid.NewString()
 		req := httptest.NewRequest(http.MethodPost, "/", nil).WithContext(authclient.ContextWithClaims(context.Background(), claims))
 		rec := httptest.NewRecorder()
 		h.ServeHTTP(rec, req)
-		return rec.Code, checker.calls
+		return rec.Code
 	}
-	if code, _ := run([]string{"admin"}); code != http.StatusNoContent {
-		t.Fatalf("tenant admin: got %d, want 204", code)
+	if got := run(true); got != http.StatusNoContent {
+		t.Fatalf("allowed: got %d", got)
 	}
-	if code, _ := run([]string{"superuser"}); code != http.StatusNoContent {
-		t.Fatalf("superuser: got %d, want 204", code)
-	}
-	if code, calls := run([]string{"driver"}); code != http.StatusForbidden || calls != 1 {
-		t.Fatalf("driver: got %d after %d checks, want 403 after 1", code, calls)
+	if got := run(false); got != http.StatusForbidden {
+		t.Fatalf("denied: got %d", got)
 	}
 }

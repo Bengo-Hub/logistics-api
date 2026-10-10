@@ -398,3 +398,13 @@ func mapEntAssignment(entAssignment *ent.UserRoleAssignment) *UserRoleAssignment
 
 	return assignment
 }
+
+// PermissionCodes implements Repository.
+func (r *EntRepository) PermissionCodes(ctx context.Context, tenantID, userID uuid.UUID, systemRoles []string) ([]string, error) {
+	return permissionCodes(ctx, r.client, tenantID, userID, systemRoles)
+}
+
+// EnsureSystemRoles implements Repository.
+func (r *EntRepository) EnsureSystemRoles(ctx context.Context, tenantID uuid.UUID) error {
+	return EnsureSystemRoles(ctx, r.client, tenantID)
+}

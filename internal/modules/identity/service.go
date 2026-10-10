@@ -14,8 +14,8 @@ import (
 	"github.com/bengobox/logistics-service/internal/consts"
 	"github.com/bengobox/logistics-service/internal/ent"
 	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
-	enttenant "github.com/bengobox/logistics-service/internal/ent/tenant"
 	"github.com/bengobox/logistics-service/internal/ent/serviceconfig"
+	enttenant "github.com/bengobox/logistics-service/internal/ent/tenant"
 	"github.com/bengobox/logistics-service/internal/ent/user"
 	fleetmod "github.com/bengobox/logistics-service/internal/modules/fleet"
 	"github.com/bengobox/logistics-service/internal/modules/tenant"
@@ -24,15 +24,15 @@ import (
 
 // UpdateRiderProfileRequest defines the fields expected for profile updates.
 type UpdateRiderProfileRequest struct {
-	Phone        string `json:"phone"`
-	VehicleType  string `json:"vehicle_type"`
-	LicenseNo    string `json:"license_no"`
-	LicensePlate string `json:"license_plate"`
-	IDNumber              string `json:"id_number"`
-	IDPassportAttachment  string `json:"id_passport_attachment"`
-	RiderPhoto            string `json:"rider_photo"`
-	ImageLicensePlate     string `json:"image_license_plate"`
-	ImageSideView         string `json:"image_side_view"`
+	Phone                string `json:"phone"`
+	VehicleType          string `json:"vehicle_type"`
+	LicenseNo            string `json:"license_no"`
+	LicensePlate         string `json:"license_plate"`
+	IDNumber             string `json:"id_number"`
+	IDPassportAttachment string `json:"id_passport_attachment"`
+	RiderPhoto           string `json:"rider_photo"`
+	ImageLicensePlate    string `json:"image_license_plate"`
+	ImageSideView        string `json:"image_side_view"`
 }
 
 // Service handles identity-related operations using Ent.
@@ -146,28 +146,9 @@ func (s *Service) EnsureUserFromToken(ctx context.Context, authServiceID uuid.UU
 	return newUsr, nil
 }
 
-// roleFromClaims returns the service-level role for JIT-created users.
-// Platform owners with superuser role get "admin".
-// Uses "driver" as the universal role for delivery/courier/taxi use cases.
-func roleFromClaims(_ string, claims map[string]any) string {
-	isPlatformOwner, _ := claims["is_platform_owner"].(bool)
-	roles := extractRoles(claims)
-
-	if isPlatformOwner && containsRole(roles, "superuser") {
-		return "admin"
-	}
-	for _, r := range roles {
-		switch r {
-		case "superuser", "admin":
-			return "admin"
-		case "staff":
-			return "staff"
-		case "driver", "rider":
-			return RoleDriver
-		}
-	}
-	// Default for fleet members: universal driver role
-	return RoleDriver
+// roleFromClaims maps the token's roles with the same rule as auth events (resolveRole).
+func roleFromClaims(tenantSlug string, claims map[string]any) string {
+	return resolveRole(extractRoles(claims), tenantSlug)
 }
 
 func extractRoles(claims map[string]any) []string {
@@ -186,14 +167,7 @@ func extractRoles(claims map[string]any) []string {
 	return nil
 }
 
-func containsRole(roles []string, target string) bool {
-	for _, r := range roles {
-		if r == target {
-			return true
-		}
-	}
-	return false
-}
+
 // GetRiderProfile retrieves the user and their associated fleet/vehicle info.
 func (s *Service) GetRiderProfile(ctx context.Context, authServiceID, tenantID uuid.UUID) (*ent.User, error) {
 	return s.client.User.Query().
@@ -308,8 +282,8 @@ func (s *Service) UpdateRiderProfile(ctx context.Context, authServiceID, tenantI
 			tenantSlug = fl.TenantSlug
 		}
 		if pubErr := s.publisher.PublishFleetMemberKYCSubmitted(ctx, tenantID, events.FleetMemberEventData{
-			MemberID:   fm.ID.String(), UserID: u.ID.String(),
-			FleetID:    fm.FleetID.String(), UserEmail: u.Email, UserName: u.FullName,
+			MemberID: fm.ID.String(), UserID: u.ID.String(),
+			FleetID: fm.FleetID.String(), UserEmail: u.Email, UserName: u.FullName,
 			TenantSlug: tenantSlug,
 		}); pubErr != nil {
 			s.log.Warn("failed to publish fleet.member_kyc_submitted", zap.Error(pubErr))

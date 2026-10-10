@@ -370,6 +370,10 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 
 			if notifH != nil {
 				tenant.Route("/notifications", func(notifR chi.Router) {
+					// The operations feed (new jobs, failures, SLA) is for dispatchers and admins.
+					if rbacSvc != nil {
+						notifR.Use(appmw.RequirePermission(rbacSvc, rbac.PermTaskView))
+					}
 					notifR.Get("/", notifH.List)
 					notifR.Get("/stream", notifH.StreamNotifications)
 					notifR.Patch("/{id}/read", notifH.MarkRead)
@@ -385,7 +389,11 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 			}
 
 			if serviceConfigH != nil {
-				serviceConfigH.RegisterTenantRoutes(tenant)
+				var manageConfig func(http.Handler) http.Handler = func(h http.Handler) http.Handler { return h }
+				if rbacSvc != nil {
+					manageConfig = appmw.RequirePermission(rbacSvc, rbac.PermConfigManage)
+				}
+				serviceConfigH.RegisterTenantRoutes(tenant, manageConfig)
 			}
 
 			// Tenant-scoped backups (this tenant's data only) — config-manage gated.
@@ -492,9 +500,16 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 
 				tenant.Route("/fleet", func(fleetR chi.Router) {
 					// Read-only fleet access
-					fleetR.Get("/", lh.GetFleet)
-					fleetR.Get("/members", lh.ListMembers)
-					fleetR.Get("/members/{memberId}", lh.GetMember)
+					// Rider names, phones and KYC are for the fleet's managers, not every user.
+					fleetView := func(h http.HandlerFunc) http.Handler {
+						if rbacSvc == nil {
+							return h
+						}
+						return appmw.RequirePermission(rbacSvc, rbac.PermFleetView)(h)
+					}
+					fleetR.Method(http.MethodGet, "/", fleetView(lh.GetFleet))
+					fleetR.Method(http.MethodGet, "/members", fleetView(lh.ListMembers))
+					fleetR.Method(http.MethodGet, "/members/{memberId}", fleetView(lh.GetMember))
 
 					// Mutations: require fleet management permission + the rider_management
 					// subscription feature (cross-service tenants with only basic_logistics_access

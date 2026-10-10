@@ -31,6 +31,12 @@ type Repository interface {
 	GetUserRoles(ctx context.Context, tenantID uuid.UUID, userID uuid.UUID) ([]*LogisticsRole, error)
 	GetUserPermissions(ctx context.Context, tenantID uuid.UUID, userID uuid.UUID) ([]*LogisticsPermission, error)
 	ListUserAssignments(ctx context.Context, tenantID uuid.UUID, filters AssignmentFilters) ([]*UserRoleAssignment, error)
+
+	// PermissionCodes returns, in one query, the permission codes of the user's assigned roles
+	// plus the named system roles (mapped from SSO roles).
+	PermissionCodes(ctx context.Context, tenantID, userID uuid.UUID, systemRoles []string) ([]string, error)
+	// EnsureSystemRoles creates the tenant's system roles and resets their permission sets.
+	EnsureSystemRoles(ctx context.Context, tenantID uuid.UUID) error
 }
 
 // PermissionFilters for listing permissions.
