@@ -20,9 +20,9 @@
 - [ ] Subscription integration:
   - Query treasury/auth-service for plan entitlements: `GET /v1/{tenant}/subscription`
   - Extract: `max_tasks_per_month`, `max_km_per_month`, `features[]` (advanced_routing, marketplace, analytics)
-- [ ] Feature gating:
-  - Middleware: `RequireFeature(feature string)` → check subscription
-  - Block advanced features if plan doesn't include: return 403 with upgrade message
+- [x] Feature gating (status 2026-10-10): `RequireFeature` reads `subscription_features` from the token for `rider_management` (fleet writes), `live_tracking` (fleet map and WebSocket) and `route_optimisation` (matrix). Plan limits `routing_requests_per_month` and `live_tracking_requests_per_month` count per calendar month (shared-ratelimit v0.3.0 `NewMonthlyQuota`); the old `*_per_day` keys never matched the catalog, so caps were off until `b8daf3f`.
+  - Tiers (subscriptions-api `e1505d0`): tier 1 rider management, assignment, dispatch, delivery areas; tier 2 adds driver analytics and performance reports; tier 3 adds live tracking, route optimisation, API access. Prod re-seed pending approval.
+  - Open: logistics-ui pages still need the treasury-style `SubscriptionGate` on every gated page and badges on all gated sidebar items.
 - [ ] Usage API:
   - `GET /v1/{tenant}/usage/metrics` → current usage vs limits
   - `GET /v1/{tenant}/usage/overage` → overage charges (if applicable)
@@ -35,6 +35,8 @@
   - `CalculateFare(ctx, task, tariffProfile)` → uses `route_metrics.actual_distance_meters`, `actual_duration_seconds`
   - Apply surcharges: check `requested_pickup_at` for peak/overnight
   - Store in `tariff_applications` table
+- [x] Staff (salaried) riders, done 2026-10-10: `fleet_members.metadata.employment` = `freelance` (paid per delivery) or `staff` (erp-api payroll, no per-task pay unless `per_task_earnings`). Per diem and allowances are erp-api expense claims: on completion logistics calls `POST /hrm/claims/external` with the trip facts and keeps `metadata.per_diem_claim` on the task; rates, job group rates, minimum distance, tax and approval live in erp-api's `hrm.per_diem_policy`. Endpoints: `PUT /fleet/members/{id}/employment`, `POST /tasks/{id}/per-diem`, `POST /riders/me/tasks/{id}/per-diem`. See `docs/integrations.md`.
+  - Open: rider-app staff view (trips and claim status instead of earnings, claim with days); erp-ui per diem policy card.
 - [ ] Payout calculation:
   - `earnings_statements` table: `fleet_member_id`, `period_start`, `period_end`, `gross_amount`, `net_amount` (after deductions), `bonus_amount`, `deduction_amount`
   - Background job: aggregate completed tasks per driver per period
@@ -44,6 +46,8 @@
   - Treasury processes payout via MPesa B2C or bank transfer
 
 ### 8.3 Expense Export to Treasury
+
+Note 2026-10-10: staff rider per diem and allowances do not go through this path; they are erp-api claims (see 8.2). Fuel, toll and parking for staff drivers should follow the same erp-api claim route rather than a logistics expenses table.
 - [ ] Expense ingestion:
   - `POST /v1/{tenant}/expenses` → accepts expense from logistics (fuel, toll, parking, maintenance)
   - Required fields: `route_id`, `vehicle_id`, `driver_id`, `category`, `amount`, `currency`, `cost_center`, `project`, `receipt_url`
