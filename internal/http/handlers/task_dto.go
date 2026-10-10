@@ -16,51 +16,55 @@ import (
 // etc. was silently getting undefined -- including the in-app map and the "Open in
 // Google Maps" button.
 type TaskResponse struct {
-	ID                  string         `json:"id"`
-	TenantID            string         `json:"tenant_id"`
-	TenantSlug          string         `json:"tenant_slug"`
-	TrackingCode        string         `json:"tracking_code,omitempty"`
-	ExternalReference   string         `json:"external_reference"`
-	ExternalType        string         `json:"external_type"`
-	Status              string         `json:"status"`
-	Priority            string         `json:"priority"`
-	SLADueAt            *time.Time     `json:"sla_due_at"`
-	RequestedPickupAt   *time.Time     `json:"requested_pickup_at"`
-	RequestedDropoffAt  *time.Time     `json:"requested_dropoff_at"`
-	AssignedRiderID     *string        `json:"assigned_rider_id"`
-	PickupAddress       string         `json:"pickup_address"`
-	PickupLatitude      *float64       `json:"pickup_latitude"`
-	PickupLongitude     *float64       `json:"pickup_longitude"`
-	PickupNotes         string         `json:"pickup_notes"`
-	PickupContactName   string         `json:"pickup_contact_name"`
-	PickupContactPhone  string         `json:"pickup_contact_phone"`
-	DropoffAddress      string         `json:"dropoff_address"`
-	DropoffLatitude     *float64       `json:"dropoff_latitude"`
-	DropoffLongitude    *float64       `json:"dropoff_longitude"`
-	DropoffNotes        string         `json:"dropoff_notes"`
-	DropoffContactName  string         `json:"dropoff_contact_name"`
-	DropoffContactPhone string         `json:"dropoff_contact_phone"`
-	CustomerName        string         `json:"customer_name"`
-	CustomerPhone       string         `json:"customer_phone"`
-	Instructions        string         `json:"instructions"`
-	ItemsDescription    string         `json:"items_description"`
-	ItemCount           int            `json:"item_count"`
-	OrderNumber         string         `json:"order_number"`
-	PaymentMethod       string         `json:"payment_method"`
-	CashOnDelivery      float64        `json:"cash_on_delivery"`
-	DistanceKm          *float64       `json:"distance_km"`
-	EtaMinutes          *float64       `json:"eta_minutes"`
-	EtaAt               *time.Time     `json:"eta_at"`
-	AssignedAt          *time.Time     `json:"assigned_at"`
-	AcceptedAt          *time.Time     `json:"accepted_at"`
-	PickedUpAt          *time.Time     `json:"picked_up_at"`
-	CompletedAt         *time.Time     `json:"completed_at"`
-	CancelledAt         *time.Time     `json:"cancelled_at"`
-	CancellationReason  string         `json:"cancellation_reason"`
-	FailureReason       string         `json:"failure_reason"`
-	Metadata            map[string]any `json:"metadata"`
-	CreatedAt           time.Time      `json:"created_at"`
-	UpdatedAt           time.Time      `json:"updated_at"`
+	ID                  string     `json:"id"`
+	TenantID            string     `json:"tenant_id"`
+	TenantSlug          string     `json:"tenant_slug"`
+	TrackingCode        string     `json:"tracking_code,omitempty"`
+	ExternalReference   string     `json:"external_reference"`
+	ExternalType        string     `json:"external_type"`
+	Status              string     `json:"status"`
+	Priority            string     `json:"priority"`
+	SLADueAt            *time.Time `json:"sla_due_at"`
+	RequestedPickupAt   *time.Time `json:"requested_pickup_at"`
+	RequestedDropoffAt  *time.Time `json:"requested_dropoff_at"`
+	AssignedRiderID     *string    `json:"assigned_rider_id"`
+	PickupAddress       string     `json:"pickup_address"`
+	PickupLatitude      *float64   `json:"pickup_latitude"`
+	PickupLongitude     *float64   `json:"pickup_longitude"`
+	PickupNotes         string     `json:"pickup_notes"`
+	PickupContactName   string     `json:"pickup_contact_name"`
+	PickupContactPhone  string     `json:"pickup_contact_phone"`
+	DropoffAddress      string     `json:"dropoff_address"`
+	DropoffLatitude     *float64   `json:"dropoff_latitude"`
+	DropoffLongitude    *float64   `json:"dropoff_longitude"`
+	DropoffNotes        string     `json:"dropoff_notes"`
+	DropoffContactName  string     `json:"dropoff_contact_name"`
+	DropoffContactPhone string     `json:"dropoff_contact_phone"`
+	CustomerName        string     `json:"customer_name"`
+	CustomerPhone       string     `json:"customer_phone"`
+	Instructions        string     `json:"instructions"`
+	ItemsDescription    string     `json:"items_description"`
+	ItemCount           int        `json:"item_count"`
+	OrderNumber         string     `json:"order_number"`
+	PaymentMethod       string     `json:"payment_method"`
+	CashOnDelivery      float64    `json:"cash_on_delivery"`
+	DistanceKm          *float64   `json:"distance_km"`
+	// Delivery area the drop-off falls in (from the checkout quote or intake tagging).
+	ZoneID             string         `json:"zone_id,omitempty"`
+	ZoneName           string         `json:"zone_name,omitempty"`
+	DeliveryFee        float64        `json:"delivery_fee"`
+	EtaMinutes         *float64       `json:"eta_minutes"`
+	EtaAt              *time.Time     `json:"eta_at"`
+	AssignedAt         *time.Time     `json:"assigned_at"`
+	AcceptedAt         *time.Time     `json:"accepted_at"`
+	PickedUpAt         *time.Time     `json:"picked_up_at"`
+	CompletedAt        *time.Time     `json:"completed_at"`
+	CancelledAt        *time.Time     `json:"cancelled_at"`
+	CancellationReason string         `json:"cancellation_reason"`
+	FailureReason      string         `json:"failure_reason"`
+	Metadata           map[string]any `json:"metadata"`
+	CreatedAt          time.Time      `json:"created_at"`
+	UpdatedAt          time.Time      `json:"updated_at"`
 }
 
 // toTaskResponse maps an ent.Task (ideally with Steps and Assignments eager-loaded --
@@ -91,6 +95,14 @@ func toTaskResponse(t *ent.Task) *TaskResponse {
 		resp.OrderNumber, _ = t.Metadata["order_number"].(string)
 		resp.PaymentMethod, _ = t.Metadata["payment_method"].(string)
 		resp.ItemsDescription, _ = t.Metadata["items_description"].(string)
+		resp.ZoneID, _ = t.Metadata["zone_id"].(string)
+		resp.ZoneName, _ = t.Metadata["zone_name"].(string)
+		if v, ok := t.Metadata["delivery_fee"].(float64); ok {
+			resp.DeliveryFee = v
+		}
+		if v, ok := t.Metadata["distance_km"].(float64); ok && v > 0 {
+			resp.DistanceKm = &v
+		}
 		if n, ok := t.Metadata["item_count"].(float64); ok {
 			resp.ItemCount = int(n)
 		} else if n, ok := t.Metadata["item_count"].(int); ok {
