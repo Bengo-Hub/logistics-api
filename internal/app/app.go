@@ -181,6 +181,12 @@ func New(ctx context.Context) (*App, error) {
 	zoneSvc := zonesmod.NewService(entClient, log)
 	zoneSvc.SetCache(cacheAside)
 
+	// Periodic outlet pull from auth-api: events age out of JetStream, and pins set before
+	// events carried them were never sent. Runs ~30s after start, then daily, one pod at a time.
+	outletResync := tenant.NewOutletResync(entClient, cfg.Auth.ServiceURL, redisClient, log)
+	outletResync.OnChange(zoneSvc.Invalidate)
+	outletResync.Start(ctx, 24*time.Hour)
+
 	// Subscribe to auth-service events for identity sync and outlet sync
 	if natsConn != nil {
 		identityEventHandler := identity.NewEventHandler(identitySvc, log)

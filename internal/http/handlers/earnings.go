@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
@@ -15,7 +16,6 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/billingevent"
 	"github.com/bengobox/logistics-service/internal/ent/earningsstatement"
 	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
-	"github.com/bengobox/logistics-service/internal/ent/pricingrule"
 	"github.com/bengobox/logistics-service/internal/modules/earnings"
 )
 
@@ -218,9 +218,7 @@ func (h *EarningsHandler) ListPricingRules(w http.ResponseWriter, r *http.Reques
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	rules, err := h.client.PricingRule.Query().
-		Where(pricingrule.TenantID(tenantID)).
-		All(r.Context())
+	rules, err := h.earningsSvc.ListRules(r.Context(), tenantID)
 	if err != nil {
 		h.log.Error("list pricing rules", zap.Error(err))
 		http.Error(w, "internal error", http.StatusInternalServerError)
@@ -237,33 +235,14 @@ func (h *EarningsHandler) CreatePricingRule(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	var req createPricingRuleRequest
+	var req earnings.RuleInput
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
-
-	c := h.client.PricingRule.Create().
-		SetTenantID(tenantID).
-		SetName(req.Name).
-		SetRuleType(pricingrule.RuleType(req.RuleType)).
-		SetBaseFee(req.BaseFee).
-		SetIsActive(req.IsActive).
-		SetPriority(req.Priority)
-	if req.PerKmRate != nil {
-		c = c.SetPerKmRate(*req.PerKmRate)
-	}
-	if req.SurgeMultiplier != nil {
-		c = c.SetSurgeMultiplier(*req.SurgeMultiplier)
-	}
-	if len(req.DistanceTiers) > 0 {
-		c = c.SetDistanceTiers(req.DistanceTiers)
-	}
-
-	rule, err := c.Save(r.Context())
+	rule, err := h.earningsSvc.CreateRule(r.Context(), tenantID, req)
 	if err != nil {
-		h.log.Error("create pricing rule", zap.Error(err))
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		respondJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
 	respondJSON(w, http.StatusCreated, rule)
@@ -282,51 +261,18 @@ func (h *EarningsHandler) UpdatePricingRule(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	var req updatePricingRuleRequest
+	var req earnings.RulePatch
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
-
-	// Verify rule belongs to this tenant
-	if _, err := h.client.PricingRule.Query().
-		Where(pricingrule.ID(ruleID), pricingrule.TenantID(tenantID)).
-		Only(r.Context()); err != nil {
-		if ent.IsNotFound(err) {
+	rule, err := h.earningsSvc.UpdateRule(r.Context(), tenantID, ruleID, req)
+	if err != nil {
+		if errors.Is(err, earnings.ErrRuleNotFound) {
 			http.Error(w, "not found", http.StatusNotFound)
 			return
 		}
-		http.Error(w, "internal error", http.StatusInternalServerError)
-		return
-	}
-
-	upd := h.client.PricingRule.UpdateOneID(ruleID)
-	if req.Name != nil {
-		upd = upd.SetName(*req.Name)
-	}
-	if req.BaseFee != nil {
-		upd = upd.SetBaseFee(*req.BaseFee)
-	}
-	if req.PerKmRate != nil {
-		upd = upd.SetPerKmRate(*req.PerKmRate)
-	}
-	if req.SurgeMultiplier != nil {
-		upd = upd.SetSurgeMultiplier(*req.SurgeMultiplier)
-	}
-	if req.IsActive != nil {
-		upd = upd.SetIsActive(*req.IsActive)
-	}
-	if req.Priority != nil {
-		upd = upd.SetPriority(*req.Priority)
-	}
-	if req.DistanceTiers != nil {
-		upd = upd.SetDistanceTiers(req.DistanceTiers)
-	}
-
-	rule, err := upd.Save(r.Context())
-	if err != nil {
-		h.log.Error("update pricing rule", zap.Error(err))
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		respondJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
 	respondJSON(w, http.StatusOK, rule)
@@ -345,20 +291,11 @@ func (h *EarningsHandler) DeletePricingRule(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Verify rule belongs to this tenant before deleting
-	if _, err := h.client.PricingRule.Query().
-		Where(pricingrule.ID(ruleID), pricingrule.TenantID(tenantID)).
-		Only(r.Context()); err != nil {
-		if ent.IsNotFound(err) {
+	if err := h.earningsSvc.DeleteRule(r.Context(), tenantID, ruleID); err != nil {
+		if errors.Is(err, earnings.ErrRuleNotFound) {
 			http.Error(w, "not found", http.StatusNotFound)
 			return
 		}
-		h.log.Error("verify pricing rule", zap.Error(err))
-		http.Error(w, "internal error", http.StatusInternalServerError)
-		return
-	}
-
-	if err := h.client.PricingRule.DeleteOneID(ruleID).Exec(r.Context()); err != nil {
 		h.log.Error("delete pricing rule", zap.Error(err))
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
@@ -537,25 +474,4 @@ func (h *EarningsHandler) ListMyBillingEvents(w http.ResponseWriter, r *http.Req
 	}
 
 	respondJSON(w, http.StatusOK, events)
-}
-
-type createPricingRuleRequest struct {
-	Name            string                   `json:"name"`
-	RuleType        string                   `json:"rule_type"`
-	BaseFee         float64                  `json:"base_fee"`
-	PerKmRate       *float64                 `json:"per_km_rate,omitempty"`
-	SurgeMultiplier *float64                 `json:"surge_multiplier,omitempty"`
-	IsActive        bool                     `json:"is_active"`
-	Priority        int                      `json:"priority"`
-	DistanceTiers   []map[string]interface{} `json:"distance_tiers,omitempty"`
-}
-
-type updatePricingRuleRequest struct {
-	Name            *string                  `json:"name,omitempty"`
-	BaseFee         *float64                 `json:"base_fee,omitempty"`
-	PerKmRate       *float64                 `json:"per_km_rate,omitempty"`
-	SurgeMultiplier *float64                 `json:"surge_multiplier,omitempty"`
-	IsActive        *bool                    `json:"is_active,omitempty"`
-	Priority        *int                     `json:"priority,omitempty"`
-	DistanceTiers   []map[string]interface{} `json:"distance_tiers,omitempty"`
 }
