@@ -19,6 +19,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/proofofdelivery"
 	"github.com/bengobox/logistics-service/internal/modules/dispatch"
 	"github.com/bengobox/logistics-service/internal/modules/fleet"
+	"github.com/bengobox/logistics-service/internal/modules/perdiem"
 	"github.com/bengobox/logistics-service/internal/modules/tasks"
 	"github.com/bengobox/logistics-service/internal/platform/subscriptions"
 )
@@ -36,6 +37,7 @@ type LogisticsHandler struct {
 	dispatcher TaskDispatcher
 	perms      permissionChecker
 	tracker    *dispatch.AutoDispatcher
+	perDiem    *perdiem.Service
 }
 
 // NewLogisticsHandler creates a new logistics handler.

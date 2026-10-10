@@ -23,6 +23,7 @@ type Config struct {
 	Subscriptions SubscriptionsConfig
 	Routing       RoutingConfig
 	Treasury      TreasuryConfig
+	ERP           ERPConfig
 	Backup        BackupConfig
 }
 
@@ -40,6 +41,14 @@ type TreasuryConfig struct {
 	ServiceURL         string        `envconfig:"TREASURY_SERVICE_URL" default:"http://treasury-api.treasury.svc.cluster.local:4000"`
 	InternalServiceKey string        `envconfig:"INTERNAL_SERVICE_KEY"`
 	RequestTimeout     time.Duration `envconfig:"TREASURY_REQUEST_TIMEOUT" default:"30s"`
+}
+
+// ERPConfig holds the erp-api S2S client config. erp-api owns HR and payroll; logistics only
+// raises per diem claims for staff riders there.
+type ERPConfig struct {
+	ServiceURL     string        `envconfig:"ERP_SERVICE_URL" default:"http://erp-api.erp.svc.cluster.local"`
+	APIKey         string        `envconfig:"INTERNAL_SERVICE_KEY"`
+	RequestTimeout time.Duration `envconfig:"ERP_REQUEST_TIMEOUT" default:"10s"`
 }
 
 // RoutingConfig holds configuration for the routing engine (Valhalla/OSRM).

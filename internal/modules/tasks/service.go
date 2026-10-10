@@ -297,6 +297,7 @@ type Service struct {
 	log            *zap.Logger
 	publisher      *events.Publisher
 	earningsSvc    EarningsRecorder
+	perDiem        PerDiemRaiser
 	etaTrigger     ETATrigger
 	sseBroadcaster StatusBroadcaster
 	notifSvc       *notifmod.Service
@@ -356,6 +357,12 @@ func NewService(client *ent.Client, log *zap.Logger) *Service {
 func (s *Service) Client() *ent.Client {
 	return s.client
 }
+
+// PerDiemRaiser raises a staff rider's per diem claim for a completed task in erp-api.
+type PerDiemRaiser func(ctx context.Context, tenantID, taskID, memberID uuid.UUID)
+
+// SetPerDiemRaiser wires per diem claims for staff riders. Optional.
+func (s *Service) SetPerDiemRaiser(f PerDiemRaiser) { s.perDiem = f }
 
 // SetEarningsService sets the earnings service for recording delivery earnings.
 func (s *Service) SetEarningsService(svc EarningsRecorder) {
@@ -1017,8 +1024,15 @@ func (s *Service) SubmitPoD(ctx context.Context, tenantID, taskID uuid.UUID, req
 			earnCtx := context.Background()
 			// Staff riders are salaried on erp-api payroll: no per-task earning unless the
 			// member's employment terms say otherwise.
-			if m, merr := s.client.FleetMember.Get(earnCtx, earnMemberID); merr == nil && !fleetmod.EmploymentOf(m).EarnsPerTask() {
-				return
+			if m, merr := s.client.FleetMember.Get(earnCtx, earnMemberID); merr == nil {
+				emp := fleetmod.EmploymentOf(m)
+				if emp.IsStaff() && s.perDiem != nil {
+					// erp-api decides whether the trip earns per diem (distance, policy).
+					s.perDiem(earnCtx, tenantID, taskID, earnMemberID)
+				}
+				if !emp.EarnsPerTask() {
+					return
+				}
 			}
 			if deliveryFee > 0 {
 				if earnErr := s.earningsSvc.RecordEarningWithAmount(earnCtx, tenantID, taskID, earnMemberID, deliveryFee); earnErr != nil {

@@ -30,6 +30,16 @@ Logistics-api owns **fleets, riders (fleet members), vehicles, tasks, routes, pr
 
 Ordering no longer prices deliveries itself. At checkout it calls `POST /api/v1/s2s/zones/{tenant}/quote` with the drop-off pin and outlet, charges the returned fee, and sends `delivery_zone_id`, `delivery_zone_name` and `distance_km` in `ordering.order.ready`. Customer UIs use the public coverage, quote and geocode endpoints. Full contract in `docs/delivery-zones.md`.
 
+### POS till deliveries (added 2026-10-10)
+
+pos-api prices a till delivery the same way. The terminal's delivery panel lists the tenant's areas (`GET /s2s/zones/{tenant}/coverage` through pos-api's `/pos/delivery-areas`), shows the fee from `/pos/delivery-quote`, and on save pos-api re-quotes the pin and charges the fee as `charges.shipping` (snapshot in `metadata.delivery_quote`). pos-api keeps no fee tables.
+
+## Outbound: ERP-API (staff riders, added 2026-10-10)
+
+Riders are either `freelance` (paid per delivery from pricing rules) or `staff` (employees on erp-api payroll), stored in `fleet_members.metadata.employment` and set from the add-rider form or `PUT /{tenant}/fleet/members/{id}/employment`. Staff riders earn nothing per task unless `per_task_earnings` is set.
+
+Salary and per diem belong to erp-api. When a staff rider completes a task, logistics calls `POST {ERP_SERVICE_URL}/api/v1/hrm/claims/external` (X-API-Key + X-Tenant-ID) with the rider's auth user id, trip distance, start and end, and `source_key = logistics:task:<id>:per_diem`. erp-api applies its `hrm.per_diem_policy` (daily rate, job group rates, minimum distance, max days), creates a normal expense claim for HR approval and payroll, or answers 422 (`not_an_employee`, `per_diem_disabled`, `not_eligible`). The outcome is kept on the task as `metadata.per_diem_claim`. Admins (`POST /{tenant}/tasks/{id}/per-diem`) and the rider (`POST /{tenant}/riders/me/tasks/{id}/per-diem`) can raise it again, with the number of days for a multi-day trip; erp-api returns the existing claim for the same task.
+
 ## Inbound: Auth-Service
 
 - **JWT validation**: All protected routes require a valid Bearer token from auth-service (JWKS).
@@ -94,6 +104,8 @@ The `GET /{tenant}/auth/me` response now includes:
   "use_case": "courier"
 }
 ```
+
+`permissions` lists every logistics permission for tenant `admin`/`superuser` tokens and platform owners (the same rule `RequirePermission` applies), so tenant admins need no logistics role row. Role grants under `/{tenant}/rbac/assignments` require `logistics.config.manage`.
 
 **Resolution order:**
 1. Explicit `ServiceConfig` override (`key = "logistics.enabled_modules"`, stored as JSON array)
@@ -164,14 +176,14 @@ Returns: status, status_history timeline, rider info, pickup/dropoff locations, 
 
 ### Rate Limiting (per tenant subscription plan)
 
-| Feature | Starter | Growth | Professional |
-|---------|---------|--------|--------------|
-| `routing_requests_per_day` | 100 | 1,000 | 10,000 |
-| `live_tracking_requests_per_day` | 500 | 5,000 | Unlimited |
-| `live_tracking_duration_minutes` | 30 | 120 | Unlimited |
-| `map_loads_per_day` | 200 | 2,000 | Unlimited |
+Limits come from the token (`subscription_limits`) and count per calendar month (shared-ratelimit `NewMonthlyQuota`). The keys match the subscriptions catalog:
 
-When a limit is reached, the API returns `HTTP 429 Too Many Requests` with `X-RateLimit-*` headers and an upgrade URL.
+| Limit | Tier 1 | Tier 2 | Tier 3 |
+|---------|---------|--------|--------------|
+| `routing_requests_per_month` | 100 | 500 | Unlimited |
+| `live_tracking_requests_per_month` | none (feature is tier 3) | none (feature is tier 3) | Unlimited |
+
+Live GPS tracking (`live_tracking`: fleet map, WebSocket streams) and route optimisation are tier 3 features. When a limit is reached the API returns `HTTP 429` with `X-RateLimit-*` headers, `Retry-After` until the month resets, and an upgrade URL.
 
 ### Frontend Integration (@bengo-hub/maps)
 
