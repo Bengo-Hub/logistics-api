@@ -28,7 +28,8 @@
   - `GET /v1/{tenant}/usage/overage` → overage charges (if applicable)
 
 ### 8.2 Tariffs & Payouts
-- [ ] Tariff profiles (`tariff_profiles` table, see ERD):
+- [x] Customer delivery tariffs, done 2026-10-10 without a separate table: area fees on zones plus the per-tenant `logistics.delivery_quote_policy` (per-km, minimum, rounding, geofence buffer); one quote rule for every service (`docs/delivery-zones.md`). Rider pay uses the order's delivery fee, else the rider pricing rules, else the same policy by real trip distance.
+- [ ] Tariff profiles with per-minute and time-of-day surcharges (remaining scope; `tariff_profiles` table, see ERD):
   - `name`, `base_fare`, `per_km_rate`, `per_minute_rate`, `surcharge_json` (peak_time/overnight), `is_active`
 - [ ] Fare calculation:
   - `CalculateFare(ctx, task, tariffProfile)` → uses `route_metrics.actual_distance_meters`, `actual_duration_seconds`
