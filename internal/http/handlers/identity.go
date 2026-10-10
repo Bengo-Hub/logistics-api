@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	authclient "github.com/Bengo-Hub/shared-auth-client"
+	"github.com/bengobox/logistics-service/internal/modules/fleet"
 	"github.com/bengobox/logistics-service/internal/modules/identity"
 	"github.com/bengobox/logistics-service/internal/modules/rbac"
 	"github.com/google/uuid"
@@ -116,6 +117,8 @@ func (h *IdentityHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 	if len(u.Edges.FleetMemberships) > 0 {
 		fm := u.Edges.FleetMemberships[0]
 		resp["status"] = fm.Status
+		// freelance riders go through KYC; staff riders (HR-vetted employees) do not.
+		resp["employment"] = fleet.EmploymentOf(fm).Type
 		resp["rider"] = signFleetMemberMedia(fm)
 		if fm.Edges.Vehicle != nil {
 			resp["vehicle"] = fm.Edges.Vehicle
@@ -162,6 +165,8 @@ func (h *IdentityHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) 
 	if len(u.Edges.FleetMemberships) > 0 {
 		fm := u.Edges.FleetMemberships[0]
 		resp["status"] = fm.Status
+		// freelance riders go through KYC; staff riders (HR-vetted employees) do not.
+		resp["employment"] = fleet.EmploymentOf(fm).Type
 		resp["rider"] = signFleetMemberMedia(fm)
 		if fm.Edges.Vehicle != nil {
 			resp["vehicle"] = fm.Edges.Vehicle

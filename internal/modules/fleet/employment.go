@@ -14,9 +14,10 @@ import (
 // MetaEmployment is the fleet member metadata key holding the rider's employment terms.
 const MetaEmployment = "employment"
 
-// Employment types. Freelance riders are paid per delivery. Staff riders are employees on
-// erp-api payroll: they earn nothing per delivery here unless overridden, and their per diem
-// and allowances are erp-api expense claims (logistics only reports the trip).
+// Employment types. Freelance riders are paid per delivery and go through KYC review. Staff
+// riders are employees on erp-api payroll whom HR has already vetted: no KYC documents, they
+// earn nothing per delivery here unless overridden, and their per diem and allowances are
+// erp-api expense claims (logistics only reports the trip).
 const (
 	EmploymentFreelance = "freelance"
 	EmploymentStaff     = "staff"
@@ -100,5 +101,23 @@ func (s *Service) SetEmployment(ctx context.Context, tenantID, memberID uuid.UUI
 		meta[k] = v
 	}
 	meta[MetaEmployment] = emp.ToMap()
-	return m.Update().SetMetadata(meta).Save(ctx)
+	upd := m.Update().SetMetadata(meta)
+	// Staff riders need no KYC review: a rider still waiting on it is activated.
+	activate := emp.IsStaff() && NeedsKYC(m.Status)
+	if activate {
+		upd.SetStatus("active")
+	}
+	saved, err := upd.Save(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if activate {
+		s.ensureDriverRole(ctx, tenantID, m.UserID)
+	}
+	return saved, nil
+}
+
+// NeedsKYC reports whether a member status is still waiting on KYC documents or review.
+func NeedsKYC(status string) bool {
+	return status == "pending" || status == "pending_review"
 }

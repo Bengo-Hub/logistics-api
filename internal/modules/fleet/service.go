@@ -266,17 +266,26 @@ func (s *Service) InviteMember(ctx context.Context, tenantID uuid.UUID, tenantSl
 	if req.LicenseNo != "" {
 		builder.SetLicenseNo(req.LicenseNo)
 	}
+	staff := false
 	if req.Employment != nil {
 		emp, err := req.Employment.Normalize()
 		if err != nil {
 			return nil, err
 		}
 		builder.SetMetadata(map[string]any{MetaEmployment: emp.ToMap()})
+		// Staff riders are employees HR has already vetted: no KYC review, they start active.
+		if emp.IsStaff() {
+			staff = true
+			builder.SetStatus("active")
+		}
 	}
 
 	m, err := builder.Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("fleet: invite member: %w", err)
+	}
+	if staff {
+		s.ensureDriverRole(ctx, tenantID, req.UserID)
 	}
 
 	s.log.Info("fleet member invited",
