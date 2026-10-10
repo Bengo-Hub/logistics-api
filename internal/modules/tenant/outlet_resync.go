@@ -3,7 +3,6 @@ package tenant
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -12,7 +11,6 @@ import (
 
 	sharedcache "github.com/Bengo-Hub/cache"
 	"github.com/google/uuid"
-	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
 	"github.com/bengobox/logistics-service/internal/ent"
@@ -26,13 +24,13 @@ type OutletResync struct {
 	client   *ent.Client
 	authURL  string
 	http     *http.Client
-	locker   redis.UniversalClient
 	onChange func(ctx context.Context, tenantID uuid.UUID)
 	log      *zap.Logger
 }
 
-// NewOutletResync builds the resync. locker may be nil (every pod then runs it).
-func NewOutletResync(client *ent.Client, authURL string, locker redis.UniversalClient, log *zap.Logger) *OutletResync {
+// NewOutletResync builds the resync. Fleet-wide coordination uses the shared lease client
+// (sharedcache.SetLeaseClient, set at startup).
+func NewOutletResync(client *ent.Client, authURL string, log *zap.Logger) *OutletResync {
 	if envURL := os.Getenv("AUTH_API_URL"); envURL != "" {
 		authURL = envURL
 	}
@@ -40,7 +38,6 @@ func NewOutletResync(client *ent.Client, authURL string, locker redis.UniversalC
 		client:  client,
 		authURL: strings.TrimRight(authURL, "/"),
 		http:    &http.Client{Timeout: 15 * time.Second},
-		locker:  locker,
 		log:     log.Named("tenant.outlet_resync"),
 	}
 }
@@ -126,25 +123,12 @@ func (r *OutletResync) SyncAll(ctx context.Context) {
 	r.log.Info("outlet resync done", zap.Int("tenants", len(tenants)), zap.Int("outlets_written", total))
 }
 
-// Start runs SyncAll shortly after startup and then every interval. A cluster-wide
-// lease means one pod does the work per round.
+// Start checks shortly after startup and then every interval; sharedcache.ClaimPeriod
+// makes one replica fleet-wide run SyncAll per period (period = interval).
 func (r *OutletResync) Start(ctx context.Context, interval time.Duration) {
 	run := func() {
-		if r.locker != nil {
-			lock, ok, err := sharedcache.TryLock(ctx, r.locker, "logistics:outlet-resync", 10*time.Minute)
-			switch {
-			case err != nil && !errors.Is(err, sharedcache.ErrLockUnavailable):
-				return
-			case err == nil && !ok:
-				return // another pod is on it
-			case err == nil:
-				defer func() {
-					rctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 2*time.Second)
-					defer cancel()
-					_ = lock.Release(rctx)
-				}()
-			}
-			// Redis unavailable: run unlocked; the upserts are idempotent.
+		if !sharedcache.ClaimPeriod(ctx, "logistics:outlet-resync", interval) {
+			return
 		}
 		rctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 		defer cancel()

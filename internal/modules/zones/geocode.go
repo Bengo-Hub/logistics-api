@@ -11,6 +11,7 @@ import (
 	"time"
 
 	sharedcache "github.com/Bengo-Hub/cache"
+	ratelimit "github.com/Bengo-Hub/shared-ratelimit"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
@@ -37,6 +38,7 @@ type Geocoder struct {
 	http      *http.Client
 	zones     areaSource
 	cache     *sharedcache.Aside
+	limiter   *ratelimit.Limiter
 	log       *zap.Logger
 }
 
@@ -46,7 +48,8 @@ type areaSource interface {
 	NearestArea(ctx context.Context, tenantID uuid.UUID, p geo.Point) (*ZoneRef, float64, error)
 }
 
-// NewGeocoder builds the proxy. cache may be nil (no caching, no cross-pod throttle).
+// NewGeocoder builds the proxy. cache may be nil (no caching); set the shared limiter with
+// SetLimiter for the fleet-wide outbound throttle.
 func NewGeocoder(baseURL, userAgent string, zones areaSource, cache *sharedcache.Aside, log *zap.Logger) *Geocoder {
 	return &Geocoder{
 		baseURL:   strings.TrimRight(baseURL, "/"),
@@ -219,25 +222,33 @@ func (g *Geocoder) get(ctx context.Context, path string, params url.Values, dst 
 	return json.NewDecoder(resp.Body).Decode(dst)
 }
 
-// waitSlot takes the shared one-request-per-second slot, waiting up to 3 seconds.
+// geocoderRate is the public Nominatim policy: at most one request per second, fleet-wide.
+var geocoderRate = ratelimit.Options{Name: "geocoder", Limit: 1, Window: time.Second, Burst: 1}
+
+// SetLimiter enables the fleet-wide outbound throttle (shared rate limiter).
+func (g *Geocoder) SetLimiter(l *ratelimit.Limiter) { g.limiter = l }
+
+// waitSlot takes the next outbound slot from the shared limiter, waiting up to 3 seconds.
 func (g *Geocoder) waitSlot(ctx context.Context) error {
-	if g.cache == nil || g.cache.Client() == nil {
+	if g.limiter == nil {
 		return nil
 	}
-	rdb := g.cache.Client()
 	deadline := time.Now().Add(3 * time.Second)
 	for {
-		ok, err := rdb.SetNX(ctx, "log:geocode:slot", 1, time.Second).Result()
-		if err != nil || ok {
-			return nil // fail open on Redis errors; the cache still protects the geocoder
+		ok, retryAfter := g.limiter.Allow(ctx, "nominatim", geocoderRate, 1)
+		if ok {
+			return nil
 		}
-		if time.Now().After(deadline) {
+		if retryAfter <= 0 {
+			retryAfter = 250 * time.Millisecond
+		}
+		if time.Now().Add(retryAfter).After(deadline) {
 			return fmt.Errorf("geocoder busy")
 		}
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case <-time.After(250 * time.Millisecond):
+		case <-time.After(retryAfter):
 		}
 	}
 }
