@@ -48,8 +48,8 @@ type preset struct {
 	Areas  []area
 }
 
-// busiaOutlet is the Urban Loft Cafe Busia pin (auth outlet 458b9299-...).
-var busiaOutlet = geo.Point{Lat: 0.4545662, Lng: 34.1272854}
+// busiaTownCentre is Busia town centre as Google Maps gives it (00°27'48"N, 34°06'19"E).
+var busiaTownCentre = geo.Point{Lat: 0.463333, Lng: 34.105278}
 
 // presets holds tenant defaults. Coordinates come from OpenStreetMap; areas OSM could not
 // place reliably are seeded as drafts (not quoted) until an admin pins them in logistics-ui.
@@ -64,7 +64,7 @@ var presets = map[string]preset{
 			return p
 		}(),
 		Areas: []area{
-			{Name: "Busia Town", Center: busiaOutlet, RadiusM: 3000, Free: true, Priority: 10, Aliases: []string{"Busia", "Busia Township"}, Notes: "Free delivery within Busia town coverage"},
+			{Name: "Busia Town", Center: busiaTownCentre, RadiusM: 3000, Free: true, Priority: 10, Aliases: []string{"Busia", "Busia Township"}, Notes: "Free delivery within 3 km of Busia town centre (Google Maps centre, 0.463333, 34.105278)."},
 			{Name: "Bulanda", Center: geo.Point{Lat: 0.452626, Lng: 34.10268}, RadiusM: 1000, Fee: 150, Priority: 20},
 			{Name: "Bugengi", Center: geo.Point{Lat: 0.44899, Lng: 34.17005}, RadiusM: 1500, Fee: 150, Priority: 20, Aliases: []string{"Bugeng'i"}, Notes: "Pinned from Google Maps (Bugeng'i sub-location, east of Busia town)."},
 			{Name: "Kemodo", Center: geo.Point{Lat: 0.468094, Lng: 34.18558}, RadiusM: 1500, Fee: 200, Priority: 20, Aliases: []string{"Kemodo Market"}},
