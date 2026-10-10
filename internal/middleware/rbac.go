@@ -14,6 +14,11 @@ type PermissionChecker interface {
 	HasPermission(ctx context.Context, tenantID uuid.UUID, userID uuid.UUID, permissionCode string) (bool, error)
 }
 
+// IsTenantAdmin reports whether the token carries the tenant admin or superuser role.
+func IsTenantAdmin(claims *authclient.Claims) bool {
+	return claims != nil && (claims.IsSuperuser() || claims.IsAdmin())
+}
+
 // RequirePermission returns a middleware that rejects requests where the authenticated
 // user does not hold the given permission in their tenant.
 // Platform owners bypass the check.
@@ -31,6 +36,13 @@ func RequirePermission(svc PermissionChecker, permissionCode string) func(http.H
 			claims, ok := authclient.ClaimsFromContext(ctx)
 			if !ok || claims.Subject == "" {
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+
+			// Tenant admins hold every logistics permission in their own tenant. Auth issues
+			// the admin/superuser role per tenant, so no logistics role assignment is needed.
+			if IsTenantAdmin(claims) {
+				next.ServeHTTP(w, r)
 				return
 			}
 

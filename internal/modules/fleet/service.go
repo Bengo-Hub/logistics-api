@@ -1,6 +1,7 @@
 package fleet
 
 import (
+	"strings"
 	"context"
 	"fmt"
 	"time"
@@ -20,10 +21,11 @@ import (
 
 // InviteMemberRequest is the DTO for adding a rider to a fleet.
 type InviteMemberRequest struct {
-	UserID    uuid.UUID `json:"user_id"`
-	FleetID   uuid.UUID `json:"fleet_id,omitempty"`
-	IDNumber  string    `json:"id_number,omitempty"`
-	LicenseNo string    `json:"license_no,omitempty"`
+	UserID     uuid.UUID   `json:"user_id"`
+	FleetID    uuid.UUID   `json:"fleet_id,omitempty"`
+	IDNumber   string      `json:"id_number,omitempty"`
+	LicenseNo  string      `json:"license_no,omitempty"`
+	Employment *Employment `json:"employment,omitempty"`
 }
 
 // Service handles fleet and fleet member business logic.
@@ -155,8 +157,18 @@ func (s *Service) GetMember(ctx context.Context, tenantID, memberID uuid.UUID) (
 
 // InviteByEmailRequest is the simplified DTO for inviting a rider by email.
 type InviteByEmailRequest struct {
-	Email    string `json:"email"`
-	IDNumber string `json:"id_number,omitempty"`
+	Email      string      `json:"email"`
+	IDNumber   string      `json:"id_number,omitempty"`
+	FirstName  string      `json:"first_name,omitempty"`
+	LastName   string      `json:"last_name,omitempty"`
+	Phone      string      `json:"phone,omitempty"`
+	LicenseNo  string      `json:"license_no,omitempty"`
+	Employment *Employment `json:"employment,omitempty"`
+}
+
+// fullName joins the invite's first and last name, or returns "" when neither is set.
+func (r InviteByEmailRequest) fullName() string {
+	return strings.TrimSpace(strings.TrimSpace(r.FirstName) + " " + strings.TrimSpace(r.LastName))
 }
 
 // InviteMemberByEmail invites a rider using just email and ID number.
@@ -170,18 +182,41 @@ func (s *Service) InviteMemberByEmail(ctx context.Context, tenantID uuid.UUID, t
 		return nil, fmt.Errorf("fleet: query user by email: %w", err)
 	}
 
+	name := req.fullName()
 	var userID uuid.UUID
 	if existing != nil {
 		userID = existing.ID
+		// Fill in the name and phone the admin typed when the profile has none yet
+		// (stub users carry their email as the name until they register).
+		upd := existing.Update()
+		changed := false
+		if name != "" && (existing.FullName == "" || existing.FullName == existing.Email) {
+			upd.SetFullName(name)
+			changed = true
+		}
+		if req.Phone != "" && existing.Phone == "" {
+			upd.SetPhone(req.Phone)
+			changed = true
+		}
+		if changed {
+			if err := upd.Exec(ctx); err != nil {
+				return nil, fmt.Errorf("fleet: update invited user: %w", err)
+			}
+		}
 	} else {
-		// Create a stub user with "invited" status
-		stub, createErr := s.client.User.Create().
+		if name == "" {
+			name = req.Email // placeholder until SSO registration
+		}
+		create := s.client.User.Create().
 			SetTenantID(tenantID).
 			SetEmail(req.Email).
-			SetFullName(req.Email). // Placeholder until SSO registration
+			SetFullName(name).
 			SetStatus("invited").
-			SetSyncStatus("pending").
-			Save(ctx)
+			SetSyncStatus("pending")
+		if req.Phone != "" {
+			create.SetPhone(req.Phone)
+		}
+		stub, createErr := create.Save(ctx)
 		if createErr != nil {
 			return nil, fmt.Errorf("fleet: create stub user: %w", createErr)
 		}
@@ -193,8 +228,10 @@ func (s *Service) InviteMemberByEmail(ctx context.Context, tenantID uuid.UUID, t
 	}
 
 	return s.InviteMember(ctx, tenantID, tenantSlug, InviteMemberRequest{
-		UserID:   userID,
-		IDNumber: req.IDNumber,
+		UserID:     userID,
+		IDNumber:   req.IDNumber,
+		LicenseNo:  req.LicenseNo,
+		Employment: req.Employment,
 	})
 }
 
@@ -228,6 +265,13 @@ func (s *Service) InviteMember(ctx context.Context, tenantID uuid.UUID, tenantSl
 	}
 	if req.LicenseNo != "" {
 		builder.SetLicenseNo(req.LicenseNo)
+	}
+	if req.Employment != nil {
+		emp, err := req.Employment.Normalize()
+		if err != nil {
+			return nil, err
+		}
+		builder.SetMetadata(map[string]any{MetaEmployment: emp.ToMap()})
 	}
 
 	m, err := builder.Save(ctx)

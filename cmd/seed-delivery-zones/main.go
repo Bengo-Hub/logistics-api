@@ -13,6 +13,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"entgo.io/ent/dialect"
@@ -52,6 +53,8 @@ var busiaOutlet = geo.Point{Lat: 0.4545662, Lng: 34.1272854}
 
 // presets holds tenant defaults. Coordinates come from OpenStreetMap; areas OSM could not
 // place reliably are seeded as drafts (not quoted) until an admin pins them in logistics-ui.
+// Pins verified 2026-10-10 against OpenStreetMap, GeoNames and Google Maps: Bugengi and
+// Redcross come from Google Maps, Malaba from GeoNames, the rest from OpenStreetMap.
 var presets = map[string]preset{
 	"urban-loft": {
 		Policy: func() zones.Policy {
@@ -62,19 +65,19 @@ var presets = map[string]preset{
 		Areas: []area{
 			{Name: "Busia Town", Center: busiaOutlet, RadiusM: 3000, Free: true, Priority: 10, Aliases: []string{"Busia", "Busia Township"}, Notes: "Free delivery within Busia town coverage"},
 			{Name: "Bulanda", Center: geo.Point{Lat: 0.452626, Lng: 34.10268}, RadiusM: 1000, Fee: 150, Priority: 20},
-			{Name: "Bugengi", Center: busiaOutlet, RadiusM: 1500, Fee: 150, Priority: 20, Status: zones.StatusDraft, Notes: "Location not found on OpenStreetMap. Set the centre on the map, then activate."},
+			{Name: "Bugengi", Center: geo.Point{Lat: 0.44899, Lng: 34.17005}, RadiusM: 1500, Fee: 150, Priority: 20, Aliases: []string{"Bugeng'i"}, Notes: "Pinned from Google Maps (Bugeng'i sub-location, east of Busia town)."},
 			{Name: "Kemodo", Center: geo.Point{Lat: 0.468094, Lng: 34.18558}, RadiusM: 1500, Fee: 200, Priority: 20, Aliases: []string{"Kemodo Market"}},
-			{Name: "Ochude", Center: busiaOutlet, RadiusM: 1500, Fee: 100, Priority: 20, Status: zones.StatusDraft, Notes: "OpenStreetMap only has an Ochude in Amukura East (0.565357, 34.34027), which does not fit a KES 100 fee. Set the centre on the map, then activate."},
+			{Name: "Ochude", Center: geo.Point{Lat: 0.565358, Lng: 34.34028}, RadiusM: 1500, Fee: 100, Priority: 20, Notes: "Ochude village, Amukura East (OpenStreetMap; the Amukura school zone lists Ochude). About 25 km out: confirm the KES 100 fee."},
 			{Name: "Mauko", Center: geo.Point{Lat: 0.460717, Lng: 34.11147}, RadiusM: 1000, Fee: 100, Priority: 20, Aliases: []string{"Mauko Market"}},
-			{Name: "Aget", Center: geo.Point{Lat: 0.527952, Lng: 34.20565}, RadiusM: 1500, Fee: 100, Priority: 20},
+			{Name: "Aget", Center: geo.Point{Lat: 0.574441, Lng: 34.16030}, RadiusM: 1500, Fee: 100, Priority: 20, Notes: "Aget village, Chakol North (OpenStreetMap). About 13 km out: confirm the KES 100 fee."},
 			{Name: "Alupe", Center: geo.Point{Lat: 0.497094, Lng: 34.13416}, RadiusM: 1500, Fee: 100, Priority: 20, Aliases: []string{"Alupe Market", "Alupe University"}},
 			{Name: "Adungosi", Center: geo.Point{Lat: 0.514879, Lng: 34.15113}, RadiusM: 1500, Fee: 250, Priority: 20},
 			{Name: "Lukolis", Center: geo.Point{Lat: 0.553185, Lng: 34.17843}, RadiusM: 1500, Fee: 600, Priority: 20},
 			{Name: "Bumala", Center: geo.Point{Lat: 0.303113, Lng: 34.20240}, RadiusM: 3000, Fee: 500, Priority: 20},
 			{Name: "Matayos", Center: geo.Point{Lat: 0.364932, Lng: 34.16494}, RadiusM: 2000, Fee: 450, Priority: 20},
 			{Name: "Mundika", Center: geo.Point{Lat: 0.414876, Lng: 34.14729}, RadiusM: 1500, Fee: 150, Priority: 20, Aliases: []string{"Mundika Market"}},
-			{Name: "Redcross", Center: busiaOutlet, RadiusM: 800, Fee: 150, Priority: 20, Status: zones.StatusDraft, Aliases: []string{"Red Cross"}, Notes: "Location not found on OpenStreetMap. Set the centre on the map, then activate."},
-			{Name: "Malaba", Center: geo.Point{Lat: 0.632706, Lng: 34.26939}, RadiusM: 3000, Fee: 1050, Priority: 20},
+			{Name: "Redcross", Center: geo.Point{Lat: 0.4664098, Lng: 34.0886426}, RadiusM: 800, Fee: 150, Priority: 20, Aliases: []string{"Red Cross"}, Notes: "Pinned from Google Maps (Red Cross, Busia). Google places it on the Uganda side of the border."},
+			{Name: "Malaba", Center: geo.Point{Lat: 0.63513, Lng: 34.281651}, RadiusM: 3000, Fee: 1050, Priority: 20, Notes: "Malaba town centre (GeoNames)."},
 			{Name: "Funyula", Center: geo.Point{Lat: 0.280512, Lng: 34.11968}, RadiusM: 3000, Fee: 1050, Priority: 20},
 			{Name: "Machakusi", Center: geo.Point{Lat: 0.609138, Lng: 34.23930}, RadiusM: 1500, Fee: 750, Priority: 20},
 		},
@@ -85,6 +88,7 @@ func main() {
 	slug := flag.String("tenant", "", "tenant slug with a preset (e.g. urban-loft)")
 	dryRun := flag.Bool("dry-run", false, "print what would change without writing")
 	overwrite := flag.Bool("overwrite", false, "replace existing zones and policy with the preset values")
+	only := flag.String("only", "", "comma-separated area names to seed; leaves the policy and other areas alone")
 	flag.Parse()
 
 	p, ok := presets[*slug]
@@ -127,11 +131,20 @@ func main() {
 		log.Printf("redis unavailable (%v): running pods pick up changes within 5 minutes", rerr)
 	}
 
-	if err := seedZones(ctx, client, svc, t.ID, p.Areas, *dryRun, *overwrite); err != nil {
+	areas := p.Areas
+	if *only != "" {
+		areas = filterAreas(areas, *only)
+		if len(areas) == 0 {
+			log.Fatalf("-only %q matches no area in the %s preset", *only, *slug)
+		}
+	}
+	if err := seedZones(ctx, client, svc, t.ID, areas, *dryRun, *overwrite); err != nil {
 		log.Fatal(err)
 	}
-	if err := seedPolicy(ctx, svc, t.ID, p.Policy, *dryRun, *overwrite); err != nil {
-		log.Fatal(err)
+	if *only == "" {
+		if err := seedPolicy(ctx, svc, t.ID, p.Policy, *dryRun, *overwrite); err != nil {
+			log.Fatal(err)
+		}
 	}
 	log.Printf("done (dry_run=%v)", *dryRun)
 }
@@ -208,4 +221,22 @@ func colorFor(a area) string {
 	default:
 		return "#3b82f6"
 	}
+}
+
+// filterAreas keeps the preset areas named in a comma-separated list (case-insensitive), so a
+// corrected pin can be pushed without touching areas an admin has since edited.
+func filterAreas(areas []area, names string) []area {
+	want := map[string]bool{}
+	for _, n := range strings.Split(names, ",") {
+		if n = strings.ToLower(strings.TrimSpace(n)); n != "" {
+			want[n] = true
+		}
+	}
+	var out []area
+	for _, a := range areas {
+		if want[strings.ToLower(a.Name)] {
+			out = append(out, a)
+		}
+	}
+	return out
 }

@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -503,16 +504,17 @@ func (h *LogisticsHandler) InviteMember(w http.ResponseWriter, r *http.Request) 
 	email, hasEmail := raw["email"].(string)
 	userIDStr, hasUserID := raw["user_id"].(string)
 
+	rawJSON, _ := json.Marshal(raw)
 	if hasEmail && email != "" && (!hasUserID || userIDStr == "") {
-		// Simplified invite by email
-		idNumber, _ := raw["id_number"].(string)
-		m, err = h.fleetSvc.InviteMemberByEmail(r.Context(), tenantID, slug, fleet.InviteByEmailRequest{
-			Email:    email,
-			IDNumber: idNumber,
-		})
+		// Invite by email: name, phone and employment terms are kept on the stub user.
+		var req fleet.InviteByEmailRequest
+		if jsonErr := json.Unmarshal(rawJSON, &req); jsonErr != nil {
+			http.Error(w, "invalid request body", http.StatusBadRequest)
+			return
+		}
+		m, err = h.fleetSvc.InviteMemberByEmail(r.Context(), tenantID, slug, req)
 	} else {
-		// Legacy invite by user_id
-		rawJSON, _ := json.Marshal(raw)
+		// Invite an existing user by id
 		var req fleet.InviteMemberRequest
 		if jsonErr := json.Unmarshal(rawJSON, &req); jsonErr != nil {
 			http.Error(w, "invalid request body", http.StatusBadRequest)
@@ -548,6 +550,37 @@ func (h *LogisticsHandler) ApproveMember(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	respondJSON(w, http.StatusOK, signFleetMemberMedia(m))
+}
+
+// SetMemberEmployment handles PUT /api/v1/{tenant}/fleet/members/{memberId}/employment.
+// Body: {"type":"freelance|staff","per_task_earnings":bool?}. Staff riders draw a salary on
+// erp-api payroll; their per diem is an erp-api claim, so nothing else is stored here.
+func (h *LogisticsHandler) SetMemberEmployment(w http.ResponseWriter, r *http.Request) {
+	tenantID := tenantIDFromClaims(r)
+	if tenantID == uuid.Nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	memberID, err := uuid.Parse(chi.URLParam(r, "memberId"))
+	if err != nil {
+		http.Error(w, "invalid member id", http.StatusBadRequest)
+		return
+	}
+	var in fleet.Employment
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	m, err := h.fleetSvc.SetEmployment(r.Context(), tenantID, memberID, in)
+	if ent.IsNotFound(err) {
+		http.Error(w, "member not found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 	respondJSON(w, http.StatusOK, signFleetMemberMedia(m))
 }
 
@@ -633,11 +666,29 @@ func (h *LogisticsHandler) BatchInviteMembers(w http.ResponseWriter, r *http.Req
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	tenantSlug := chi.URLParam(r, "tenantSlug")
+	tenantSlug := chi.URLParam(r, "tenant")
+	if claims, ok := authclient.ClaimsFromContext(r.Context()); ok && claims.GetTenantSlug() != "" {
+		tenantSlug = claims.GetTenantSlug()
+	}
 
-	var requests []fleet.InviteByEmailRequest
-	if err := json.NewDecoder(r.Body).Decode(&requests); err != nil {
+	// Accepts {"members": [...]} (what the UIs send) or a bare array.
+	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+	if err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	var requests []fleet.InviteByEmailRequest
+	var wrapped struct {
+		Members []fleet.InviteByEmailRequest `json:"members"`
+	}
+	if json.Unmarshal(body, &wrapped) == nil && wrapped.Members != nil {
+		requests = wrapped.Members
+	} else if err := json.Unmarshal(body, &requests); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	if len(requests) == 0 {
+		http.Error(w, "no members to invite", http.StatusBadRequest)
 		return
 	}
 

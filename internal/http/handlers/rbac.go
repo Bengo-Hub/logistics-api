@@ -161,11 +161,12 @@ func (h *RBACHandler) ListPermissions(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, map[string]interface{}{"permissions": permissions})
 }
 
-// RegisterRoutes registers RBAC routes on the given tenant-scoped router.
-func (h *RBACHandler) RegisterRoutes(r chi.Router) {
-	r.Post("/rbac/assignments", h.AssignRole)
-	r.Get("/rbac/assignments", h.ListAssignments)
-	r.Delete("/rbac/assignments/{id}", h.RevokeRole)
+// RegisterRoutes registers RBAC routes on the given tenant-scoped router. manage guards
+// role grants and revokes; without it any signed-in user could make themselves admin.
+func (h *RBACHandler) RegisterRoutes(r chi.Router, manage func(http.Handler) http.Handler) {
+	r.With(manage).Post("/rbac/assignments", h.AssignRole)
+	r.With(manage).Get("/rbac/assignments", h.ListAssignments)
+	r.With(manage).Delete("/rbac/assignments/{id}", h.RevokeRole)
 	// /roles and /rbac/roles both work — frontend may use either path
 	r.Get("/roles", h.ListRoles)
 	r.Get("/rbac/roles", h.ListRoles)
