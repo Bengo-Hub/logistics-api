@@ -28,7 +28,9 @@ import (
 )
 
 func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authclient.AuthMiddleware, idSvc *identity.Service, lh *handlers.LogisticsHandler, rh *handlers.RoutingHandler, th *handlers.TrackingHandler, zh *handlers.ZonesHandler, rbacH *handlers.RBACHandler, rdb *redis.Client, cfg *config.Config, allowedOrigins []string, serviceConfigH *handlers.ServiceConfigHandler, earningsH *handlers.EarningsHandler, sseH *handlers.SSEHandler, rbacSvc *rbac.Service, telH *handlers.TelemetryHandler, shipmentH *handlers.ShipmentHandler, shiftH *handlers.ShiftHandler, analyticsH *handlers.AnalyticsHandler, backupsH *handlers.BackupsHandler, backupDestH *handlers.BackupDestinationHandler, validator *authclient.Validator, fleetWSH *handlers.FleetTrackingWSHandler, notifH *handlers.NotificationsHandler) http.Handler {
-	quota := ratelimit.NewQuota(rdb)
+	// Plan limits for routing and live tracking are monthly (*_per_month in the subscriptions
+	// catalog), so they count on the calendar-month window.
+	quota := ratelimit.NewMonthlyQuota(rdb)
 	limiter := ratelimit.NewLimiter(rdb, log, "logistics")
 	r := chi.NewRouter()
 
@@ -325,7 +327,7 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 
 			if rh != nil {
 				tenant.Route("/routing", func(routeR chi.Router) {
-					routeR.Use(appmw.RequireRateLimit(quota, "routing_requests_per_day", cfg.Subscriptions.ServiceURL+"/upgrade"))
+					routeR.Use(appmw.RequireRateLimit(quota, "routing_requests_per_month", cfg.Subscriptions.ServiceURL+"/upgrade"))
 					// Basic route/ETA stay open (used by guest checkout). The multi-stop
 					// matrix optimisation is the premium "route_optimisation" surface.
 					routeR.Get("/route", rh.GetRoute)
@@ -348,7 +350,7 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 					// Live GPS rider tracking is a premium feature. Customer-facing order
 					// tracking uses the public /api/v1/track/{code} endpoint, which is unaffected.
 					trackR.Use(appmw.RequireFeature("live_tracking", cfg.Subscriptions.ServiceURL+"/upgrade"))
-					trackR.Use(appmw.RequireRateLimit(quota, "live_tracking_requests_per_day", cfg.Subscriptions.ServiceURL+"/upgrade"))
+					trackR.Use(appmw.RequireRateLimit(quota, "live_tracking_requests_per_month", cfg.Subscriptions.ServiceURL+"/upgrade"))
 					if telH != nil {
 						telH.RegisterFleetTrackingRoute(trackR)
 					}

@@ -4,10 +4,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	authclient "github.com/Bengo-Hub/shared-auth-client"
 	ratelimit "github.com/Bengo-Hub/shared-ratelimit"
 )
+
+// secondsToNextMonth is how long until the monthly quota window resets (UTC).
+func secondsToNextMonth(now time.Time) int {
+	now = now.UTC()
+	next := time.Date(now.Year(), now.Month()+1, 1, 0, 0, 0, 0, time.UTC)
+	return int(next.Sub(now).Seconds())
+}
 
 // RequireRateLimit returns middleware that enforces a rate limit for a given feature.
 // The limit is read from JWT claims via Claims.GetLimit(featureKey).
@@ -51,7 +59,7 @@ func RequireRateLimit(q *ratelimit.Quota, featureKey string, upgradeURL string) 
 
 			if !result.Allowed {
 				w.Header().Set("Content-Type", "application/json")
-				w.Header().Set("Retry-After", "86400")
+				w.Header().Set("Retry-After", fmt.Sprintf("%d", secondsToNextMonth(time.Now())))
 				w.WriteHeader(http.StatusTooManyRequests)
 				// Body matches the shared limit-reached modal contract (code, metric, limit,
 				// used, overage_eligible). These metered metrics support pay-as-you-go overage.
@@ -64,7 +72,7 @@ func RequireRateLimit(q *ratelimit.Quota, featureKey string, upgradeURL string) 
 					"used":             result.Used,
 					"overage_eligible": true,
 					"upgrade_url":      upgradeURL,
-					"message":          fmt.Sprintf("Daily %s limit reached. Upgrade your plan or enable extra usage.", featureKey),
+					"message":          fmt.Sprintf("Monthly %s limit reached. Upgrade your plan or enable extra usage.", featureKey),
 				})
 				return
 			}
