@@ -17,6 +17,7 @@ import (
 
 	"entgo.io/ent/dialect"
 	entsql "entgo.io/ent/dialect/sql"
+	sharedcache "github.com/Bengo-Hub/cache"
 	"github.com/google/uuid"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"go.uber.org/zap"
@@ -114,7 +115,17 @@ func main() {
 		log.Fatalf("tenant %s not found in logistics: %v", *slug, err)
 	}
 	logger, _ := zap.NewProduction()
-	svc := zones.NewService(client, logger) // no cache: running pods refresh within the 5 minute TTL
+	svc := zones.NewService(client, logger)
+	// With Redis the writes drop the running pods' cached zones and quotes at once;
+	// without it they refresh within the 5 minute TTL.
+	if rdb, rerr := sharedcache.NewRedis(ctx, sharedcache.RedisConfig{
+		Addr: cfg.Redis.Addr, Username: cfg.Redis.Username, Password: cfg.Redis.Password,
+		DB: cfg.Redis.DB, TLS: cfg.Redis.TLSRequired, DialTimeout: cfg.Redis.DialTimeout,
+	}); rerr == nil {
+		svc.SetCache(sharedcache.New(rdb, logger))
+	} else {
+		log.Printf("redis unavailable (%v): running pods pick up changes within 5 minutes", rerr)
+	}
 
 	if err := seedZones(ctx, client, svc, t.ID, p.Areas, *dryRun, *overwrite); err != nil {
 		log.Fatal(err)

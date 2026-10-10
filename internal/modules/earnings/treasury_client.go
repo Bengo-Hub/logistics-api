@@ -41,14 +41,14 @@ type DisburseRecipient struct {
 
 // DisburseRequest is the body for POST /api/v1/{tenantSlug}/payouts/disburse.
 type DisburseRequest struct {
-	EntityType    string            `json:"entity_type"`   // "rider"
-	EntityID      string            `json:"entity_id"`     // fleet_member UUID
-	Amount        float64           `json:"amount"`
-	Currency      string            `json:"currency"`
-	Reference     string            `json:"reference"`     // e.g. "RIDER-{statement_id}"
-	Reason        string            `json:"reason"`
-	PayoutMethod  string            `json:"payout_method"`
-	Recipient     DisburseRecipient `json:"recipient"`
+	EntityType   string            `json:"entity_type"` // "rider"
+	EntityID     string            `json:"entity_id"`   // fleet_member UUID
+	Amount       float64           `json:"amount"`
+	Currency     string            `json:"currency"`
+	Reference    string            `json:"reference"` // e.g. "RIDER-{statement_id}"
+	Reason       string            `json:"reason"`
+	PayoutMethod string            `json:"payout_method"`
+	Recipient    DisburseRecipient `json:"recipient"`
 }
 
 // DisburseResponse is the response from POST /api/v1/{tenantSlug}/payouts/disburse.

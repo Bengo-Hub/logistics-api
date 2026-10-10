@@ -35,13 +35,19 @@ type Geocoder struct {
 	baseURL   string
 	userAgent string
 	http      *http.Client
-	zones     *Service
+	zones     areaSource
 	cache     *sharedcache.Aside
 	log       *zap.Logger
 }
 
+// areaSource is the part of the zones Service the geocoder uses to label places.
+type areaSource interface {
+	Coverage(ctx context.Context, tenantID, outletID uuid.UUID) (Coverage, error)
+	NearestArea(ctx context.Context, tenantID uuid.UUID, p geo.Point) (*ZoneRef, float64, error)
+}
+
 // NewGeocoder builds the proxy. cache may be nil (no caching, no cross-pod throttle).
-func NewGeocoder(baseURL, userAgent string, zones *Service, cache *sharedcache.Aside, log *zap.Logger) *Geocoder {
+func NewGeocoder(baseURL, userAgent string, zones areaSource, cache *sharedcache.Aside, log *zap.Logger) *Geocoder {
 	return &Geocoder{
 		baseURL:   strings.TrimRight(baseURL, "/"),
 		userAgent: userAgent,
@@ -91,6 +97,13 @@ func (g *Geocoder) Search(ctx context.Context, tenantID uuid.UUID, q string, lim
 		if match {
 			ref := ZoneRef{ID: z.ID, Name: z.Name}
 			out = append(out, Place{Name: z.Name, DisplayName: z.Name + " (delivery area)", Location: *z.Center, Source: "zone", Area: &ref})
+		}
+	}
+
+	// The tenant's own outlets (e.g. "Urban Loft Cafe Busia") are useful landmarks too.
+	for _, o := range cov.Outlets {
+		if strings.Contains(strings.ToLower(o.Name), lq) {
+			out = append(out, Place{Name: o.Name, DisplayName: o.Name + " (our outlet)", Location: o.Point, Kind: "outlet", Source: "zone"})
 		}
 	}
 

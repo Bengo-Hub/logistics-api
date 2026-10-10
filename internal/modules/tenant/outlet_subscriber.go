@@ -12,6 +12,7 @@ import (
 
 	"github.com/bengobox/logistics-service/internal/ent"
 	entoutlet "github.com/bengobox/logistics-service/internal/ent/outlet"
+	enttenant "github.com/bengobox/logistics-service/internal/ent/tenant"
 )
 
 const authStream = "auth"
@@ -145,69 +146,101 @@ func (s *OutletSubscriber) handleUpsert(ctx context.Context, evt *sharedevents.E
 		return fmt.Errorf("missing tenant_id in outlet event")
 	}
 
-	// Logistics hubs (or an unset use_case) are always mirrored. Any other outlet is
-	// mirrored only for tenants that already use logistics, so a shop that offers
-	// delivery gets its pickup point without pulling in every tenant's branches.
-	if useCase != "" && !logisticsUseCases[useCase] {
-		exists, terr := s.client.Tenant.Get(ctx, evt.TenantID)
-		if terr != nil || exists == nil {
-			s.logger.Debug("skipping outlet: tenant does not use logistics",
-				zap.String("outlet_id", outletIDStr), zap.String("use_case", useCase))
-			return nil
-		}
+	rec := OutletRecord{ID: outletID, TenantID: evt.TenantID, Code: code, Name: name, UseCase: useCase, IsHQ: isHQ, Status: status, Address: address}
+	if lat, lng, ok := outletLocation(evt.Payload); ok {
+		rec.Latitude, rec.Longitude = &lat, &lng
 	}
-	if useCase == "" {
-		useCase = "logistics"
-	}
-	lat, lng, hasLoc := outletLocation(evt.Payload)
-
-	existing, err := s.client.Outlet.Get(ctx, outletID)
+	changed, err := UpsertOutlet(ctx, s.client, rec)
 	if err != nil {
-		create := s.client.Outlet.Create().
-			SetID(outletID).
-			SetTenantID(evt.TenantID).
-			SetCode(code).
-			SetName(name).
-			SetUseCase(useCase).
-			SetIsHq(isHQ).
-			SetStatus(status)
-		if address != "" {
-			create = create.SetAddress(address)
-		}
-		if hasLoc {
-			create = create.SetLatitude(lat).SetLongitude(lng)
-		}
-		if _, createErr := create.Save(ctx); createErr != nil {
-			return fmt.Errorf("create logistics outlet mirror: %w", createErr)
-		}
-		s.logger.Info("logistics outlet created from auth event",
-			zap.String("outlet_id", outletIDStr), zap.String("code", code))
+		return err
+	}
+	if changed {
+		s.logger.Info("logistics outlet synced from auth event", zap.String("outlet_id", outletIDStr), zap.String("code", code))
 		s.changed(ctx, evt.TenantID)
-		return nil
+	}
+	return nil
+}
+
+// OutletRecord is an auth-api outlet as logistics mirrors it.
+type OutletRecord struct {
+	ID        uuid.UUID
+	TenantID  uuid.UUID
+	Code      string
+	Name      string
+	UseCase   string
+	IsHQ      bool
+	Status    string
+	Address   string
+	Latitude  *float64
+	Longitude *float64
+}
+
+// UpsertOutlet creates or updates the local mirror of an auth outlet. It is the one
+// outlet write path, shared by the auth.outlet.* subscriber and the startup resync.
+//
+// Logistics hubs (or an unset use_case) are always mirrored. Any other outlet is mirrored
+// only for tenants that exist in logistics, so a shop that offers delivery gets its pickup
+// point without pulling in every tenant's branches. A missing pin keeps the stored one.
+// Returns whether a row was written.
+func UpsertOutlet(ctx context.Context, client *ent.Client, r OutletRecord) (bool, error) {
+	if r.ID == uuid.Nil || r.TenantID == uuid.Nil {
+		return false, fmt.Errorf("outlet upsert: missing outlet or tenant id")
+	}
+	if r.UseCase != "" && !logisticsUseCases[r.UseCase] {
+		if ok, terr := client.Tenant.Query().Where(enttenant.ID(r.TenantID)).Exist(ctx); terr != nil || !ok {
+			return false, nil
+		}
+	}
+	if r.UseCase == "" {
+		r.UseCase = "logistics"
+	}
+	if r.Status == "" {
+		r.Status = "active"
 	}
 
-	upd := s.client.Outlet.UpdateOne(existing).
-		SetName(name).
-		SetUseCase(useCase).
-		SetIsHq(isHQ).
-		SetStatus(status)
-	if code != "" {
-		upd = upd.SetCode(code)
+	existing, err := client.Outlet.Get(ctx, r.ID)
+	if err != nil {
+		if !ent.IsNotFound(err) {
+			return false, fmt.Errorf("load logistics outlet mirror: %w", err)
+		}
+		create := client.Outlet.Create().
+			SetID(r.ID).
+			SetTenantID(r.TenantID).
+			SetCode(r.Code).
+			SetName(r.Name).
+			SetUseCase(r.UseCase).
+			SetIsHq(r.IsHQ).
+			SetStatus(r.Status)
+		if r.Address != "" {
+			create = create.SetAddress(r.Address)
+		}
+		if r.Latitude != nil && r.Longitude != nil {
+			create = create.SetLatitude(*r.Latitude).SetLongitude(*r.Longitude)
+		}
+		if _, err := create.Save(ctx); err != nil {
+			return false, fmt.Errorf("create logistics outlet mirror: %w", err)
+		}
+		return true, nil
 	}
-	if address != "" {
-		upd = upd.SetAddress(address)
+
+	upd := client.Outlet.UpdateOne(existing).
+		SetName(r.Name).
+		SetUseCase(r.UseCase).
+		SetIsHq(r.IsHQ).
+		SetStatus(r.Status)
+	if r.Code != "" {
+		upd = upd.SetCode(r.Code)
 	}
-	// A missing location in the event keeps the stored one; auth only sends it when set.
-	if hasLoc {
-		upd = upd.SetLatitude(lat).SetLongitude(lng)
+	if r.Address != "" {
+		upd = upd.SetAddress(r.Address)
 	}
-	if _, updErr := upd.Save(ctx); updErr != nil {
-		return fmt.Errorf("update logistics outlet mirror: %w", updErr)
+	if r.Latitude != nil && r.Longitude != nil {
+		upd = upd.SetLatitude(*r.Latitude).SetLongitude(*r.Longitude)
 	}
-	s.logger.Info("logistics outlet updated from auth event",
-		zap.String("outlet_id", outletIDStr), zap.String("code", code))
-	s.changed(ctx, evt.TenantID)
-	return nil
+	if _, err := upd.Save(ctx); err != nil {
+		return false, fmt.Errorf("update logistics outlet mirror: %w", err)
+	}
+	return true, nil
 }
 
 // handleArchive sets status = "archived" for the outlet.
