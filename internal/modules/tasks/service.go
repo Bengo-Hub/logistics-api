@@ -200,6 +200,12 @@ func (s *Service) AutoAssignEnabled(ctx context.Context, tenantID uuid.UUID) boo
 	return s.boolSetting(ctx, tenantID, "logistics.auto_assign_enabled", true)
 }
 
+// ProofRequired reports whether riders must submit proof of delivery to complete a job
+// (setting logistics.pod_required, default on). Dispatchers can still close a job by hand.
+func (s *Service) ProofRequired(ctx context.Context, tenantID uuid.UUID) bool {
+	return s.boolSetting(ctx, tenantID, "logistics.pod_required", true)
+}
+
 // boolSetting reads a boolean service setting: the tenant's own value, else the platform
 // default, else def.
 func (s *Service) boolSetting(ctx context.Context, tenantID uuid.UUID, key string, def bool) bool {
@@ -633,6 +639,9 @@ func (s *Service) UpdateStatusAs(ctx context.Context, tenantID, taskID uuid.UUID
 	}
 	if err := statusChangeError(t.Status, newStatus, actor.Type == "rider", reason); err != nil {
 		return nil, err
+	}
+	if newStatus == "delivered" && actor.Type == "rider" && s.ProofRequired(ctx, tenantID) {
+		return nil, ErrProofRequired
 	}
 
 	now := time.Now().UTC()

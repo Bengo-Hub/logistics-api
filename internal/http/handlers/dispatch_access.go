@@ -112,6 +112,8 @@ func writeTaskError(w http.ResponseWriter, err error) {
 		http.Error(w, strings.TrimPrefix(err.Error(), "tasks: "), http.StatusForbidden)
 	case errors.Is(err, tasks.ErrTaskChanged), errors.Is(err, tasks.ErrTaskTaken), errors.Is(err, tasks.ErrIntakeBusy):
 		http.Error(w, strings.TrimPrefix(err.Error(), "tasks: "), http.StatusConflict)
+	case errors.Is(err, tasks.ErrProofRequired):
+		http.Error(w, strings.TrimPrefix(err.Error(), "tasks: "), http.StatusUnprocessableEntity)
 	case errors.Is(err, tasks.ErrTaskClosed), errors.Is(err, tasks.ErrAlreadyPickedUp):
 		http.Error(w, strings.TrimPrefix(err.Error(), "tasks: "), http.StatusConflict)
 	case err != nil && strings.Contains(err.Error(), "not found"):

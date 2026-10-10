@@ -100,7 +100,17 @@ var retiredPermissionPrefixes = []string{"logistics.geofences."}
 
 // retiredConfigKeys are platform config rows no code reads any more. Geofence behaviour
 // now lives in the per-tenant zones.PolicyConfigKey policy.
-var retiredConfigKeys = []string{"logistics.geofence_radius_meters"}
+// The others were seeded and shown in Settings but never read by any code.
+var retiredConfigKeys = []string{
+	"logistics.geofence_radius_meters",
+	"logistics.default_task_timeout",
+	"logistics.max_concurrent_tasks",
+	"logistics.max_fleet_size",
+	"logistics.telemetry_interval_seconds",
+	"logistics.max_route_waypoints",
+	"logistics.earnings_payout_cycle_days",
+	"logistics.tracking_link_expiry_hours",
+}
 
 // removeRetiredSeedRows deletes permissions (and their role grants) and config rows that
 // earlier seeds created but the service no longer uses. Idempotent.
@@ -124,8 +134,9 @@ func removeRetiredSeedRows(ctx context.Context, client *ent.Client) error {
 		}
 		log.Printf("removed %d retired permissions (%s*)", n, prefix)
 	}
+	// Platform defaults and tenant overrides alike: nothing reads these keys.
 	n, err := client.ServiceConfig.Delete().
-		Where(serviceconfig.ConfigKeyIn(retiredConfigKeys...), serviceconfig.TenantIDIsNil()).
+		Where(serviceconfig.ConfigKeyIn(retiredConfigKeys...)).
 		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("drop retired configs: %w", err)
@@ -249,15 +260,10 @@ func seedServiceConfigs(ctx context.Context, client *ent.Client) error {
 	}
 
 	configs := []svcConfig{
-		{"logistics.default_task_timeout", "3600", "int", "Default task timeout in seconds", false},
-		{"logistics.max_concurrent_tasks", "50", "int", "Maximum concurrent tasks per rider", false},
-		{"logistics.max_fleet_size", "500", "int", "Maximum fleet members per tenant", false},
-		{"logistics.auto_assign_enabled", "true", "bool", "Whether auto-assignment of tasks is enabled", false},
-		{"logistics.telemetry_interval_seconds", "10", "int", "Telemetry reporting interval in seconds", false},
-		{"logistics.pod_required", "true", "bool", "Whether proof of delivery is required", false},
-		{"logistics.max_route_waypoints", "25", "int", "Maximum waypoints per routing request", false},
-		{"logistics.earnings_payout_cycle_days", "7", "int", "Earnings payout cycle in days", false},
-		{"logistics.tracking_link_expiry_hours", "48", "int", "Public tracking link expiry in hours", false},
+		// Only settings code reads. Rider limits come from the plan (max_riders); delivery
+		// pricing and geofence live in logistics.delivery_quote_policy.
+		{"logistics.auto_assign_enabled", "true", "bool", "Auto-assign new delivery tasks to the nearest rider", false},
+		{"logistics.pod_required", "true", "bool", "Riders must submit proof of delivery to complete a job", false},
 	}
 
 	count := 0
