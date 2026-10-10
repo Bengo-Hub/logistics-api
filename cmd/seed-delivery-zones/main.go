@@ -53,8 +53,9 @@ var busiaOutlet = geo.Point{Lat: 0.4545662, Lng: 34.1272854}
 
 // presets holds tenant defaults. Coordinates come from OpenStreetMap; areas OSM could not
 // place reliably are seeded as drafts (not quoted) until an admin pins them in logistics-ui.
-// Pins verified 2026-10-10 against OpenStreetMap, GeoNames and Google Maps: Bugengi and
-// Redcross come from Google Maps, Malaba from GeoNames, the rest from OpenStreetMap.
+// Pins verified 2026-10-10 against OpenStreetMap, GeoNames and Google Maps: Bugengi, Redcross
+// and Aget (Trading Centre) come from Google Maps, Malaba from GeoNames, the rest from
+// OpenStreetMap.
 var presets = map[string]preset{
 	"urban-loft": {
 		Policy: func() zones.Policy {
@@ -69,7 +70,7 @@ var presets = map[string]preset{
 			{Name: "Kemodo", Center: geo.Point{Lat: 0.468094, Lng: 34.18558}, RadiusM: 1500, Fee: 200, Priority: 20, Aliases: []string{"Kemodo Market"}},
 			{Name: "Ochude", Center: geo.Point{Lat: 0.565358, Lng: 34.34028}, RadiusM: 1500, Fee: 100, Priority: 20, Notes: "Ochude village, Amukura East (OpenStreetMap; the Amukura school zone lists Ochude). About 25 km out: confirm the KES 100 fee."},
 			{Name: "Mauko", Center: geo.Point{Lat: 0.460717, Lng: 34.11147}, RadiusM: 1000, Fee: 100, Priority: 20, Aliases: []string{"Mauko Market"}},
-			{Name: "Aget", Center: geo.Point{Lat: 0.574441, Lng: 34.16030}, RadiusM: 1500, Fee: 100, Priority: 20, Notes: "Aget village, Chakol North (OpenStreetMap). About 13 km out: confirm the KES 100 fee."},
+			{Name: "Aget", Center: geo.Point{Lat: 0.4678448, Lng: 34.1419726}, RadiusM: 1500, Fee: 100, Priority: 20, Aliases: []string{"Aget Trading Centre"}, Notes: "Aget Trading Centre, pinned from Google Maps by the tenant."},
 			{Name: "Alupe", Center: geo.Point{Lat: 0.497094, Lng: 34.13416}, RadiusM: 1500, Fee: 100, Priority: 20, Aliases: []string{"Alupe Market", "Alupe University"}},
 			{Name: "Adungosi", Center: geo.Point{Lat: 0.514879, Lng: 34.15113}, RadiusM: 1500, Fee: 250, Priority: 20},
 			{Name: "Lukolis", Center: geo.Point{Lat: 0.553185, Lng: 34.17843}, RadiusM: 1500, Fee: 600, Priority: 20},
