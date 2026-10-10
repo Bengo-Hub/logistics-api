@@ -371,8 +371,8 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 			// Media upload (tenant-scoped so the rider-app path /{slug}/media/upload works)
 			tenant.Post("/media/upload", mediaHandler.Upload)
 
-			if rbacH != nil {
-				rbacH.RegisterRoutes(tenant)
+			if rbacH != nil && rbacSvc != nil {
+				rbacH.RegisterRoutes(tenant, appmw.RequirePermission(rbacSvc, rbac.PermConfigManage))
 			}
 
 			if serviceConfigH != nil {
@@ -497,6 +497,7 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 						mut.Post("/members/{memberId}/suspend", lh.SuspendMember)
 						mut.Post("/members/{memberId}/reject", lh.RejectMember)
 						mut.Post("/members/{memberId}/vehicle", lh.AssignVehicle)
+						mut.Put("/members/{memberId}/employment", lh.SetMemberEmployment)
 						mut.Delete("/members/{memberId}", lh.DeleteMember)
 						mut.Post("/members/batch", lh.BatchInviteMembers)
 						mut.Post("/vehicles", lh.CreateVehicle)

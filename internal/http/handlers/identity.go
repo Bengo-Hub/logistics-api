@@ -41,7 +41,14 @@ func (h *IdentityHandler) GetAuthMe(w http.ResponseWriter, r *http.Request) {
 	var serviceRole *roleInfo
 	var permCodes []string
 
-	if h.rbacSvc != nil && tenantID != uuid.Nil {
+	fullAccess := claims.IsPlatformOwner || claims.IsSuperuser() || claims.IsAdmin()
+	if h.rbacSvc != nil && fullAccess {
+		// Mirrors RequirePermission: admins pass every check without a logistics role row.
+		if codes, err := h.rbacSvc.AllPermissionCodes(r.Context()); err == nil {
+			permCodes = codes
+		}
+		serviceRole = &roleInfo{Code: "admin", Name: "Administrator"}
+	} else if h.rbacSvc != nil && tenantID != uuid.Nil {
 		roles, err := h.rbacSvc.GetUserRoles(r.Context(), tenantID, authID)
 		if err == nil && len(roles) > 0 {
 			r0 := roles[0]

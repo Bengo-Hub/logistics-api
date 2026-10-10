@@ -120,3 +120,17 @@ func (s *Service) RevokeRole(ctx context.Context, tenantID uuid.UUID, userID uui
 	return nil
 }
 
+
+// AllPermissionCodes returns every logistics permission code. Tenant admins and platform
+// owners hold all of them, so /auth/me reports the full list for them.
+func (s *Service) AllPermissionCodes(ctx context.Context) ([]string, error) {
+	perms, err := s.repo.ListPermissions(ctx, PermissionFilters{})
+	if err != nil {
+		return nil, fmt.Errorf("list permissions: %w", err)
+	}
+	codes := make([]string, 0, len(perms))
+	for _, p := range perms {
+		codes = append(codes, p.PermissionCode)
+	}
+	return codes, nil
+}

@@ -24,6 +24,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/taskassignment"
 	"github.com/bengobox/logistics-service/internal/ent/taskevent"
 	entuser "github.com/bengobox/logistics-service/internal/ent/user"
+	fleetmod "github.com/bengobox/logistics-service/internal/modules/fleet"
 	notifmod "github.com/bengobox/logistics-service/internal/modules/notifications"
 	"github.com/bengobox/logistics-service/internal/platform/events"
 )
@@ -1014,6 +1015,11 @@ func (s *Service) SubmitPoD(ctx context.Context, tenantID, taskID uuid.UUID, req
 		earnMemberID := memberID
 		go func() {
 			earnCtx := context.Background()
+			// Staff riders are salaried on erp-api payroll: no per-task earning unless the
+			// member's employment terms say otherwise.
+			if m, merr := s.client.FleetMember.Get(earnCtx, earnMemberID); merr == nil && !fleetmod.EmploymentOf(m).EarnsPerTask() {
+				return
+			}
 			if deliveryFee > 0 {
 				if earnErr := s.earningsSvc.RecordEarningWithAmount(earnCtx, tenantID, taskID, earnMemberID, deliveryFee); earnErr != nil {
 					s.log.Warn("failed to record delivery earning", zap.Error(earnErr))
