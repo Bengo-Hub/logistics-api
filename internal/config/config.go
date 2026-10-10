@@ -37,7 +37,7 @@ type BackupConfig struct {
 
 // TreasuryConfig holds configuration for the treasury-api S2S client.
 type TreasuryConfig struct {
-	ServiceURL         string        `envconfig:"TREASURY_SERVICE_URL" default:"http://treasury-api.treasury.svc.cluster.local:4005"`
+	ServiceURL         string        `envconfig:"TREASURY_SERVICE_URL" default:"http://treasury-api.treasury.svc.cluster.local:4000"`
 	InternalServiceKey string        `envconfig:"INTERNAL_SERVICE_KEY"`
 	RequestTimeout     time.Duration `envconfig:"TREASURY_REQUEST_TIMEOUT" default:"30s"`
 }
