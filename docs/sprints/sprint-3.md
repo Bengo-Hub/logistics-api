@@ -69,6 +69,7 @@
   - Input: `task_ids[]`, `optimization_mode` (distance/time/cost)
   - Output: `route_plan_json` (ordered task sequence, waypoints, ETAs)
   - Store in `routes` table (see ERD)
+- [x] Urban Loft area pins verified 2026-10-10 against OSM, GeoNames and Google Maps and pushed live with `logistics-seed-delivery-zones -only <areas> -overwrite` (policy and other areas untouched). All 17 areas active. Tenant to confirm the KES 100 fee for Ochude (~25 km) and Aget (~13 km).
 
 ### 4.4 Provider Abstraction
 - [ ] Provider interface (`internal/modules/routing/provider.go`):
