@@ -27,6 +27,10 @@
   - `GET /v1/{tenant}/usage/metrics` → current usage vs limits
   - `GET /v1/{tenant}/usage/overage` → overage charges (if applicable)
 
+### 8.1b Access control (status 2026-10-10)
+- [x] System roles (admin, dispatcher, driver) defined once (`rbac.SystemRoles`), ensured for every tenant by the startup seed and on demand; one permission rule (`rbac.Service.HasPermission`) with tenant admin bypass and SSO role mapping; driver role limited to own work; fleet and notification reads gated; Roles page API with usable views (`e366fbe`, `ef7c7b7`).
+- [x] Tenant settings reduced to what code reads (`auto_assign_enabled`, `pod_required`, now enforced for riders); eight dead keys retired (`c311ffd`).
+
 ### 8.2 Tariffs & Payouts
 - [x] Customer delivery tariffs, done 2026-10-10 without a separate table: area fees on zones plus the per-tenant `logistics.delivery_quote_policy` (per-km, minimum, rounding, geofence buffer); one quote rule for every service (`docs/delivery-zones.md`). Rider pay uses the order's delivery fee, else the rider pricing rules, else the same policy by real trip distance.
 - [ ] Tariff profiles with per-minute and time-of-day surcharges (remaining scope; `tariff_profiles` table, see ERD):
