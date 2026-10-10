@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	authclient "github.com/Bengo-Hub/shared-auth-client"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
@@ -26,20 +27,48 @@ func NewService(repo Repository, logger *zap.Logger, tenantSyncer *tenant.Syncer
 	}
 }
 
-// HasPermission checks if a user has a specific permission.
+// HasPermission checks if a user has a specific permission. Tenant admins and superusers
+// (from the request's token) hold every permission; other users hold the permissions of
+// their assigned roles plus the system roles their SSO roles map to (a "dispatcher" in auth
+// is a dispatcher here without any role row).
 func (s *Service) HasPermission(ctx context.Context, tenantID uuid.UUID, userID uuid.UUID, permissionCode string) (bool, error) {
-	permissions, err := s.repo.GetUserPermissions(ctx, tenantID, userID)
+	codes, full, err := s.EffectivePermissions(ctx, tenantID, userID)
 	if err != nil {
-		return false, fmt.Errorf("get user permissions: %w", err)
+		return false, err
 	}
-
-	for _, perm := range permissions {
-		if perm.PermissionCode == permissionCode {
+	if full {
+		return true, nil
+	}
+	for _, c := range codes {
+		if c == permissionCode {
 			return true, nil
 		}
 	}
-
 	return false, nil
+}
+
+// EffectivePermissions returns the caller's permission codes. full is true for tenant
+// admins, superusers and platform owners, who hold every permission.
+func (s *Service) EffectivePermissions(ctx context.Context, tenantID, userID uuid.UUID) (codes []string, full bool, err error) {
+	var ssoRoles []string
+	if claims, ok := authclient.ClaimsFromContext(ctx); ok && claims != nil {
+		if claims.IsPlatformOwner || claims.IsSuperuser() || claims.IsAdmin() {
+			return nil, true, nil
+		}
+		ssoRoles = claims.Roles
+	}
+	codes, err = s.repo.PermissionCodes(ctx, tenantID, userID, SystemRolesForSSO(ssoRoles))
+	if err != nil {
+		return nil, false, fmt.Errorf("get user permissions: %w", err)
+	}
+	return codes, false, nil
+}
+
+// EnsureSystemRoles creates the tenant's admin, dispatcher and driver roles if missing and
+// resets their permission sets. Called by the seed for every tenant and when a tenant first
+// needs a role at runtime.
+func (s *Service) EnsureSystemRoles(ctx context.Context, tenantID uuid.UUID) error {
+	return s.repo.EnsureSystemRoles(ctx, tenantID)
 }
 
 // GetUserRoles returns all roles assigned to a user in a tenant.
@@ -70,6 +99,10 @@ func (s *Service) HasRole(ctx context.Context, tenantID uuid.UUID, userID uuid.U
 
 // AssignRole assigns a role to a user.
 func (s *Service) AssignRole(ctx context.Context, tenantID uuid.UUID, userID uuid.UUID, roleID uuid.UUID, assignedBy uuid.UUID) error {
+	// The role must be one of this tenant's roles; never another tenant's.
+	if _, err := s.repo.GetRole(ctx, tenantID, roleID); err != nil {
+		return fmt.Errorf("role not found for this tenant")
+	}
 	// Check if assignment already exists
 	assignments, err := s.repo.ListUserAssignments(ctx, tenantID, AssignmentFilters{
 		UserID: &userID,

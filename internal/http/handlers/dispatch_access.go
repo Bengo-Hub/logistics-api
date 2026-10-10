@@ -26,8 +26,8 @@ import (
 // Riders hold logistics.tasks.manage because it is what lets them move their own jobs along.
 // That same permission guards the dispatcher's actions, so without a second check any rider
 // could list every customer's delivery, assign jobs, cancel orders or record their own cash
-// hand-in. A rider here is a fleet member of the tenant who does not also hold
-// logistics.fleet.manage (an owner who also rides keeps full access).
+// hand-in. A rider here is a fleet member of the tenant without dispatch rights
+// (logistics.tasks.add); an admin or dispatcher who also rides keeps full access.
 
 // permissionChecker is the subset of the RBAC service used to tell dispatchers from riders.
 type permissionChecker interface {
@@ -62,7 +62,8 @@ func (h *LogisticsHandler) riderOnly(r *http.Request, tenantID uuid.UUID) *ent.F
 		return nil
 	}
 	if h.perms != nil {
-		if can, perr := h.perms.HasPermission(ctx, tenantID, userID, rbac.PermFleetManage); perr == nil && can {
+		// Dispatch rights (admins, dispatchers) are logistics.tasks.add; riders never hold it.
+		if can, perr := h.perms.HasPermission(ctx, tenantID, userID, rbac.PermTaskAdd); perr == nil && can {
 			return nil
 		}
 	}

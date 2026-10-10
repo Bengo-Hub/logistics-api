@@ -14,14 +14,10 @@ type PermissionChecker interface {
 	HasPermission(ctx context.Context, tenantID uuid.UUID, userID uuid.UUID, permissionCode string) (bool, error)
 }
 
-// IsTenantAdmin reports whether the token carries the tenant admin or superuser role.
-func IsTenantAdmin(claims *authclient.Claims) bool {
-	return claims != nil && (claims.IsSuperuser() || claims.IsAdmin())
-}
-
 // RequirePermission returns a middleware that rejects requests where the authenticated
-// user does not hold the given permission in their tenant.
-// Platform owners bypass the check.
+// user does not hold the given permission in their tenant. The rule (tenant admins hold
+// everything, SSO roles map to system roles, assigned roles add theirs) lives in
+// rbac.Service.HasPermission so every check agrees.
 func RequirePermission(svc PermissionChecker, permissionCode string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -36,13 +32,6 @@ func RequirePermission(svc PermissionChecker, permissionCode string) func(http.H
 			claims, ok := authclient.ClaimsFromContext(ctx)
 			if !ok || claims.Subject == "" {
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
-				return
-			}
-
-			// Tenant admins hold every logistics permission in their own tenant. Auth issues
-			// the admin/superuser role per tenant, so no logistics role assignment is needed.
-			if IsTenantAdmin(claims) {
-				next.ServeHTTP(w, r)
 				return
 			}
 

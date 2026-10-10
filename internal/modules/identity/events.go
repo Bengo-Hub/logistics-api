@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/bengobox/logistics-service/internal/modules/rbac"
 	"log"
 	"time"
 
@@ -512,21 +513,20 @@ var logisticsServiceRoles = map[string]bool{
 	"driver": true, "rider": true, "delivery_coordinator": true, "dispatcher": true, "fleet_manager": true, "courier": true,
 }
 
-// resolveRole determines the service-level role from auth-service roles.
-// Uses "driver" as the universal role for delivery/courier/taxi use cases.
-func resolveRole(roles []string, tenantSlug string) string {
+// resolveRole is the one mapping from auth-service roles to the role shown on a logistics
+// user: admin for tenant admins and superusers, else the system role the SSO role maps to
+// (dispatcher or driver), else "member". Permissions do not depend on it; see
+// rbac.Service.HasPermission.
+func resolveRole(roles []string, _ string) string {
 	for _, r := range roles {
-		switch r {
-		case "superuser", "admin":
-			return "admin"
-		case "driver", "rider":
-			return RoleDriver
-		case "staff":
-			return "staff"
+		if r == "superuser" || r == "admin" {
+			return rbac.RoleAdmin
 		}
 	}
-	// Default: if user registered for a tenant with a fleet invitation, they're a driver
-	return RoleDriver
+	if mapped := rbac.SystemRolesForSSO(roles); len(mapped) > 0 {
+		return mapped[0]
+	}
+	return "member"
 }
 
 func coalesce(a, b string) string {
