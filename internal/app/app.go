@@ -348,7 +348,7 @@ func New(ctx context.Context) (*App, error) {
 	// RBAC
 	rbacRepo := rbacmod.NewEntRepository(entClient)
 	rbacSvc := rbacmod.NewService(rbacRepo, log, tenantSyncer)
-	rbacHandler := handlers.NewRBACHandler(log, rbacSvc, rbacRepo)
+	rbacHandler := handlers.NewRBACHandler(log, rbacSvc, entClient)
 	logisticsHandler.SetPermissionChecker(rbacSvc)
 
 	// Initialize service config handler for platform admin + tenant settings

@@ -101,7 +101,7 @@ func (s *Service) HasRole(ctx context.Context, tenantID uuid.UUID, userID uuid.U
 func (s *Service) AssignRole(ctx context.Context, tenantID uuid.UUID, userID uuid.UUID, roleID uuid.UUID, assignedBy uuid.UUID) error {
 	// The role must be one of this tenant's roles; never another tenant's.
 	if _, err := s.repo.GetRole(ctx, tenantID, roleID); err != nil {
-		return fmt.Errorf("role not found for this tenant")
+		return ErrRoleNotInTenant
 	}
 	// Check if assignment already exists
 	assignments, err := s.repo.ListUserAssignments(ctx, tenantID, AssignmentFilters{
@@ -113,7 +113,7 @@ func (s *Service) AssignRole(ctx context.Context, tenantID uuid.UUID, userID uui
 	}
 
 	if len(assignments) > 0 {
-		return fmt.Errorf("role already assigned to user")
+		return ErrAlreadyAssigned
 	}
 
 	assignment := &UserRoleAssignment{
