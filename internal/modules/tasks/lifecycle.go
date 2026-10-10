@@ -32,6 +32,9 @@ var (
 	ErrReasonRequired = errors.New("tasks: please give a reason")
 	// ErrRiderMayNotSetStatus means a rider tried a status only a dispatcher may set.
 	ErrRiderMayNotSetStatus = errors.New("tasks: riders cannot set this status; decline the job or report a failed delivery instead")
+	// ErrProofRequired means the tenant requires proof of delivery, so a rider completes a job
+	// by submitting it rather than by setting the status.
+	ErrProofRequired = errors.New("tasks: proof of delivery is required; complete the job from the delivery screen")
 )
 
 // Actor identifies who changed a task, for the task's history.
