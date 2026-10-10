@@ -20,6 +20,7 @@ import (
 	sharedcache "github.com/Bengo-Hub/cache"
 	authclient "github.com/Bengo-Hub/shared-auth-client"
 	eventslib "github.com/Bengo-Hub/shared-events"
+	ratelimit "github.com/Bengo-Hub/shared-ratelimit"
 	"github.com/bengobox/logistics-service/internal/config"
 	"github.com/bengobox/logistics-service/internal/ent"
 	handlers "github.com/bengobox/logistics-service/internal/http/handlers"
@@ -182,10 +183,10 @@ func New(ctx context.Context) (*App, error) {
 	zoneSvc.SetCache(cacheAside)
 
 	// Periodic outlet pull from auth-api: events age out of JetStream, and pins set before
-	// events carried them were never sent. Runs ~30s after start, then daily, one pod at a time.
-	outletResync := tenant.NewOutletResync(entClient, cfg.Auth.ServiceURL, redisClient, log)
+	// events carried them were never sent. One replica fleet-wide runs it every 6 hours.
+	outletResync := tenant.NewOutletResync(entClient, cfg.Auth.ServiceURL, log)
 	outletResync.OnChange(zoneSvc.Invalidate)
-	outletResync.Start(ctx, 24*time.Hour)
+	outletResync.Start(ctx, 6*time.Hour)
 
 	// Subscribe to auth-service events for identity sync and outlet sync
 	if natsConn != nil {
@@ -327,7 +328,9 @@ func New(ctx context.Context) (*App, error) {
 	// Zone management (service created earlier so the outlet subscriber can refresh it)
 	zoneSvc.SetDistanceProvider(routing.ZoneDistance{Svc: routingSvc})
 	zonesHandler := handlers.NewZonesHandler(zoneSvc, log)
-	zonesHandler.SetGeocoder(zonesmod.NewGeocoder(cfg.Routing.GeocoderURL, cfg.Routing.GeocoderUserAgent, zoneSvc, cacheAside, log))
+	geocoder := zonesmod.NewGeocoder(cfg.Routing.GeocoderURL, cfg.Routing.GeocoderUserAgent, zoneSvc, cacheAside, log)
+	geocoder.SetLimiter(ratelimit.NewLimiter(redisClient, log, "logistics"))
+	zonesHandler.SetGeocoder(geocoder)
 	zonesHandler.SetSlugResolver(identitySvc.ResolveTenantSlug)
 
 	// RBAC
