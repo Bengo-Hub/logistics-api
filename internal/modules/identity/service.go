@@ -17,6 +17,7 @@ import (
 	enttenant "github.com/bengobox/logistics-service/internal/ent/tenant"
 	"github.com/bengobox/logistics-service/internal/ent/serviceconfig"
 	"github.com/bengobox/logistics-service/internal/ent/user"
+	fleetmod "github.com/bengobox/logistics-service/internal/modules/fleet"
 	"github.com/bengobox/logistics-service/internal/modules/tenant"
 	"github.com/bengobox/logistics-service/internal/platform/events"
 )
@@ -240,16 +241,31 @@ func (s *Service) UpdateRiderProfile(ctx context.Context, authServiceID, tenantI
 		return nil, fmt.Errorf("rider record not found: %w", err)
 	}
 
-	// Update KYC fields and transition to pending_review
-	now := time.Now()
-	err = tx.FleetMember.UpdateOne(fm).
-		SetIDNumber(req.IDNumber).
-		SetLicenseNo(req.LicenseNo).
-		SetIDPassportAttachment(req.IDPassportAttachment).
-		SetRiderPhoto(req.RiderPhoto).
-		SetStatus("pending_review").
-		SetKycSubmittedAt(now).
-		Exec(ctx)
+	if fleetmod.EmploymentOf(fm).IsStaff() {
+		// Staff riders were vetted by HR: no KYC review. Save what they filled in and keep
+		// their status.
+		upd := tx.FleetMember.UpdateOne(fm)
+		if req.IDNumber != "" {
+			upd.SetIDNumber(req.IDNumber)
+		}
+		if req.LicenseNo != "" {
+			upd.SetLicenseNo(req.LicenseNo)
+		}
+		if req.RiderPhoto != "" {
+			upd.SetRiderPhoto(req.RiderPhoto)
+		}
+		err = upd.Exec(ctx)
+	} else {
+		// Freelance riders: KYC fields go to review.
+		err = tx.FleetMember.UpdateOne(fm).
+			SetIDNumber(req.IDNumber).
+			SetLicenseNo(req.LicenseNo).
+			SetIDPassportAttachment(req.IDPassportAttachment).
+			SetRiderPhoto(req.RiderPhoto).
+			SetStatus("pending_review").
+			SetKycSubmittedAt(time.Now()).
+			Exec(ctx)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("update fleet member: %w", err)
 	}
@@ -284,8 +300,8 @@ func (s *Service) UpdateRiderProfile(ctx context.Context, authServiceID, tenantI
 		return nil, err
 	}
 
-	// Publish KYC submitted event to notify tenant admin
-	if s.publisher != nil {
+	// Publish KYC submitted event to notify tenant admin (staff riders have no KYC review)
+	if s.publisher != nil && !fleetmod.EmploymentOf(fm).IsStaff() {
 		// Resolve tenant slug from the fleet
 		tenantSlug := ""
 		if fl, flErr := s.client.Fleet.Get(ctx, fm.FleetID); flErr == nil {
