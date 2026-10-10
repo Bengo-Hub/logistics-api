@@ -33,6 +33,7 @@ import (
 	fleetmod "github.com/bengobox/logistics-service/internal/modules/fleet"
 	"github.com/bengobox/logistics-service/internal/modules/identity"
 	notifmod "github.com/bengobox/logistics-service/internal/modules/notifications"
+	"github.com/bengobox/logistics-service/internal/modules/perdiem"
 	rbacmod "github.com/bengobox/logistics-service/internal/modules/rbac"
 	"github.com/bengobox/logistics-service/internal/modules/routing"
 	"github.com/bengobox/logistics-service/internal/modules/tasks"
@@ -40,6 +41,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/modules/tenant"
 	zonesmod "github.com/bengobox/logistics-service/internal/modules/zones"
 	"github.com/bengobox/logistics-service/internal/platform/database"
+	"github.com/bengobox/logistics-service/internal/platform/erp"
 	"github.com/bengobox/logistics-service/internal/platform/events"
 	"github.com/bengobox/logistics-service/internal/platform/subscriptions"
 	"github.com/bengobox/logistics-service/internal/shared/logger"
@@ -258,6 +260,16 @@ func New(ctx context.Context) (*App, error) {
 	autoDispatcher.SetShiftSource(entClient)
 
 	logisticsHandler := handlers.NewLogisticsHandler(log, taskSvc, fleetSvc, autoDispatcher)
+	// Staff riders' per diem is an erp-api claim (erp-api owns rates, eligibility, approval).
+	perDiemSvc := perdiem.NewService(entClient, erp.NewClient(cfg.ERP.ServiceURL, cfg.ERP.APIKey, cfg.ERP.RequestTimeout), log)
+	logisticsHandler.SetPerDiem(perDiemSvc)
+	if perDiemSvc.Enabled() {
+		taskSvc.SetPerDiemRaiser(func(ctx context.Context, tenantID, taskID, memberID uuid.UUID) {
+			if _, err := perDiemSvc.RaiseForTask(ctx, tenantID, taskID, memberID, 0); err != nil && !errors.Is(err, perdiem.ErrNotStaff) {
+				log.Warn("per diem claim not raised", zap.String("task_id", taskID.String()), zap.Error(err))
+			}
+		})
+	}
 	logisticsHandler.SetTracker(autoDispatcher)
 	// A job a rider declines goes straight to the next nearest rider when auto-assign is on.
 	taskSvc.SetRedispatcher(func(ctx context.Context, tenantID, taskID uuid.UUID) {

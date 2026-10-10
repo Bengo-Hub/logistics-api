@@ -433,6 +433,7 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 				// Ownership is the caller's own fleet membership, so no task-manage permission.
 				tenant.Get("/riders/me/open-tasks", lh.ListOpenJobs)
 				tenant.Post("/riders/me/tasks/{taskId}/claim", lh.ClaimJob)
+				tenant.Post("/riders/me/tasks/{taskId}/per-diem", lh.RaiseMyPerDiem)
 				// Hand a job back before pickup; it goes to the next rider.
 				tenant.Post("/riders/me/tasks/{taskId}/decline", lh.DeclineJob)
 				// Cash on delivery the rider holds until it is handed in at the outlet.
@@ -467,6 +468,8 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 						// Riders work their own jobs here (ownership checked in the handlers).
 						mut.Patch("/{taskId}/status", lh.UpdateTaskStatus)
 						mut.Post("/{taskId}/pod", lh.SubmitPoD)
+						// Per diem for staff riders, raised in erp-api payroll.
+						mut.Post("/{taskId}/per-diem", lh.RaisePerDiem)
 						// Dispatcher actions.
 						mut.Group(func(disp chi.Router) {
 							disp.Use(lh.DispatcherOnly)
