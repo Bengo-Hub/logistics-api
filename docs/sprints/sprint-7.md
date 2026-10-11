@@ -30,6 +30,7 @@
 ### 8.1b Access control (status 2026-10-10)
 - [x] System roles (admin, dispatcher, driver) defined once (`rbac.SystemRoles`), ensured for every tenant by the startup seed and on demand; one permission rule (`rbac.Service.HasPermission`) with tenant admin bypass and SSO role mapping; driver role limited to own work; fleet and notification reads gated; Roles page API with usable views (`e366fbe`, `ef7c7b7`).
 - [x] Integration intake gated on an active fleet (one check in the tasks service, 409 no_active_fleet to S2S callers) and modules mapped for every auth-api use case (`0a4ae1b`).
+- [x] One subscription gate (`06aeb3a`): tenants whose plan has no logistics are never provisioned (JIT 403, user events skipped, tenant events not mirrored) and their tasks are refused (409 logistics_not_in_plan). kura (axle load enforcement) removed from logistics with backups.
 - [x] Tenant settings reduced to what code reads (`auto_assign_enabled`, `pod_required`, now enforced for riders); eight dead keys retired (`c311ffd`).
 
 ### 8.2 Tariffs & Payouts
