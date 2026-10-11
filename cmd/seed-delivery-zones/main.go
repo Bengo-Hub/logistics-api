@@ -69,7 +69,7 @@ var presets = map[string]preset{
 			{Name: "Bugengi", Center: geo.Point{Lat: 0.44899, Lng: 34.17005}, RadiusM: 1500, Fee: 150, Priority: 20, Aliases: []string{"Bugeng'i"}, Notes: "Pinned from Google Maps (Bugeng'i sub-location, east of Busia town)."},
 			{Name: "Kemodo", Center: geo.Point{Lat: 0.468094, Lng: 34.18558}, RadiusM: 1500, Fee: 200, Priority: 20, Aliases: []string{"Kemodo Market"}},
 			{Name: "Ochude", Center: geo.Point{Lat: 0.565358, Lng: 34.34028}, RadiusM: 1500, Fee: 100, Priority: 20, Notes: "Ochude village, Amukura East (OpenStreetMap; the Amukura school zone lists Ochude). About 25 km out: confirm the KES 100 fee."},
-			{Name: "Mauko", Center: geo.Point{Lat: 0.460717, Lng: 34.11147}, RadiusM: 1000, Fee: 100, Priority: 20, Aliases: []string{"Mauko Market"}},
+			{Name: "Mauko", Center: geo.Point{Lat: 0.460717, Lng: 34.11147}, RadiusM: 600, Fee: 100, Priority: 20, Aliases: []string{"Mauko Market"}, Notes: "600 m around Mauko Market so the area stops short of Busia town centre (free)."},
 			{Name: "Aget", Center: geo.Point{Lat: 0.4678448, Lng: 34.1419726}, RadiusM: 1500, Fee: 100, Priority: 20, Aliases: []string{"Aget Trading Centre"}, Notes: "Aget Trading Centre, pinned from Google Maps by the tenant."},
 			{Name: "Alupe", Center: geo.Point{Lat: 0.497094, Lng: 34.13416}, RadiusM: 1500, Fee: 100, Priority: 20, Aliases: []string{"Alupe Market", "Alupe University"}},
 			{Name: "Adungosi", Center: geo.Point{Lat: 0.514879, Lng: 34.15113}, RadiusM: 1500, Fee: 250, Priority: 20},
