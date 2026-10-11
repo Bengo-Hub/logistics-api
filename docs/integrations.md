@@ -40,6 +40,14 @@ Riders are either `freelance` (paid per delivery from pricing rules) or `staff` 
 
 Salary and per diem belong to erp-api. When a staff rider completes a task, logistics calls `POST {ERP_SERVICE_URL}/api/v1/hrm/claims/external` (X-API-Key + X-Tenant-ID) with the rider's auth user id, trip distance, start and end, and `source_key = logistics:task:<id>:per_diem`. erp-api applies its `hrm.per_diem_policy` (daily rate, job group rates, minimum distance, max days), creates a normal expense claim for HR approval and payroll, or answers 422 (`not_an_employee`, `per_diem_disabled`, `not_eligible`). The outcome is kept on the task as `metadata.per_diem_claim`. Admins (`POST /{tenant}/tasks/{id}/per-diem`) and the rider (`POST /{tenant}/riders/me/tasks/{id}/per-diem`) can raise it again, with the number of days for a multi-day trip; erp-api returns the existing claim for the same task.
 
+## Intake gate: an active fleet (added 2026-10-11)
+
+Logistics mirrors every tenant whose users open it, but only tenants that run riders dispatch. Tasks from other services (ordering `order.ready`, inventory `transfer.created`, `POST /s2s/dispatch/{tenant}/tasks` from the POS and others) are accepted only when the tenant has at least one active rider, staff or freelance (`tasks.Service.HasActiveFleet`, the one check, inside `CreateTask`/`CreateTaskFromOrder`). Consumers ack and skip; S2S callers get `409 {"code":"no_active_fleet"}` and pos-api shows the cashier why. Dispatcher-made jobs are not gated. The answer is cached in the shared cache for two minutes and dropped whenever a rider is activated, suspended, rejected or removed. Plan entitlement is not used for this: every PowerSuite tier carries `basic_logistics_access`, and `active_products` has no logistics row for tenants whose main plan grants it.
+
+## Modules by use case (updated 2026-10-11)
+
+`/auth/me` returns `enabled_modules` from `consts.UseCaseModules`, keyed on the tenant's auth-api use case: hospitality and quick service get the delivery set (riders, dispatch, tracking, pricing, rider pay, vehicles, shifts, reports); retail, warehouse and manufacturing add distribution; pharmacy and hospital add distribution and cold chain; logistics and distribution get every module; ISP, hotspot, services, library, property, FBO and weighbridge tenants see only the dashboard, settings and roles. A tenant override (`logistics.enabled_modules`, platform owners) still wins, and an unknown use case keeps every module.
+
 ## Inbound: Auth-Service
 
 - **JWT validation**: All protected routes require a valid Bearer token from auth-service (JWKS).
