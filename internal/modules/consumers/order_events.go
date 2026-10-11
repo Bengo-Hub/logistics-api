@@ -242,6 +242,12 @@ func (c *OrderReadyConsumer) handleMessage(msg *nats.Msg) {
 		_ = msg.NakWithDelay(3 * time.Second)
 		return
 	}
+	if errors.Is(err, tasks.ErrNoActiveFleet) {
+		// The business delivers without riders in logistics: nothing to dispatch, no retry.
+		c.log.Info("order ready: tenant has no active riders, skipping delivery task", zap.String("order_id", orderID))
+		_ = msg.Ack()
+		return
+	}
 	if err != nil {
 		c.log.Error("order ready: create task failed",
 			zap.Error(err),

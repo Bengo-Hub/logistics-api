@@ -244,6 +244,8 @@ func New(ctx context.Context) (*App, error) {
 	taskSvc.SetPublisher(eventPublisher)
 	taskSvc.SetLocker(redisClient)
 	taskSvc.SetAreaTagger(zoneSvc)
+	// Integration tasks need an active fleet; the answer is cached and dropped on rider changes.
+	taskSvc.SetCache(cacheAside)
 
 	// Earnings: records rider earnings on delivery completion, daily statement generation
 	earningsSvc := earnings.NewService(entClient, log).WithDB(sqlDB)
@@ -253,6 +255,7 @@ func New(ctx context.Context) (*App, error) {
 	log.Info("app: earnings statement job started (daily)")
 
 	fleetSvc := fleetmod.NewService(entClient, log, eventPublisher)
+	fleetSvc.OnStatusChange(taskSvc.InvalidateFleetGate)
 	go fleetSvc.StartStaleRiderCleanup(ctx)
 
 	// Auto-dispatch: find nearest rider and assign tasks automatically

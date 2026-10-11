@@ -113,6 +113,7 @@ func (s *Service) SetEmployment(ctx context.Context, tenantID, memberID uuid.UUI
 	}
 	if activate {
 		s.ensureDriverRole(ctx, tenantID, m.UserID)
+		s.statusChanged(ctx, tenantID)
 	}
 	return saved, nil
 }

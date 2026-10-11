@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -39,6 +40,13 @@ func (h *LogisticsHandler) S2SCreateTask(w http.ResponseWriter, r *http.Request)
 	}
 
 	t, err := h.taskSvc.CreateTask(r.Context(), tenantID, req)
+	if errors.Is(err, tasks.ErrNoActiveFleet) {
+		respondJSON(w, http.StatusConflict, map[string]string{
+			"code":  "no_active_fleet",
+			"error": "This business has no active riders in logistics. Add riders before sending deliveries.",
+		})
+		return
+	}
 	if err != nil {
 		h.log.Warn("s2s create task", zap.Error(err))
 		http.Error(w, err.Error(), http.StatusBadRequest)

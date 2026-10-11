@@ -1,9 +1,9 @@
 package fleet
 
 import (
-	"strings"
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -34,6 +34,17 @@ type Service struct {
 	client    *ent.Client
 	log       *zap.Logger
 	publisher *events.Publisher
+	onChange  func(ctx context.Context, tenantID uuid.UUID)
+}
+
+// OnStatusChange registers a callback run after a rider's status may have changed (the task
+// intake fleet gate drops its cached answer).
+func (s *Service) OnStatusChange(fn func(ctx context.Context, tenantID uuid.UUID)) { s.onChange = fn }
+
+func (s *Service) statusChanged(ctx context.Context, tenantID uuid.UUID) {
+	if s.onChange != nil {
+		s.onChange(ctx, tenantID)
+	}
 }
 
 // NewService creates a new fleet service.
@@ -287,6 +298,7 @@ func (s *Service) InviteMember(ctx context.Context, tenantID uuid.UUID, tenantSl
 	}
 	if staff {
 		s.ensureDriverRole(ctx, tenantID, req.UserID)
+		s.statusChanged(ctx, tenantID)
 	}
 
 	s.log.Info("fleet member invited",
@@ -330,6 +342,7 @@ func (s *Service) ApproveMember(ctx context.Context, tenantID, memberID uuid.UUI
 	// Grant the rider the tenant's "driver" role so RBAC permits task status/POD
 	// updates. Idempotent + non-fatal: never block onboarding on an RBAC hiccup.
 	s.ensureDriverRole(ctx, tenantID, m.UserID)
+	s.statusChanged(ctx, tenantID)
 
 	// Publish fleet member approved event
 	if s.publisher != nil {
@@ -420,6 +433,7 @@ func (s *Service) SuspendMember(ctx context.Context, tenantID, memberID uuid.UUI
 	if err != nil {
 		return nil, fmt.Errorf("fleet: suspend: %w", err)
 	}
+	s.statusChanged(ctx, tenantID)
 
 	// Publish fleet member suspended event
 	if s.publisher != nil {
@@ -459,6 +473,7 @@ func (s *Service) RejectMember(ctx context.Context, tenantID, memberID uuid.UUID
 	if err != nil {
 		return nil, fmt.Errorf("fleet: reject: %w", err)
 	}
+	s.statusChanged(ctx, tenantID)
 
 	// Publish fleet member rejected event
 	if s.publisher != nil {
@@ -499,6 +514,7 @@ func (s *Service) DeleteMember(ctx context.Context, tenantID, memberID uuid.UUID
 	if err := s.client.FleetMember.DeleteOneID(m.ID).Exec(ctx); err != nil {
 		return fmt.Errorf("fleet: delete member: %w", err)
 	}
+	s.statusChanged(ctx, tenantID)
 
 	s.log.Info("deleted fleet member",
 		zap.String("member_id", memberID.String()),

@@ -3,6 +3,7 @@ package consumers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -186,6 +187,12 @@ func (c *TransferReadyConsumer) handleMessage(msg *nats.Msg) {
 		TaskType:          "outlet_transfer",
 		Metadata:          metadata,
 	})
+	if errors.Is(err, tasks.ErrNoActiveFleet) {
+		// Stock moved off the books (no riders in logistics): the transfer stays in inventory.
+		c.log.Info("transfer created: tenant has no active riders, skipping transfer task", zap.String("transfer_id", transferID))
+		_ = msg.Ack()
+		return
+	}
 	if err != nil {
 		c.log.Error("transfer created: create task failed",
 			zap.Error(err),
