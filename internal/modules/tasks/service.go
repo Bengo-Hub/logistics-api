@@ -304,6 +304,7 @@ type Service struct {
 	publisher      *events.Publisher
 	earningsSvc    EarningsRecorder
 	cache          *sharedcache.Aside
+	entitled       func(ctx context.Context, tenantID string) bool
 	perDiem        PerDiemRaiser
 	etaTrigger     ETATrigger
 	sseBroadcaster StatusBroadcaster
@@ -395,8 +396,10 @@ func (s *Service) SetSSEBroadcaster(b StatusBroadcaster) {
 // carrying an external_reference that already has an open task returns that task instead of a
 // second one (pos-api dispatching the same order twice, a retried S2S call).
 func (s *Service) CreateTask(ctx context.Context, tenantID uuid.UUID, req CreateTaskRequest) (*ent.Task, error) {
-	if isIntegrationSource(req.SourceService) && !s.HasActiveFleet(ctx, tenantID) {
-		return nil, ErrNoActiveFleet
+	if isIntegrationSource(req.SourceService) {
+		if err := s.intakeAllowed(ctx, tenantID); err != nil {
+			return nil, err
+		}
 	}
 	unlock, err := s.lockIntake(ctx, tenantID, req.ExternalReference)
 	if err != nil {
@@ -1067,8 +1070,8 @@ func (s *Service) SubmitPoD(ctx context.Context, tenantID, taskID uuid.UUID, req
 // CreateTaskFromOrder creates a delivery task from an ordering event, including
 // pickup/dropoff TaskSteps with coordinates for auto-dispatch.
 func (s *Service) CreateTaskFromOrder(ctx context.Context, tenantID uuid.UUID, externalRef string, req CreateTaskFromOrderRequest) (*ent.Task, error) {
-	if !s.HasActiveFleet(ctx, tenantID) {
-		return nil, ErrNoActiveFleet
+	if err := s.intakeAllowed(ctx, tenantID); err != nil {
+		return nil, err
 	}
 	// Idempotent per order, across replicas: two ready events for the same order (kitchen and
 	// pickup queue) processed on two pods at once used to create two tasks.

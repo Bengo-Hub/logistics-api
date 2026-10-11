@@ -3,7 +3,9 @@ package router
 import (
 	"context"
 	"crypto/subtle"
+	"errors"
 	ratelimit "github.com/Bengo-Hub/shared-ratelimit"
+	tenantmod "github.com/bengobox/logistics-service/internal/modules/tenant"
 	"net/http"
 	"strconv"
 	"strings"
@@ -213,6 +215,12 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 								"roles":             claims.Roles,
 								"is_platform_owner": claims.IsPlatformOwner,
 							})
+							if errors.Is(err, tenantmod.ErrNotEntitled) && !claims.IsPlatformOwner {
+								w.Header().Set("Content-Type", "application/json")
+								w.WriteHeader(http.StatusForbidden)
+								_, _ = w.Write([]byte(`{"code":"logistics_not_in_plan","error":"Logistics is not part of your subscription."}`))
+								return
+							}
 							if err != nil {
 								log.Warn("jit provisioning failed", zap.Error(err))
 							}

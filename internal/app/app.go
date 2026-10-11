@@ -160,20 +160,16 @@ func New(ctx context.Context) (*App, error) {
 		APIKey:         cfg.Subscriptions.APIKey,
 	})
 
-	// consumerFeatureGate restricts cross-service data sync (ordering→delivery tasks,
-	// inventory→transfer tasks) to tenants entitled to the corresponding logistics feature,
-	// mirroring the HTTP-layer gating contract. Cached per tenant; fails open on a
-	// subscriptions-api outage so a downtime never strands legitimate deliveries.
-	consumerFeatureGate := func(ctx context.Context, tenantID, feature string) bool {
-		return subsClient.ConsumerHasFeature(ctx, tenantID, feature)
-	}
-	// consumerActiveProductGate additionally gates on per-product ACTIVATION (has the tenant
-	// currently turned the app on), distinct from plan entitlement above. Same fail-open contract.
-	consumerActiveProductGate := func(ctx context.Context, tenantID, productCode string) bool {
-		return subsClient.ConsumerHasActiveProduct(ctx, tenantID, productCode)
+	// logisticsEntitled is the one subscription gate: a tenant whose plan does not cover
+	// logistics (subscriptions-api active_service_tags) is never provisioned here and its
+	// events and S2S tasks are refused. Exempt, demo and service-charge tenants pass; a
+	// subscriptions-api outage fails open, a 404 (no subscription) does not.
+	logisticsEntitled := func(ctx context.Context, tenantID string) bool {
+		return subsClient.ConsumerUsesService(ctx, tenantID, "logistics")
 	}
 
 	tenantSyncer := tenant.NewSyncer(entClient, cfg.Auth.ServiceURL)
+	tenantSyncer.SetEntitlementGate(logisticsEntitled)
 
 	// Publisher will be set after NATS initialization
 	identitySvc := identity.NewService(entClient, tenantSyncer, nil, log)
@@ -193,9 +189,6 @@ func New(ctx context.Context) (*App, error) {
 	// Subscribe to auth-service events for identity sync and outlet sync
 	if natsConn != nil {
 		identityEventHandler := identity.NewEventHandler(identitySvc, log)
-		identityEventHandler.ProductActive = func(ctx context.Context, tenantID string) bool {
-			return consumerActiveProductGate(ctx, tenantID, "logistics")
-		}
 		if err := identityEventHandler.SubscribeToAuthEvents(natsConn); err != nil {
 			log.Warn("app: failed to subscribe to auth events", zap.Error(err))
 		}
@@ -211,6 +204,7 @@ func New(ctx context.Context) (*App, error) {
 		// Tenant sync: mirrors auth.tenant.created/updated events into the local
 		// tenants table so tenant metadata stays current without HTTP round-trips.
 		tenantEventSub := tenant.NewTenantEventSubscriber(entClient, log)
+		tenantEventSub.UseGateOf(tenantSyncer)
 		if err := tenantEventSub.Start(natsConn); err != nil {
 			log.Warn("app: failed to start tenant event subscriber", zap.Error(err))
 		}
@@ -246,6 +240,7 @@ func New(ctx context.Context) (*App, error) {
 	taskSvc.SetAreaTagger(zoneSvc)
 	// Integration tasks need an active fleet; the answer is cached and dropped on rider changes.
 	taskSvc.SetCache(cacheAside)
+	taskSvc.SetEntitlementGate(logisticsEntitled)
 
 	// Earnings: records rider earnings on delivery completion, daily statement generation
 	earningsSvc := earnings.NewService(entClient, log).WithDB(sqlDB)
@@ -283,10 +278,7 @@ func New(ctx context.Context) (*App, error) {
 	orderCancelledConsumer := consumers.NewOrderCancelledConsumer(log, taskSvc)
 
 	orderConsumer := consumers.NewOrderReadyConsumer(log, taskSvc, autoDispatcher)
-	orderConsumer.SetFeatureGate(consumerFeatureGate)
-	orderConsumer.SetActiveProductGate(consumerActiveProductGate)
 	transferConsumer := consumers.NewTransferReadyConsumer(log, taskSvc, autoDispatcher)
-	transferConsumer.SetFeatureGate(consumerFeatureGate)
 
 	// Tenant purge consumer: on platform-owner-confirmed dormancy purge (tenant.purge),
 	// IRREVERSIBLY deletes all of the tenant's logistics data. No feature gate — a purge

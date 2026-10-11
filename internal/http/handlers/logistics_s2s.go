@@ -40,6 +40,13 @@ func (h *LogisticsHandler) S2SCreateTask(w http.ResponseWriter, r *http.Request)
 	}
 
 	t, err := h.taskSvc.CreateTask(r.Context(), tenantID, req)
+	if errors.Is(err, tasks.ErrNotEntitled) {
+		respondJSON(w, http.StatusConflict, map[string]string{
+			"code":  "logistics_not_in_plan",
+			"error": "Logistics is not part of this business's subscription.",
+		})
+		return
+	}
 	if errors.Is(err, tasks.ErrNoActiveFleet) {
 		respondJSON(w, http.StatusConflict, map[string]string{
 			"code":  "no_active_fleet",

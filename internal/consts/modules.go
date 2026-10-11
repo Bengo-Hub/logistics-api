@@ -110,19 +110,3 @@ func ResolveModules(useCase string, override []string) []string {
 	}
 	return AllModules
 }
-
-// DeliversGoods reports whether a use case runs deliveries, so logistics should mirror the
-// tenant. Unknown or empty use cases count as delivering (fail open); ISP, library, property,
-// weighbridge and similar tenants do not.
-func DeliversGoods(useCase string) bool {
-	modules, ok := UseCaseModules[useCase]
-	if !ok {
-		return true
-	}
-	for _, m := range modules {
-		if m == ModuleDispatch {
-			return true
-		}
-	}
-	return false
-}

@@ -30,9 +30,6 @@ type TransferReadyConsumer struct {
 	taskSvc    *tasks.Service
 	dispatcher *dispatch.AutoDispatcher
 	svcCtx     context.Context //nolint:containedctx
-	// hasFeature gates inventory→logistics distribution sync by subscription entitlement.
-	// Nil → fail open.
-	hasFeature func(ctx context.Context, tenantID, feature string) bool
 }
 
 // NewTransferReadyConsumer creates the consumer.
@@ -43,20 +40,6 @@ func NewTransferReadyConsumer(log *zap.Logger, taskSvc *tasks.Service, dispatche
 		dispatcher: dispatcher,
 		svcCtx:     context.Background(),
 	}
-}
-
-// SetFeatureGate wires the subscription entitlement check used to gate transfer-task sync.
-func (c *TransferReadyConsumer) SetFeatureGate(fn func(ctx context.Context, tenantID, feature string) bool) {
-	c.hasFeature = fn
-}
-
-// entitled reports whether the tenant may have a distribution/transfer task synced. Fails open
-// when no gate is wired or tenantID is empty.
-func (c *TransferReadyConsumer) entitled(ctx context.Context, tenantID, feature string) bool {
-	if c.hasFeature == nil || tenantID == "" {
-		return true
-	}
-	return c.hasFeature(ctx, tenantID, feature)
 }
 
 // Start begins consuming inventory.transfer.created via JetStream.
@@ -148,16 +131,6 @@ func (c *TransferReadyConsumer) handleMessage(msg *nats.Msg) {
 		return
 	}
 
-	// Gate the cross-service distribution sync on the core logistics entitlement. Fails open on a
-	// subscriptions-api outage. Warehouse transfers are an optional distribution capability, so a
-	// tenant without logistics access never accrues transfer tasks/shipments.
-	if !c.entitled(ctx, evt.TenantID, "basic_logistics_access") {
-		c.log.Debug("transfer created: tenant lacks basic_logistics_access — skipping transfer task sync",
-			zap.String("tenant_id", evt.TenantID), zap.String("transfer_id", transferID))
-		_ = msg.Ack()
-		return
-	}
-
 	fromLat, fromLng := derefFloat(p.FromWarehouse.Latitude), derefFloat(p.FromWarehouse.Longitude)
 	toLat, toLng := derefFloat(p.ToWarehouse.Latitude), derefFloat(p.ToWarehouse.Longitude)
 	itemCount := len(p.Items)
@@ -187,9 +160,9 @@ func (c *TransferReadyConsumer) handleMessage(msg *nats.Msg) {
 		TaskType:          "outlet_transfer",
 		Metadata:          metadata,
 	})
-	if errors.Is(err, tasks.ErrNoActiveFleet) {
-		// Stock moved off the books (no riders in logistics): the transfer stays in inventory.
-		c.log.Info("transfer created: tenant has no active riders, skipping transfer task", zap.String("transfer_id", transferID))
+	if errors.Is(err, tasks.ErrNoActiveFleet) || errors.Is(err, tasks.ErrNotEntitled) {
+		// Stock moved off the books (no logistics plan or no riders): it stays in inventory.
+		c.log.Info("transfer created: tenant does not dispatch through logistics, skipping", zap.String("transfer_id", transferID), zap.Error(err))
 		_ = msg.Ack()
 		return
 	}

@@ -3,7 +3,6 @@ package tenant
 import (
 	"context"
 	"fmt"
-	"github.com/bengobox/logistics-service/internal/consts"
 	"time"
 
 	sharedevents "github.com/Bengo-Hub/shared-events"
@@ -21,7 +20,12 @@ import (
 type TenantEventSubscriber struct {
 	client *ent.Client
 	logger *zap.Logger
+	// syncer supplies the logistics entitlement gate (one rule for every provisioning path).
+	syncer *Syncer
 }
+
+// UseGateOf makes the subscriber mirror only tenants the syncer's gate admits.
+func (s *TenantEventSubscriber) UseGateOf(syncer *Syncer) { s.syncer = syncer }
 
 // NewTenantEventSubscriber constructs a TenantEventSubscriber.
 func NewTenantEventSubscriber(client *ent.Client, logger *zap.Logger) *TenantEventSubscriber {
@@ -116,13 +120,12 @@ func (s *TenantEventSubscriber) handleUpsert(ctx context.Context, evt *sharedeve
 		return fmt.Errorf("invalid tenant_id %q: %w", tenantIDStr, err)
 	}
 
-	// Only businesses that deliver are mirrored. A tenant already here (it opened logistics or
-	// runs riders) keeps being updated whatever its use case.
-	if !consts.DeliversGoods(useCase) {
+	// Only tenants whose subscription includes logistics are mirrored. A tenant already here
+	// keeps being updated.
+	if s.syncer != nil && !s.syncer.Entitled(ctx, tenantID.String()) {
 		exists, xerr := s.client.Tenant.Query().Where(enttenant.ID(tenantID)).Exist(ctx)
 		if xerr == nil && !exists {
-			s.logger.Debug("tenant event: use case does not deliver, not mirrored",
-				zap.String("slug", slug), zap.String("use_case", useCase))
+			s.logger.Debug("tenant event: logistics not in plan, not mirrored", zap.String("slug", slug))
 			return nil
 		}
 	}

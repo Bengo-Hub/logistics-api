@@ -17,6 +17,27 @@ import (
 // otherwise pile up jobs nobody can take. This is the one check; every intake path goes
 // through CreateTask or CreateTaskFromOrder.
 
+// ErrNotEntitled means the tenant's subscription has no logistics, so integration tasks are
+// refused.
+var ErrNotEntitled = errors.New("tasks: logistics is not part of this business's subscription")
+
+// SetEntitlementGate wires the subscription check (does the plan include logistics).
+func (s *Service) SetEntitlementGate(fn func(ctx context.Context, tenantID string) bool) {
+	s.entitled = fn
+}
+
+// intakeAllowed is the one check for tasks from other services: the plan includes logistics
+// and the tenant runs at least one active rider.
+func (s *Service) intakeAllowed(ctx context.Context, tenantID uuid.UUID) error {
+	if s.entitled != nil && !s.entitled(ctx, tenantID.String()) {
+		return ErrNotEntitled
+	}
+	if !s.HasActiveFleet(ctx, tenantID) {
+		return ErrNoActiveFleet
+	}
+	return nil
+}
+
 // ErrNoActiveFleet means the tenant has no active rider, so integration tasks are refused.
 var ErrNoActiveFleet = errors.New("tasks: this business has no active riders in logistics; add riders before sending deliveries")
 

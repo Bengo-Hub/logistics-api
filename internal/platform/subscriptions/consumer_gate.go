@@ -27,6 +27,12 @@ type Entitlements struct {
 	// tenants (subscriptions-api's exemptResult never populates it) — ConsumerHasActiveProduct
 	// bypasses via BillingMode, never by checking this list.
 	ActiveProducts []string `json:"active_products"`
+	// ActiveServiceTags are the services the tenant's plan covers (subscriptions-api derives
+	// them from the plan's features). "logistics" here means the plan includes logistics.
+	ActiveServiceTags []string `json:"active_service_tags"`
+	// NotSubscribed is set when subscriptions-api answers 404: the tenant has no subscription,
+	// which is a real "no", not an outage to fail open on.
+	NotSubscribed bool `json:"-"`
 }
 
 type cachedEntitlements struct {
@@ -59,6 +65,9 @@ func (c *Client) GetEntitlements(ctx context.Context, tenantID string) *Entitlem
 		return nil
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound {
+		return &Entitlements{NotSubscribed: true}
+	}
 	if resp.StatusCode != http.StatusOK {
 		return nil
 	}
@@ -93,6 +102,32 @@ func (c *Client) ConsumerHasFeature(ctx context.Context, tenantID, featureCode s
 	return false
 }
 
+// ConsumerUsesService reports whether the tenant's subscription covers a service (for example
+// "logistics"): exempt, demo-bypass and service-charge tenants always do; a tenant with no
+// subscription does not; otherwise the tag must be in active_service_tags. Fails open only when
+// subscriptions-api cannot be reached. Cached per tenant like the other checks.
+func (c *Client) ConsumerUsesService(ctx context.Context, tenantID, serviceTag string) bool {
+	if c == nil || tenantID == "" || serviceTag == "" {
+		return true
+	}
+	e := c.cachedEntitlements(ctx, tenantID)
+	if e == nil {
+		return true // outage: never drop legitimate traffic
+	}
+	if e.NotSubscribed {
+		return false
+	}
+	if e.IsDemoBypass || e.BillingMode == "exempt" || e.BillingMode == "service_charge" {
+		return true
+	}
+	for _, t := range e.ActiveServiceTags {
+		if t == serviceTag {
+			return true
+		}
+	}
+	return false
+}
+
 // ConsumerHasActiveProduct reports whether tenantID has currently ACTIVATED productCode — used
 // to gate cross-service traffic (S2S calls into this service, NATS events this service reacts
 // to) against a product the tenant has self-deactivated via subscriptions-api's per-product
@@ -118,6 +153,9 @@ func (c *Client) ConsumerHasActiveProduct(ctx context.Context, tenantID, product
 	e := c.cachedEntitlements(ctx, tenantID)
 	if e == nil {
 		return true // lookup failed → fail open
+	}
+	if e.NotSubscribed {
+		return false
 	}
 	if e.BillingMode == "exempt" || e.BillingMode == "service_charge" {
 		return true

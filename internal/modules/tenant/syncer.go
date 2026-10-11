@@ -3,6 +3,7 @@ package tenant
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -16,10 +17,27 @@ import (
 	enttenant "github.com/bengobox/logistics-service/internal/ent/tenant"
 )
 
+// ErrNotEntitled means the tenant's subscription does not include logistics, so it is not
+// provisioned here.
+var ErrNotEntitled = errors.New("tenant: logistics is not part of this subscription")
+
+// EntitlementGate reports whether a tenant's subscription includes logistics.
+type EntitlementGate func(ctx context.Context, tenantID string) bool
+
 // Syncer handles dynamic syncing of tenant data from auth-api using Ent ORM.
 type Syncer struct {
 	client  *ent.Client
 	authURL string
+	gate    EntitlementGate
+}
+
+// SetEntitlementGate makes the syncer refuse tenants whose plan has no logistics. Tenants
+// already mirrored are returned as before.
+func (s *Syncer) SetEntitlementGate(g EntitlementGate) { s.gate = g }
+
+// Entitled runs the gate (true when none is wired).
+func (s *Syncer) Entitled(ctx context.Context, tenantID string) bool {
+	return s.gate == nil || s.gate(ctx, tenantID)
 }
 
 // NewSyncer creates a new TenantSyncer.
@@ -74,6 +92,10 @@ func (s *Syncer) SyncTenant(ctx context.Context, slug string) (uuid.UUID, error)
 	realID, err := uuid.Parse(remote.ID)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("tenant.Syncer: invalid UUID %q: %w", remote.ID, err)
+	}
+
+	if !s.Entitled(ctx, realID.String()) {
+		return uuid.Nil, ErrNotEntitled
 	}
 
 	now := time.Now()

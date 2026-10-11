@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/bengobox/logistics-service/internal/modules/rbac"
+	"github.com/bengobox/logistics-service/internal/modules/tenant"
 	"log"
 	"time"
 
@@ -34,9 +35,6 @@ const authStream = "auth"
 type EventHandler struct {
 	service *Service
 	logger  *zap.Logger
-	// ProductActive reports whether the tenant has logistics active on its subscription.
-	// Nil admits every tenant.
-	ProductActive func(ctx context.Context, tenantID string) bool
 }
 
 // NewEventHandler creates a new identity event handler.
@@ -337,13 +335,12 @@ func (h *EventHandler) handleUserCreated(ctx context.Context, evt *sharedevents.
 		}
 	}
 
-	// A tenant that has not activated logistics is never projected here, neither the tenant row
-	// nor its people. The gate fails open, and demo and PAYG tenants always pass.
-	if h.ProductActive != nil && evt.TenantID != uuid.Nil && !h.ProductActive(ctx, evt.TenantID.String()) {
+	// A tenant whose plan has no logistics is never projected here, neither the tenant row nor
+	// its people (tenant.Syncer applies the one entitlement gate).
+	tenantID, err := h.service.tenantSyncer.SyncTenant(ctx, tenantSlug)
+	if errors.Is(err, tenant.ErrNotEntitled) {
 		return nil
 	}
-
-	tenantID, err := h.service.tenantSyncer.SyncTenant(ctx, tenantSlug)
 	if err != nil {
 		return fmt.Errorf("sync tenant %s: %w", tenantSlug, err)
 	}

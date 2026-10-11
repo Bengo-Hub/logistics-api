@@ -32,13 +32,6 @@ type OrderReadyConsumer struct {
 	// the NATS handler (which has no context parameter) can derive bounded
 	// goroutine contexts that respect service shutdown.
 	svcCtx context.Context //nolint:containedctx
-	// hasFeature gates ordering→logistics delivery sync by subscription entitlement.
-	// Nil → fail open.
-	hasFeature func(ctx context.Context, tenantID, feature string) bool
-	// hasActiveProduct gates ordering→logistics delivery sync by per-product activation
-	// (distinct from hasFeature's plan-entitlement check — this checks whether the tenant has
-	// currently turned "logistics" on). Nil → fail open.
-	hasActiveProduct func(ctx context.Context, tenantID, productCode string) bool
 }
 
 // NewOrderReadyConsumer creates the consumer.
@@ -49,35 +42,6 @@ func NewOrderReadyConsumer(log *zap.Logger, taskSvc *tasks.Service, dispatcher *
 		dispatcher: dispatcher,
 		svcCtx:     context.Background(), // replaced by Start()
 	}
-}
-
-// SetFeatureGate wires the subscription entitlement check used to gate delivery-task sync.
-func (c *OrderReadyConsumer) SetFeatureGate(fn func(ctx context.Context, tenantID, feature string) bool) {
-	c.hasFeature = fn
-}
-
-// SetActiveProductGate wires the per-product activation check used to gate delivery-task sync
-// against a tenant that has self-deactivated the logistics app.
-func (c *OrderReadyConsumer) SetActiveProductGate(fn func(ctx context.Context, tenantID, productCode string) bool) {
-	c.hasActiveProduct = fn
-}
-
-// entitled reports whether the tenant may have a delivery task synced. Fails open when no
-// gate is wired or tenantID is empty (never strand a legitimate delivery on a parse miss).
-func (c *OrderReadyConsumer) entitled(ctx context.Context, tenantID, feature string) bool {
-	if c.hasFeature == nil || tenantID == "" {
-		return true
-	}
-	return c.hasFeature(ctx, tenantID, feature)
-}
-
-// productActive reports whether the tenant currently has the logistics product activated.
-// Fails open when no gate is wired or tenantID is empty.
-func (c *OrderReadyConsumer) productActive(ctx context.Context, tenantID, productCode string) bool {
-	if c.hasActiveProduct == nil || tenantID == "" {
-		return true
-	}
-	return c.hasActiveProduct(ctx, tenantID, productCode)
 }
 
 // Start begins consuming ordering.order.ready via JetStream.
@@ -168,25 +132,8 @@ func (c *OrderReadyConsumer) handleMessage(msg *nats.Msg) {
 		return
 	}
 
-	// Gate the cross-service delivery sync on the core logistics entitlement. Fails open on a
-	// subscriptions-api outage so a downtime never strands a legitimate delivery. basic_logistics_access
-	// is auto-injected into ordering plans, so any tenant whose orders reach here is normally entitled.
-	if !c.entitled(ctx, rawTenantID, "basic_logistics_access") {
-		c.log.Debug("order ready: tenant lacks basic_logistics_access — skipping delivery task sync",
-			zap.String("tenant_id", rawTenantID), zap.String("order_id", orderID))
-		_ = msg.Ack()
-		return
-	}
-
-	// Gate on per-product activation: a tenant may be plan-entitled to logistics but have
-	// self-deactivated the app via subscriptions-api. Skip (ack, don't retry) rather than fail —
-	// this is not an error, it's the tenant opting out.
-	if !c.productActive(ctx, rawTenantID, "logistics") {
-		c.log.Info("order ready: logistics deactivated for tenant, skipping delivery task sync",
-			zap.String("tenant_id", rawTenantID), zap.String("order_id", orderID))
-		_ = msg.Ack()
-		return
-	}
+	// Whether the tenant takes deliveries at all (plan includes logistics, active riders) is
+	// decided once, in tasks.Service, for every intake path.
 
 	// Build task creation request with full delivery context
 	req := tasks.CreateTaskFromOrderRequest{
@@ -242,9 +189,9 @@ func (c *OrderReadyConsumer) handleMessage(msg *nats.Msg) {
 		_ = msg.NakWithDelay(3 * time.Second)
 		return
 	}
-	if errors.Is(err, tasks.ErrNoActiveFleet) {
-		// The business delivers without riders in logistics: nothing to dispatch, no retry.
-		c.log.Info("order ready: tenant has no active riders, skipping delivery task", zap.String("order_id", orderID))
+	if errors.Is(err, tasks.ErrNoActiveFleet) || errors.Is(err, tasks.ErrNotEntitled) {
+		// No logistics in the plan, or no riders: nothing to dispatch, no retry.
+		c.log.Info("order ready: tenant does not dispatch through logistics, skipping", zap.String("order_id", orderID), zap.Error(err))
 		_ = msg.Ack()
 		return
 	}
