@@ -436,6 +436,10 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 				// Driver/fleet performance analytics are a premium surface.
 				tenant.Group(func(ag chi.Router) {
 					ag.Use(appmw.RequireAnyFeature(cfg.Subscriptions.ServiceURL+"/upgrade", "driver_analytics", "performance_reports"))
+					// Operations analytics are for dispatchers and admins, not every user.
+					if rbacSvc != nil {
+						ag.Use(appmw.RequirePermission(rbacSvc, rbac.PermTaskView))
+					}
 					analyticsH.RegisterRoutes(ag)
 				})
 			}
