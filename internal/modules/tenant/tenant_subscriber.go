@@ -3,6 +3,7 @@ package tenant
 import (
 	"context"
 	"fmt"
+	"github.com/bengobox/logistics-service/internal/consts"
 	"time"
 
 	sharedevents "github.com/Bengo-Hub/shared-events"
@@ -113,6 +114,17 @@ func (s *TenantEventSubscriber) handleUpsert(ctx context.Context, evt *sharedeve
 	tenantID, err := uuid.Parse(tenantIDStr)
 	if err != nil {
 		return fmt.Errorf("invalid tenant_id %q: %w", tenantIDStr, err)
+	}
+
+	// Only businesses that deliver are mirrored. A tenant already here (it opened logistics or
+	// runs riders) keeps being updated whatever its use case.
+	if !consts.DeliversGoods(useCase) {
+		exists, xerr := s.client.Tenant.Query().Where(enttenant.ID(tenantID)).Exist(ctx)
+		if xerr == nil && !exists {
+			s.logger.Debug("tenant event: use case does not deliver, not mirrored",
+				zap.String("slug", slug), zap.String("use_case", useCase))
+			return nil
+		}
 	}
 
 	now := time.Now()

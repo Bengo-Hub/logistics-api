@@ -53,7 +53,9 @@ func main() {
 	// Sync tenants so the tenant rows exist before runtime NATS outlet events arrive.
 	// Outlets are synced automatically at runtime via auth.outlet.* JetStream events.
 	syncer := tenant.NewSyncer(client, cfg.Auth.ServiceURL)
-	for _, slug := range []string{"codevertex-demo", "urban-loft", "kura"} {
+	// Only the demo and the first delivery tenant; every other tenant arrives through auth
+	// events (businesses that deliver) or when its users first open logistics.
+	for _, slug := range []string{"codevertex-demo", "urban-loft"} {
 		if _, err := syncer.SyncTenant(ctx, slug); err != nil {
 			log.Printf("  [SKIP] sync tenant %s: %v", slug, err)
 			continue

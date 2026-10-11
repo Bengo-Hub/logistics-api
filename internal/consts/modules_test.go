@@ -36,3 +36,16 @@ func TestResolveModulesByUseCase(t *testing.T) {
 		}
 	}
 }
+
+func TestDeliversGoods(t *testing.T) {
+	for _, uc := range []string{"hospitality", "retail", "logistics", "hospital", "", "brand-new"} {
+		if !DeliversGoods(uc) {
+			t.Errorf("%q should be mirrored", uc)
+		}
+	}
+	for _, uc := range []string{"axle_load_enforcement", "isp", "library", "property", "services"} {
+		if DeliversGoods(uc) {
+			t.Errorf("%q does not deliver goods", uc)
+		}
+	}
+}
