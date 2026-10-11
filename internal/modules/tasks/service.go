@@ -892,17 +892,17 @@ func (s *Service) SubmitPoD(ctx context.Context, tenantID, taskID uuid.UUID, req
 	// it to the rider on delivery. When present and non-empty it MUST match the
 	// confirmation_code supplied by the rider. Tasks without a pod_code (legacy
 	// or non-delivery tasks) remain fully backward-compatible.
-	if t.Metadata != nil {
-		if raw, ok := t.Metadata["pod_code"]; ok {
-			if podCode, ok := raw.(string); ok && podCode != "" {
-				if req.ConfirmationCode == "" {
-					return nil, fmt.Errorf("tasks: delivery confirmation code required")
-				}
-				if req.ConfirmationCode != podCode {
-					return nil, fmt.Errorf("tasks: incorrect delivery confirmation code")
-				}
-			}
+	podCode, _ := t.Metadata["pod_code"].(string)
+	if podCode != "" {
+		if req.ConfirmationCode == "" {
+			return nil, fmt.Errorf("tasks: delivery confirmation code required")
 		}
+		if req.ConfirmationCode != podCode {
+			return nil, fmt.Errorf("tasks: incorrect delivery confirmation code")
+		}
+	} else if strings.TrimSpace(req.RecipientName) == "" && req.PhotoURL == "" && req.SignatureURL == "" {
+		// No customer code (till and transfer deliveries): some proof is still needed.
+		return nil, fmt.Errorf("tasks: enter who received the order")
 	}
 
 	meta := req.Metadata

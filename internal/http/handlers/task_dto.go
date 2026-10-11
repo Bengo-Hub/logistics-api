@@ -50,8 +50,11 @@ type TaskResponse struct {
 	CashOnDelivery      float64    `json:"cash_on_delivery"`
 	DistanceKm          *float64   `json:"distance_km"`
 	// Delivery area the drop-off falls in (from the checkout quote or intake tagging).
-	ZoneID             string         `json:"zone_id,omitempty"`
-	ZoneName           string         `json:"zone_name,omitempty"`
+	ZoneID   string `json:"zone_id,omitempty"`
+	ZoneName string `json:"zone_name,omitempty"`
+	// PODCodeRequired says the customer has a delivery code the rider must enter; the code
+	// itself is never sent.
+	PODCodeRequired    bool           `json:"pod_code_required"`
 	DeliveryFee        float64        `json:"delivery_fee"`
 	EtaMinutes         *float64       `json:"eta_minutes"`
 	EtaAt              *time.Time     `json:"eta_at"`
@@ -97,6 +100,9 @@ func toTaskResponse(t *ent.Task) *TaskResponse {
 		resp.ItemsDescription, _ = t.Metadata["items_description"].(string)
 		resp.ZoneID, _ = t.Metadata["zone_id"].(string)
 		resp.ZoneName, _ = t.Metadata["zone_name"].(string)
+		if code, _ := t.Metadata["pod_code"].(string); code != "" {
+			resp.PODCodeRequired = true
+		}
 		if v, ok := t.Metadata["delivery_fee"].(float64); ok {
 			resp.DeliveryFee = v
 		}
