@@ -12,6 +12,8 @@
 | Shift scheduling registered in router | `internal/http/router/router.go` | ShiftHandler registered under tenant routes |
 | RiderShift Ent schema | `internal/ent/schema/ridershift.go` | Pre-existing; now fully surfaced via API |
 | Zone-based shift assignment | `shift.go` | Shifts accept `zone_ids[]` for zone-based dispatch |
+| Shift service (2026-10-13) | `internal/modules/shifts` | Tenant-scoped reads and writes (the handler used to look shifts up by id alone, so any signed-in user could change another business's shifts), state machine (scheduled to active or cancelled, active to completed), no overlapping shifts per rider, active riders only, rider names in the list. Reads need `fleet.view`; changes need `tasks.manage` and are refused to riders. New `POST /shifts/{id}/cancel`; delete only for shifts that never ran |
+| Rider online and offline (2026-10-13) | `handlers/rider_shift.go` | `GET /riders/me/shift`, `POST /riders/me/shift/online` (starts the scheduled shift, or an open-ended one stopping before the next scheduled shift), `POST /riders/me/shift/offline` (ends it now and drops the rider from auto-dispatch at once) |
 
 ## Goals
 

@@ -438,6 +438,14 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 			}
 
 			if shiftH != nil {
+				// Shift schedule: dispatchers and admins. Riders go online through /riders/me/shift.
+				if rbacSvc != nil && lh != nil {
+					manage := appmw.RequirePermission(rbacSvc, rbac.PermTaskManage)
+					shiftH.SetGates(
+						appmw.RequirePermission(rbacSvc, rbac.PermFleetView),
+						func(next http.Handler) http.Handler { return manage(lh.DispatcherOnly(next)) },
+					)
+				}
 				shiftH.RegisterRoutes(tenant)
 			}
 
@@ -457,6 +465,10 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 				// Rider self-service: JWT-resolved tasks for the current fleet member.
 				// Registered next to the other /riders/me/* routes (earnings).
 				tenant.Get("/riders/me/tasks", lh.ListMyTasks)
+				// Online and offline: the rider's shift (started from their schedule or open-ended).
+				tenant.Get("/riders/me/shift", lh.GetMyShift)
+				tenant.Post("/riders/me/shift/online", lh.GoOnline)
+				tenant.Post("/riders/me/shift/offline", lh.GoOffline)
 				// Open jobs riders can take themselves (logistics.rider_self_claim_enabled).
 				// Ownership is the caller's own fleet membership, so no task-manage permission.
 				tenant.Get("/riders/me/open-tasks", lh.ListOpenJobs)

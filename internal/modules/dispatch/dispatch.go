@@ -112,6 +112,19 @@ func (d *AutoDispatcher) UpdateRiderLocation(ctx context.Context, tenantID, memb
 	return err
 }
 
+// MarkOffline drops a rider from the live position set at once, so a rider who goes offline
+// gets no new jobs (otherwise their last fix kept them eligible for maxFixAge).
+func (d *AutoDispatcher) MarkOffline(ctx context.Context, tenantID, memberID uuid.UUID) error {
+	if d.redis == nil {
+		return nil
+	}
+	pipe := d.redis.TxPipeline()
+	pipe.ZRem(ctx, fmt.Sprintf(riderLocationKey, tenantID.String()), memberID.String())
+	pipe.ZRem(ctx, fmt.Sprintf(riderSeenKey, tenantID.String()), memberID.String())
+	_, err := pipe.Exec(ctx)
+	return err
+}
+
 // riderSeen returns when each of the given riders last reported a position.
 func (d *AutoDispatcher) riderSeen(ctx context.Context, tenantID uuid.UUID, ids []string) map[string]time.Time {
 	out := map[string]time.Time{}

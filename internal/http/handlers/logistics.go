@@ -20,6 +20,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/modules/dispatch"
 	"github.com/bengobox/logistics-service/internal/modules/fleet"
 	"github.com/bengobox/logistics-service/internal/modules/perdiem"
+	"github.com/bengobox/logistics-service/internal/modules/shifts"
 	"github.com/bengobox/logistics-service/internal/modules/tasks"
 	"github.com/bengobox/logistics-service/internal/platform/subscriptions"
 )
@@ -38,6 +39,7 @@ type LogisticsHandler struct {
 	perms      permissionChecker
 	tracker    *dispatch.AutoDispatcher
 	perDiem    *perdiem.Service
+	shifts     *shifts.Service
 }
 
 // NewLogisticsHandler creates a new logistics handler.
@@ -111,6 +113,12 @@ func (h *LogisticsHandler) ListTasks(w http.ResponseWriter, r *http.Request) {
 	if v := q.Get("date_to"); v != "" {
 		if t, err := time.Parse(time.RFC3339, v); err == nil {
 			filter.DateTo = &t
+		}
+	}
+	// rider_id (fleet member id): jobs this rider was assigned, for the rider pages' history.
+	if v := q.Get("rider_id"); v != "" {
+		if id, err := uuid.Parse(v); err == nil {
+			filter.MemberID = id
 		}
 	}
 

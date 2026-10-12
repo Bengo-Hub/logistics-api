@@ -36,6 +36,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/modules/perdiem"
 	rbacmod "github.com/bengobox/logistics-service/internal/modules/rbac"
 	"github.com/bengobox/logistics-service/internal/modules/routing"
+	shiftsmod "github.com/bengobox/logistics-service/internal/modules/shifts"
 	"github.com/bengobox/logistics-service/internal/modules/tasks"
 	telemetrymod "github.com/bengobox/logistics-service/internal/modules/telemetry"
 	"github.com/bengobox/logistics-service/internal/modules/tenant"
@@ -352,8 +353,10 @@ func New(ctx context.Context) (*App, error) {
 	// Distribution / KEMSA shipments
 	shipmentHandler := handlers.NewShipmentHandler(entClient, log)
 
-	// Rider shift scheduling
-	shiftHandler := handlers.NewShiftHandler(entClient, log)
+	// Rider shifts: the dispatcher's schedule and riders going online or offline.
+	shiftSvc := shiftsmod.NewService(entClient)
+	shiftHandler := handlers.NewShiftHandler(shiftSvc, log)
+	logisticsHandler.SetShifts(shiftSvc)
 
 	// Analytics KPI endpoint
 	analyticsHandler := handlers.NewAnalyticsHandler(entClient, log)
