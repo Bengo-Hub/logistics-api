@@ -425,6 +425,10 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 			if earningsH != nil {
 				if rbacSvc != nil {
 					earningsH.SetPricingGate(appmw.RequirePermission(rbacSvc, rbac.PermPricingManage))
+					earningsH.SetGates(
+						appmw.RequirePermission(rbacSvc, rbac.PermEarningsView),
+						appmw.RequirePermission(rbacSvc, rbac.PermEarningsManage),
+					)
 				}
 				earningsH.RegisterRoutes(tenant)
 			}

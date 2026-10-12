@@ -19,6 +19,12 @@ import (
 // currentRider resolves the calling rider's fleet membership from the JWT subject (auth user ID)
 // and tenant. On failure it writes the response and returns ok=false.
 func (h *LogisticsHandler) currentRider(w http.ResponseWriter, r *http.Request) (uuid.UUID, *ent.FleetMember, bool) {
+	return currentRiderOf(w, r, h.taskSvc.Client(), h.log)
+}
+
+// currentRiderOf resolves the signed-in rider's fleet membership in the token's tenant from the
+// JWT subject, writing 401/404/500 itself when it cannot. Every /riders/me route uses it.
+func currentRiderOf(w http.ResponseWriter, r *http.Request, client *ent.Client, log *zap.Logger) (uuid.UUID, *ent.FleetMember, bool) {
 	tenantID := tenantIDFromClaims(r)
 	if tenantID == uuid.Nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -34,7 +40,7 @@ func (h *LogisticsHandler) currentRider(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return uuid.Nil, nil, false
 	}
-	member, err := h.taskSvc.Client().FleetMember.Query().
+	member, err := client.FleetMember.Query().
 		Where(fleetmember.UserID(authUserID), fleetmember.TenantID(tenantID)).
 		Only(r.Context())
 	if err != nil {
@@ -42,7 +48,7 @@ func (h *LogisticsHandler) currentRider(w http.ResponseWriter, r *http.Request) 
 			http.Error(w, "rider not found in fleet", http.StatusNotFound)
 			return uuid.Nil, nil, false
 		}
-		h.log.Error("resolve fleet member", zap.Error(err))
+		log.Error("resolve fleet member", zap.Error(err))
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return uuid.Nil, nil, false
 	}

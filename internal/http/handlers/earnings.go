@@ -10,12 +10,9 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	authclient "github.com/Bengo-Hub/shared-auth-client"
-
 	"github.com/bengobox/logistics-service/internal/ent"
 	"github.com/bengobox/logistics-service/internal/ent/billingevent"
 	"github.com/bengobox/logistics-service/internal/ent/earningsstatement"
-	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
 	"github.com/bengobox/logistics-service/internal/modules/earnings"
 )
 
@@ -27,10 +24,19 @@ type EarningsHandler struct {
 	treasuryClient *earnings.TreasuryClient
 	// pricingGate guards rider pricing-rule writes (logistics.pricing.manage).
 	pricingGate func(http.Handler) http.Handler
+	// viewGate guards statement and billing reads (logistics.earnings.view); manageGate guards
+	// generating and settling statements and other riders' payout details
+	// (logistics.earnings.manage). Settling sends real money through treasury.
+	viewGate, manageGate func(http.Handler) http.Handler
 }
 
 // SetPricingGate sets the middleware that guards pricing-rule mutations.
 func (h *EarningsHandler) SetPricingGate(mw func(http.Handler) http.Handler) { h.pricingGate = mw }
+
+// SetGates sets the earnings view and manage middleware.
+func (h *EarningsHandler) SetGates(view, manage func(http.Handler) http.Handler) {
+	h.viewGate, h.manageGate = view, manage
+}
 
 // NewEarningsHandler creates a new EarningsHandler.
 func NewEarningsHandler(log *zap.Logger, client *ent.Client, earningsSvc *earnings.Service) *EarningsHandler {
@@ -49,10 +55,12 @@ func (h *EarningsHandler) SetTreasuryClient(tc *earnings.TreasuryClient) {
 // RegisterRoutes wires all earnings sub-routes onto the given router (already scoped to /{tenant}).
 func (h *EarningsHandler) RegisterRoutes(r chi.Router) {
 	r.Route("/earnings", func(e chi.Router) {
-		e.Get("/statements", h.ListStatements)
-		e.Get("/statements/{statementId}", h.GetStatement)
-		e.Post("/statements/generate", h.GenerateStatements)
-		e.Get("/events", h.ListBillingEvents)
+		e.With(gate(h.viewGate)...).Get("/statements", h.ListStatements)
+		e.With(gate(h.viewGate)...).Get("/statements/{statementId}", h.GetStatement)
+		e.With(gate(h.viewGate)...).Get("/events", h.ListBillingEvents)
+		e.With(gate(h.manageGate)...).Post("/statements/generate", h.GenerateStatements)
+		// Statement settlement: rider payout disbursement via treasury-api.
+		e.With(gate(h.manageGate)...).Post("/statements/{statementID}/settle", h.SettleEarningsStatement)
 		e.Get("/pricing-rules", h.ListPricingRules)
 		e.Group(func(pr chi.Router) {
 			if h.pricingGate != nil {
@@ -62,18 +70,19 @@ func (h *EarningsHandler) RegisterRoutes(r chi.Router) {
 			pr.Patch("/pricing-rules/{ruleId}", h.UpdatePricingRule)
 			pr.Delete("/pricing-rules/{ruleId}", h.DeletePricingRule)
 		})
-		// Statement settlement → rider payout disbursement via treasury-api
-		e.Post("/statements/{statementID}/settle", h.SettleEarningsStatement)
 	})
 
 	// Rider self-service earnings
 	r.Get("/riders/me/earnings", h.GetMyEarnings)
 	r.Get("/riders/me/earnings/events", h.ListMyBillingEvents)
 	r.Get("/riders/me/earnings/statements", h.ListMyStatements)
+	// Where the rider is paid: their own details only.
+	r.Get("/riders/me/payout-method", h.GetMyPayoutMethod)
+	r.Put("/riders/me/payout-method", h.UpdateMyPayoutMethod)
 
-	// Rider payout method management
-	r.Get("/riders/{riderID}/payout-method", h.GetRiderPayoutMethod)
-	r.Put("/riders/{riderID}/payout-method", h.UpdateRiderPayoutMethod)
+	// Another rider's payout details: earnings managers only (changing them redirects money).
+	r.With(gate(h.manageGate)...).Get("/riders/{riderID}/payout-method", h.GetRiderPayoutMethod)
+	r.With(gate(h.manageGate)...).Put("/riders/{riderID}/payout-method", h.UpdateRiderPayoutMethod)
 }
 
 // ListStatements handles GET /api/v1/{tenant}/earnings/statements
@@ -306,36 +315,8 @@ func (h *EarningsHandler) DeletePricingRule(w http.ResponseWriter, r *http.Reque
 // GetMyEarnings handles GET /api/v1/{tenant}/riders/me/earnings
 // Returns today/week/month earnings totals for the authenticated rider.
 func (h *EarningsHandler) GetMyEarnings(w http.ResponseWriter, r *http.Request) {
-	tenantID := tenantIDFromClaims(r)
-	if tenantID == uuid.Nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	// Resolve fleet member from the JWT subject (auth user ID)
-	claims, ok := authclient.ClaimsFromContext(r.Context())
-	if !ok || claims.Subject == "" {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-	authUserID, err := uuid.Parse(claims.Subject)
-	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	member, err := h.client.FleetMember.Query().
-		Where(
-			fleetmember.UserID(authUserID),
-			fleetmember.TenantID(tenantID),
-		).Only(r.Context())
-	if err != nil {
-		if ent.IsNotFound(err) {
-			http.Error(w, "rider not found in fleet", http.StatusNotFound)
-			return
-		}
-		h.log.Error("resolve fleet member", zap.Error(err))
-		http.Error(w, "internal error", http.StatusInternalServerError)
+	tenantID, member, ok := currentRiderOf(w, r, h.client, h.log)
+	if !ok {
 		return
 	}
 
@@ -361,35 +342,8 @@ func (h *EarningsHandler) GetMyEarnings(w http.ResponseWriter, r *http.Request) 
 
 // ListMyStatements handles GET /api/v1/{tenant}/riders/me/earnings/statements
 func (h *EarningsHandler) ListMyStatements(w http.ResponseWriter, r *http.Request) {
-	tenantID := tenantIDFromClaims(r)
-	if tenantID == uuid.Nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	claims, ok := authclient.ClaimsFromContext(r.Context())
-	if !ok || claims.Subject == "" {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-	authUserID, err := uuid.Parse(claims.Subject)
-	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	member, err := h.client.FleetMember.Query().
-		Where(
-			fleetmember.UserID(authUserID),
-			fleetmember.TenantID(tenantID),
-		).Only(r.Context())
-	if err != nil {
-		if ent.IsNotFound(err) {
-			http.Error(w, "rider not found in fleet", http.StatusNotFound)
-			return
-		}
-		h.log.Error("resolve fleet member for statements", zap.Error(err))
-		http.Error(w, "internal error", http.StatusInternalServerError)
+	tenantID, member, ok := currentRiderOf(w, r, h.client, h.log)
+	if !ok {
 		return
 	}
 
@@ -413,36 +367,8 @@ func (h *EarningsHandler) ListMyStatements(w http.ResponseWriter, r *http.Reques
 // Returns billing events scoped to the authenticated rider only.
 // Query params: task_id, from, to
 func (h *EarningsHandler) ListMyBillingEvents(w http.ResponseWriter, r *http.Request) {
-	tenantID := tenantIDFromClaims(r)
-	if tenantID == uuid.Nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	// Resolve fleet member from the JWT subject (auth user ID)
-	claims, ok := authclient.ClaimsFromContext(r.Context())
-	if !ok || claims.Subject == "" {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-	authUserID, err := uuid.Parse(claims.Subject)
-	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	member, err := h.client.FleetMember.Query().
-		Where(
-			fleetmember.UserID(authUserID),
-			fleetmember.TenantID(tenantID),
-		).Only(r.Context())
-	if err != nil {
-		if ent.IsNotFound(err) {
-			http.Error(w, "rider not found in fleet", http.StatusNotFound)
-			return
-		}
-		h.log.Error("resolve fleet member for billing events", zap.Error(err))
-		http.Error(w, "internal error", http.StatusInternalServerError)
+	tenantID, member, ok := currentRiderOf(w, r, h.client, h.log)
+	if !ok {
 		return
 	}
 

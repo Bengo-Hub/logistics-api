@@ -31,6 +31,8 @@ const (
 	PermZoneView     = "logistics.zones.view"
 	PermZoneManage   = "logistics.zones.manage"
 	PermEarningsView = "logistics.earnings.view"
+	// PermEarningsManage generates and settles statements (real payouts) and edits riders' payout details.
+	PermEarningsManage = "logistics.earnings.manage"
 	// PermPricingManage edits customer delivery pricing (quote policy) and rider pricing rules.
 	PermPricingManage = "logistics.pricing.manage"
 	PermConfigManage  = "logistics.config.manage"
