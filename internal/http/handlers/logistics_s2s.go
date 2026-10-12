@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
+	"github.com/bengobox/logistics-service/internal/modules/fleet"
 	"github.com/bengobox/logistics-service/internal/modules/tasks"
 )
 
@@ -17,6 +18,41 @@ import (
 // user identity) — these are authenticated ONLY by the internal service key and take the tenant
 // from the URL path. They let another backend (e.g. pos-api) create a delivery task and assign a
 // rider directly, for orders logistics does not otherwise own (POS-native delivery orders).
+
+// S2SRider is the slim rider view other services need to pick a rider: no KYC, no documents.
+type S2SRider struct {
+	ID         string `json:"id"`
+	FirstName  string `json:"first_name"`
+	LastName   string `json:"last_name"`
+	Phone      string `json:"phone,omitempty"`
+	Employment string `json:"employment"`
+}
+
+// S2SListRiders handles GET /api/v1/s2s/dispatch/{tenant}/riders: the tenant's active riders,
+// for another service's dispatch screen (ordering's staff queue assigns through S2S, so its
+// staff need no logistics fleet permission).
+func (h *LogisticsHandler) S2SListRiders(w http.ResponseWriter, r *http.Request) {
+	tenantID, err := uuid.Parse(chi.URLParam(r, "tenant"))
+	if err != nil {
+		http.Error(w, "invalid tenant", http.StatusBadRequest)
+		return
+	}
+	members, _, err := h.fleetSvc.ListMembers(r.Context(), tenantID, "active", "", 200, 0)
+	if err != nil {
+		h.log.Warn("s2s list riders", zap.Error(err))
+		http.Error(w, "failed to list riders", http.StatusInternalServerError)
+		return
+	}
+	out := make([]S2SRider, 0, len(members))
+	for _, m := range members {
+		resp := toFleetMemberResponse(m)
+		out = append(out, S2SRider{
+			ID: m.ID.String(), FirstName: resp.FirstName, LastName: resp.LastName,
+			Phone: resp.Phone, Employment: fleet.EmploymentOf(m).Type,
+		})
+	}
+	respondJSON(w, http.StatusOK, map[string]any{"data": out})
+}
 
 // S2SCreateTask handles POST /api/v1/s2s/dispatch/{tenant}/tasks
 // {tenant} is the tenant UUID. Body is tasks.CreateTaskRequest.
