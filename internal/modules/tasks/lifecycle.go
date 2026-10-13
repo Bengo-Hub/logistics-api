@@ -252,6 +252,13 @@ func (s *Service) releaseTask(ctx context.Context, tenantID, taskID uuid.UUID, a
 			SourceService:     t.SourceService,
 			OrderNumber:       metadataString(t.Metadata, "order_number"),
 			Reason:            reason,
+			// A dispatcher took the job away: tell the rider. A rider who declined knows already.
+			RiderUserID: func() string {
+				if assignmentStatus == "declined" {
+					return ""
+				}
+				return s.memberUserID(ctx, previous)
+			}(),
 		})
 	}
 	if s.sseBroadcaster != nil {
@@ -332,6 +339,8 @@ func (s *Service) CancelTask(ctx context.Context, tenantID, taskID uuid.UUID, re
 		}
 		if rider != uuid.Nil {
 			data.FleetMemberID = rider.String()
+			// The rider holding the job is told it was cancelled.
+			data.RiderUserID = s.memberUserID(ctx, rider)
 		}
 		_ = s.publisher.PublishTaskStatusChanged(ctx, tenantID, data)
 	}
@@ -403,4 +412,16 @@ func (s *Service) DeclinedMembers(ctx context.Context, taskID uuid.UUID) map[uui
 		out[a.FleetMemberID] = true
 	}
 	return out
+}
+
+// memberUserID returns the auth user id of a fleet member, or "" when unknown.
+func (s *Service) memberUserID(ctx context.Context, memberID uuid.UUID) string {
+	if memberID == uuid.Nil {
+		return ""
+	}
+	m, err := s.client.FleetMember.Get(ctx, memberID)
+	if err != nil {
+		return ""
+	}
+	return m.UserID.String()
 }
