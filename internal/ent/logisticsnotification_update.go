@@ -116,6 +116,26 @@ func (_u *LogisticsNotificationUpdate) ClearRelatedTaskID() *LogisticsNotificati
 	return _u
 }
 
+// SetRecipientMemberID sets the "recipient_member_id" field.
+func (_u *LogisticsNotificationUpdate) SetRecipientMemberID(v uuid.UUID) *LogisticsNotificationUpdate {
+	_u.mutation.SetRecipientMemberID(v)
+	return _u
+}
+
+// SetNillableRecipientMemberID sets the "recipient_member_id" field if the given value is not nil.
+func (_u *LogisticsNotificationUpdate) SetNillableRecipientMemberID(v *uuid.UUID) *LogisticsNotificationUpdate {
+	if v != nil {
+		_u.SetRecipientMemberID(*v)
+	}
+	return _u
+}
+
+// ClearRecipientMemberID clears the value of the "recipient_member_id" field.
+func (_u *LogisticsNotificationUpdate) ClearRecipientMemberID() *LogisticsNotificationUpdate {
+	_u.mutation.ClearRecipientMemberID()
+	return _u
+}
+
 // SetIsRead sets the "is_read" field.
 func (_u *LogisticsNotificationUpdate) SetIsRead(v bool) *LogisticsNotificationUpdate {
 	_u.mutation.SetIsRead(v)
@@ -212,6 +232,12 @@ func (_u *LogisticsNotificationUpdate) sqlSave(ctx context.Context) (_node int, 
 	}
 	if _u.mutation.RelatedTaskIDCleared() {
 		_spec.ClearField(logisticsnotification.FieldRelatedTaskID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.RecipientMemberID(); ok {
+		_spec.SetField(logisticsnotification.FieldRecipientMemberID, field.TypeUUID, value)
+	}
+	if _u.mutation.RecipientMemberIDCleared() {
+		_spec.ClearField(logisticsnotification.FieldRecipientMemberID, field.TypeUUID)
 	}
 	if value, ok := _u.mutation.IsRead(); ok {
 		_spec.SetField(logisticsnotification.FieldIsRead, field.TypeBool, value)
@@ -321,6 +347,26 @@ func (_u *LogisticsNotificationUpdateOne) SetNillableRelatedTaskID(v *uuid.UUID)
 // ClearRelatedTaskID clears the value of the "related_task_id" field.
 func (_u *LogisticsNotificationUpdateOne) ClearRelatedTaskID() *LogisticsNotificationUpdateOne {
 	_u.mutation.ClearRelatedTaskID()
+	return _u
+}
+
+// SetRecipientMemberID sets the "recipient_member_id" field.
+func (_u *LogisticsNotificationUpdateOne) SetRecipientMemberID(v uuid.UUID) *LogisticsNotificationUpdateOne {
+	_u.mutation.SetRecipientMemberID(v)
+	return _u
+}
+
+// SetNillableRecipientMemberID sets the "recipient_member_id" field if the given value is not nil.
+func (_u *LogisticsNotificationUpdateOne) SetNillableRecipientMemberID(v *uuid.UUID) *LogisticsNotificationUpdateOne {
+	if v != nil {
+		_u.SetRecipientMemberID(*v)
+	}
+	return _u
+}
+
+// ClearRecipientMemberID clears the value of the "recipient_member_id" field.
+func (_u *LogisticsNotificationUpdateOne) ClearRecipientMemberID() *LogisticsNotificationUpdateOne {
+	_u.mutation.ClearRecipientMemberID()
 	return _u
 }
 
@@ -450,6 +496,12 @@ func (_u *LogisticsNotificationUpdateOne) sqlSave(ctx context.Context) (_node *L
 	}
 	if _u.mutation.RelatedTaskIDCleared() {
 		_spec.ClearField(logisticsnotification.FieldRelatedTaskID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.RecipientMemberID(); ok {
+		_spec.SetField(logisticsnotification.FieldRecipientMemberID, field.TypeUUID, value)
+	}
+	if _u.mutation.RecipientMemberIDCleared() {
+		_spec.ClearField(logisticsnotification.FieldRecipientMemberID, field.TypeUUID)
 	}
 	if value, ok := _u.mutation.IsRead(); ok {
 		_spec.SetField(logisticsnotification.FieldIsRead, field.TypeBool, value)

@@ -261,6 +261,10 @@ func (s *Service) releaseTask(ctx context.Context, tenantID, taskID uuid.UUID, a
 			}(),
 		})
 	}
+	if assignmentStatus != "declined" {
+		s.notifyRider(ctx, tenantID, previous, taskID, "job_unassigned",
+			"Job moved to another rider", fmt.Sprintf("Order %s is no longer yours: %s", orderLabel(t), reason))
+	}
 	if s.sseBroadcaster != nil {
 		s.sseBroadcaster.Publish(tenantID, taskID, "status_changed", map[string]any{
 			"task_id": taskID, "status": "pending", "previous_status": t.Status,
@@ -344,6 +348,8 @@ func (s *Service) CancelTask(ctx context.Context, tenantID, taskID uuid.UUID, re
 		}
 		_ = s.publisher.PublishTaskStatusChanged(ctx, tenantID, data)
 	}
+	s.notifyRider(ctx, tenantID, rider, taskID, "job_cancelled",
+		"Job cancelled", fmt.Sprintf("Order %s was cancelled: %s. You do not need to deliver it.", orderLabel(t), reason))
 	if s.sseBroadcaster != nil {
 		s.sseBroadcaster.Publish(tenantID, taskID, "status_changed", map[string]any{
 			"task_id": taskID, "status": "cancelled", "previous_status": t.Status,
@@ -395,6 +401,26 @@ func (s *Service) alertDispatcher(ctx context.Context, tenantID, taskID uuid.UUI
 		RelatedTaskID:    &id,
 	}); err != nil {
 		s.log.Warn("dispatcher alert failed", zap.String("task_id", taskID.String()), zap.Error(err))
+	}
+}
+
+// notifyRider puts a message in one rider's inbox (rider app), pushed live to their open app.
+// Best effort: a failure is logged and never blocks the job change.
+func (s *Service) notifyRider(ctx context.Context, tenantID, memberID, taskID uuid.UUID, kind, title, body string) {
+	if s.notifSvc == nil || memberID == uuid.Nil {
+		return
+	}
+	id, member := taskID, memberID
+	if _, err := s.notifSvc.Create(ctx, notifmod.CreateRequest{
+		TenantID:          tenantID,
+		NotificationType:  kind,
+		Title:             title,
+		Body:              body,
+		Payload:           map[string]any{"task_id": taskID.String()},
+		RelatedTaskID:     &id,
+		RecipientMemberID: &member,
+	}); err != nil {
+		s.log.Warn("rider notification failed", zap.String("task_id", taskID.String()), zap.Error(err))
 	}
 }
 

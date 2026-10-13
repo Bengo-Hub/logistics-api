@@ -26,6 +26,8 @@ const (
 	FieldPayload = "payload"
 	// FieldRelatedTaskID holds the string denoting the related_task_id field in the database.
 	FieldRelatedTaskID = "related_task_id"
+	// FieldRecipientMemberID holds the string denoting the recipient_member_id field in the database.
+	FieldRecipientMemberID = "recipient_member_id"
 	// FieldIsRead holds the string denoting the is_read field in the database.
 	FieldIsRead = "is_read"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
@@ -43,6 +45,7 @@ var Columns = []string{
 	FieldBody,
 	FieldPayload,
 	FieldRelatedTaskID,
+	FieldRecipientMemberID,
 	FieldIsRead,
 	FieldCreatedAt,
 }
@@ -103,6 +106,11 @@ func ByBody(opts ...sql.OrderTermOption) OrderOption {
 // ByRelatedTaskID orders the results by the related_task_id field.
 func ByRelatedTaskID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldRelatedTaskID, opts...).ToFunc()
+}
+
+// ByRecipientMemberID orders the results by the recipient_member_id field.
+func ByRecipientMemberID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRecipientMemberID, opts...).ToFunc()
 }
 
 // ByIsRead orders the results by the is_read field.

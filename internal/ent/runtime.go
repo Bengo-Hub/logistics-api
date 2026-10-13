@@ -388,11 +388,11 @@ func init() {
 	// logisticsnotification.DefaultPayload holds the default value on creation for the payload field.
 	logisticsnotification.DefaultPayload = logisticsnotificationDescPayload.Default.(map[string]interface{})
 	// logisticsnotificationDescIsRead is the schema descriptor for is_read field.
-	logisticsnotificationDescIsRead := logisticsnotificationFields[7].Descriptor()
+	logisticsnotificationDescIsRead := logisticsnotificationFields[8].Descriptor()
 	// logisticsnotification.DefaultIsRead holds the default value on creation for the is_read field.
 	logisticsnotification.DefaultIsRead = logisticsnotificationDescIsRead.Default.(bool)
 	// logisticsnotificationDescCreatedAt is the schema descriptor for created_at field.
-	logisticsnotificationDescCreatedAt := logisticsnotificationFields[8].Descriptor()
+	logisticsnotificationDescCreatedAt := logisticsnotificationFields[9].Descriptor()
 	// logisticsnotification.DefaultCreatedAt holds the default value on creation for the created_at field.
 	logisticsnotification.DefaultCreatedAt = logisticsnotificationDescCreatedAt.Default.(func() time.Time)
 	// logisticsnotificationDescID is the schema descriptor for id field.

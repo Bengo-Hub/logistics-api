@@ -808,6 +808,10 @@ func (s *Service) AssignTask(ctx context.Context, tenantID, taskID uuid.UUID, re
 	)
 
 	s.publishAssigned(ctx, tenantID, taskID, member)
+	if t, _ := s.client.Task.Get(ctx, taskID); t != nil {
+		s.notifyRider(ctx, tenantID, req.FleetMemberID, taskID, "job_assigned",
+			"New delivery job", fmt.Sprintf("Order %s is yours. Open it to start.", orderLabel(t)))
+	}
 
 	return assignment, nil
 }

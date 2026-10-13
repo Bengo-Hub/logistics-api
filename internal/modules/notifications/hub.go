@@ -1,6 +1,6 @@
-// Package notifications provides tenant-wide operational alerts for logistics-ui's
-// dispatcher bell: a persisted feed (LogisticsNotification) plus a real-time WebSocket hub
-// so a connected dispatcher sees a new alert immediately rather than on next poll.
+// Package notifications provides persisted notifications (LogisticsNotification) plus a
+// real-time WebSocket hub for two audiences: tenant-wide operational alerts on logistics-ui's
+// dispatcher bell, and each rider's own inbox in the rider app.
 package notifications
 
 import (
@@ -44,19 +44,38 @@ func NewHub(log *zap.Logger, relay *eventslib.Broadcaster) *Hub {
 	return &Hub{fan: fan, log: l}
 }
 
-// BroadcastNew delivers a newly-created notification to every dispatcher connected for the
-// tenant, on every replica.
+// riderKey is the fan-out key of one rider's inbox; dispatchers subscribe to the bare tenant id,
+// so a rider's message never reaches the dispatcher bell and the reverse.
+func riderKey(tenantID, memberID uuid.UUID) string {
+	return tenantID.String() + ":rider:" + memberID.String()
+}
+
+// BroadcastNew delivers a newly-created notification to its audience on every replica: the
+// rider it is for, or every dispatcher connected for the tenant.
 func (h *Hub) BroadcastNew(n *ent.LogisticsNotification) {
 	b, err := json.Marshal(Message{Type: "notification", Data: n})
 	if err != nil {
 		return
 	}
-	h.fan.Publish(n.TenantID.String(), "", b)
+	key := n.TenantID.String()
+	if n.RecipientMemberID != nil {
+		key = riderKey(n.TenantID, *n.RecipientMemberID)
+	}
+	h.fan.Publish(key, "", b)
 }
 
-// ServeWS registers conn for tenantID and blocks until it disconnects.
+// ServeWS registers a dispatcher's conn for tenantID and blocks until it disconnects.
 func (h *Hub) ServeWS(ctx context.Context, conn *websocket.Conn, tenantID uuid.UUID) {
-	sub := h.fan.Subscribe(tenantID.String())
+	h.serve(ctx, conn, tenantID.String())
+}
+
+// ServeRiderWS registers a rider's conn for their own inbox and blocks until it disconnects.
+func (h *Hub) ServeRiderWS(ctx context.Context, conn *websocket.Conn, tenantID, memberID uuid.UUID) {
+	h.serve(ctx, conn, riderKey(tenantID, memberID))
+}
+
+func (h *Hub) serve(ctx context.Context, conn *websocket.Conn, key string) {
+	sub := h.fan.Subscribe(key)
 	defer h.fan.Unsubscribe(sub)
 	hello, _ := json.Marshal(Message{Type: "ping"})
 	eventslib.Pump(ctx, realtime.Socket(conn), sub, hello, nil)

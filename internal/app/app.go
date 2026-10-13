@@ -315,6 +315,7 @@ func New(ctx context.Context) (*App, error) {
 	autoDispatcher.SetNotifications(notifSvc)
 	taskSvc.SetNotifications(notifSvc)
 	notificationsHandler := handlers.NewNotificationsHandler(log, notifSvc, notifHub, cfg.HTTP.AllowedOrigins)
+	notificationsHandler.SetClient(entClient)
 
 	// SSE hub: task status/ETA events for logistics-ui, relayed across replicas.
 	sseHub := handlers.NewSSEHub(log, relay)
@@ -366,6 +367,7 @@ func New(ctx context.Context) (*App, error) {
 	analyticsHandler.SetDB(sqlDB)
 
 	earningsHandler := handlers.NewEarningsHandler(log, entClient, earningsSvc)
+	earningsHandler.SetNotifications(notifSvc)
 
 	// Wire treasury S2S client for rider payout disbursement
 	treasuryClient := earnings.NewTreasuryClient(cfg.Treasury.ServiceURL, cfg.Treasury.InternalServiceKey)

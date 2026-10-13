@@ -10,11 +10,12 @@ import (
 )
 
 // LogisticsNotification holds the schema definition for the LogisticsNotification entity.
-// Tenant-wide operational alerts for dispatchers/admins (SLA breaches, auto-dispatch
-// failures needing manual attention) surfaced by logistics-ui's notification bell — not
-// per-user, since these are team-visible operational signals rather than personal messages
-// (any dispatcher acknowledging one dismisses it for the whole tenant, matching how a
-// shared ops alert is normally handled).
+// Two audiences in one table:
+//   - recipient_member_id NULL: tenant-wide operational alerts for dispatchers (SLA breaches,
+//     auto-dispatch failures) on logistics-ui's bell. Team-visible, so any dispatcher reading
+//     one dismisses it for the tenant.
+//   - recipient_member_id set: a rider's own inbox in the rider app (job assigned, cancelled or
+//     moved, payout sent). Only that rider sees or reads it.
 type LogisticsNotification struct {
 	ent.Schema
 }
@@ -38,6 +39,10 @@ func (LogisticsNotification) Fields() []ent.Field {
 		field.UUID("related_task_id", uuid.UUID{}).
 			Optional().
 			Nillable(),
+		field.UUID("recipient_member_id", uuid.UUID{}).
+			Optional().
+			Nillable().
+			Comment("Rider (fleet member) the message is for; NULL = dispatcher alert for the tenant"),
 		field.Bool("is_read").
 			Default(false),
 		field.Time("created_at").
@@ -51,5 +56,7 @@ func (LogisticsNotification) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("tenant_id", "is_read", "created_at"),
 		index.Fields("tenant_id", "notification_type", "related_task_id"),
+		// A rider's inbox: newest first, unread count.
+		index.Fields("tenant_id", "recipient_member_id", "created_at"),
 	}
 }

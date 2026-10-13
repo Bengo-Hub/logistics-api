@@ -389,6 +389,13 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 					notifR.Patch("/{id}/read", notifH.MarkRead)
 					notifR.Post("/mark-all-read", notifH.MarkAllRead)
 				})
+				// The rider's own inbox (no permission: scoped to the caller's fleet membership).
+				tenant.Route("/riders/me/notifications", func(mine chi.Router) {
+					mine.Get("/", notifH.ListMine)
+					mine.Get("/stream", notifH.StreamMine)
+					mine.Patch("/{id}/read", notifH.MarkMineRead)
+					mine.Post("/mark-all-read", notifH.MarkAllMineRead)
+				})
 			}
 
 			// Media upload (tenant-scoped so the rider-app path /{slug}/media/upload works)

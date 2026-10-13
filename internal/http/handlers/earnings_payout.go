@@ -17,6 +17,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/earningsstatement"
 	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
 	"github.com/bengobox/logistics-service/internal/modules/earnings"
+	notifmod "github.com/bengobox/logistics-service/internal/modules/notifications"
 )
 
 // updatePayoutMethodRequest is the body for PUT /{tenant}/riders/{riderID}/payout-method.
@@ -339,6 +340,19 @@ func (h *EarningsHandler) SettleEarningsStatement(w http.ResponseWriter, r *http
 		zap.String("statement_id", statementID.String()),
 		zap.String("payout_reference", disbResp.Reference),
 	)
+	if h.notif != nil {
+		member := stmt.FleetMemberID
+		if _, nerr := h.notif.Create(r.Context(), notifmod.CreateRequest{
+			TenantID:          tenantID,
+			NotificationType:  "payout_sent",
+			Title:             "Payment sent",
+			Body:              fmt.Sprintf("KES %.2f for %s is on its way. Reference %s.", stmt.NetAmount, period, disbResp.Reference),
+			Payload:           map[string]any{"statement_id": stmt.ID.String(), "payout_reference": disbResp.Reference},
+			RecipientMemberID: &member,
+		}); nerr != nil {
+			h.log.Warn("payout notice", zap.Error(nerr))
+		}
+	}
 
 	respondJSON(w, http.StatusOK, map[string]any{
 		"statement_id":     statementID,

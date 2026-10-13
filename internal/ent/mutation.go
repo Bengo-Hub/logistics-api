@@ -11673,21 +11673,22 @@ func (m *IntegrationSettingMutation) ResetEdge(name string) error {
 // LogisticsNotificationMutation represents an operation that mutates the LogisticsNotification nodes in the graph.
 type LogisticsNotificationMutation struct {
 	config
-	op                Op
-	typ               string
-	id                *uuid.UUID
-	tenant_id         *uuid.UUID
-	notification_type *string
-	title             *string
-	body              *string
-	payload           *map[string]interface{}
-	related_task_id   *uuid.UUID
-	is_read           *bool
-	created_at        *time.Time
-	clearedFields     map[string]struct{}
-	done              bool
-	oldValue          func(context.Context) (*LogisticsNotification, error)
-	predicates        []predicate.LogisticsNotification
+	op                  Op
+	typ                 string
+	id                  *uuid.UUID
+	tenant_id           *uuid.UUID
+	notification_type   *string
+	title               *string
+	body                *string
+	payload             *map[string]interface{}
+	related_task_id     *uuid.UUID
+	recipient_member_id *uuid.UUID
+	is_read             *bool
+	created_at          *time.Time
+	clearedFields       map[string]struct{}
+	done                bool
+	oldValue            func(context.Context) (*LogisticsNotification, error)
+	predicates          []predicate.LogisticsNotification
 }
 
 var _ ent.Mutation = (*LogisticsNotificationMutation)(nil)
@@ -12036,6 +12037,55 @@ func (m *LogisticsNotificationMutation) ResetRelatedTaskID() {
 	delete(m.clearedFields, logisticsnotification.FieldRelatedTaskID)
 }
 
+// SetRecipientMemberID sets the "recipient_member_id" field.
+func (m *LogisticsNotificationMutation) SetRecipientMemberID(u uuid.UUID) {
+	m.recipient_member_id = &u
+}
+
+// RecipientMemberID returns the value of the "recipient_member_id" field in the mutation.
+func (m *LogisticsNotificationMutation) RecipientMemberID() (r uuid.UUID, exists bool) {
+	v := m.recipient_member_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRecipientMemberID returns the old "recipient_member_id" field's value of the LogisticsNotification entity.
+// If the LogisticsNotification object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LogisticsNotificationMutation) OldRecipientMemberID(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRecipientMemberID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRecipientMemberID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRecipientMemberID: %w", err)
+	}
+	return oldValue.RecipientMemberID, nil
+}
+
+// ClearRecipientMemberID clears the value of the "recipient_member_id" field.
+func (m *LogisticsNotificationMutation) ClearRecipientMemberID() {
+	m.recipient_member_id = nil
+	m.clearedFields[logisticsnotification.FieldRecipientMemberID] = struct{}{}
+}
+
+// RecipientMemberIDCleared returns if the "recipient_member_id" field was cleared in this mutation.
+func (m *LogisticsNotificationMutation) RecipientMemberIDCleared() bool {
+	_, ok := m.clearedFields[logisticsnotification.FieldRecipientMemberID]
+	return ok
+}
+
+// ResetRecipientMemberID resets all changes to the "recipient_member_id" field.
+func (m *LogisticsNotificationMutation) ResetRecipientMemberID() {
+	m.recipient_member_id = nil
+	delete(m.clearedFields, logisticsnotification.FieldRecipientMemberID)
+}
+
 // SetIsRead sets the "is_read" field.
 func (m *LogisticsNotificationMutation) SetIsRead(b bool) {
 	m.is_read = &b
@@ -12142,7 +12192,7 @@ func (m *LogisticsNotificationMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *LogisticsNotificationMutation) Fields() []string {
-	fields := make([]string, 0, 8)
+	fields := make([]string, 0, 9)
 	if m.tenant_id != nil {
 		fields = append(fields, logisticsnotification.FieldTenantID)
 	}
@@ -12160,6 +12210,9 @@ func (m *LogisticsNotificationMutation) Fields() []string {
 	}
 	if m.related_task_id != nil {
 		fields = append(fields, logisticsnotification.FieldRelatedTaskID)
+	}
+	if m.recipient_member_id != nil {
+		fields = append(fields, logisticsnotification.FieldRecipientMemberID)
 	}
 	if m.is_read != nil {
 		fields = append(fields, logisticsnotification.FieldIsRead)
@@ -12187,6 +12240,8 @@ func (m *LogisticsNotificationMutation) Field(name string) (ent.Value, bool) {
 		return m.Payload()
 	case logisticsnotification.FieldRelatedTaskID:
 		return m.RelatedTaskID()
+	case logisticsnotification.FieldRecipientMemberID:
+		return m.RecipientMemberID()
 	case logisticsnotification.FieldIsRead:
 		return m.IsRead()
 	case logisticsnotification.FieldCreatedAt:
@@ -12212,6 +12267,8 @@ func (m *LogisticsNotificationMutation) OldField(ctx context.Context, name strin
 		return m.OldPayload(ctx)
 	case logisticsnotification.FieldRelatedTaskID:
 		return m.OldRelatedTaskID(ctx)
+	case logisticsnotification.FieldRecipientMemberID:
+		return m.OldRecipientMemberID(ctx)
 	case logisticsnotification.FieldIsRead:
 		return m.OldIsRead(ctx)
 	case logisticsnotification.FieldCreatedAt:
@@ -12267,6 +12324,13 @@ func (m *LogisticsNotificationMutation) SetField(name string, value ent.Value) e
 		}
 		m.SetRelatedTaskID(v)
 		return nil
+	case logisticsnotification.FieldRecipientMemberID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRecipientMemberID(v)
+		return nil
 	case logisticsnotification.FieldIsRead:
 		v, ok := value.(bool)
 		if !ok {
@@ -12317,6 +12381,9 @@ func (m *LogisticsNotificationMutation) ClearedFields() []string {
 	if m.FieldCleared(logisticsnotification.FieldRelatedTaskID) {
 		fields = append(fields, logisticsnotification.FieldRelatedTaskID)
 	}
+	if m.FieldCleared(logisticsnotification.FieldRecipientMemberID) {
+		fields = append(fields, logisticsnotification.FieldRecipientMemberID)
+	}
 	return fields
 }
 
@@ -12336,6 +12403,9 @@ func (m *LogisticsNotificationMutation) ClearField(name string) error {
 		return nil
 	case logisticsnotification.FieldRelatedTaskID:
 		m.ClearRelatedTaskID()
+		return nil
+	case logisticsnotification.FieldRecipientMemberID:
+		m.ClearRecipientMemberID()
 		return nil
 	}
 	return fmt.Errorf("unknown LogisticsNotification nullable field %s", name)
@@ -12362,6 +12432,9 @@ func (m *LogisticsNotificationMutation) ResetField(name string) error {
 		return nil
 	case logisticsnotification.FieldRelatedTaskID:
 		m.ResetRelatedTaskID()
+		return nil
+	case logisticsnotification.FieldRecipientMemberID:
+		m.ResetRecipientMemberID()
 		return nil
 	case logisticsnotification.FieldIsRead:
 		m.ResetIsRead()

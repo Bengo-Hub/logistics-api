@@ -76,6 +76,20 @@ func (_c *LogisticsNotificationCreate) SetNillableRelatedTaskID(v *uuid.UUID) *L
 	return _c
 }
 
+// SetRecipientMemberID sets the "recipient_member_id" field.
+func (_c *LogisticsNotificationCreate) SetRecipientMemberID(v uuid.UUID) *LogisticsNotificationCreate {
+	_c.mutation.SetRecipientMemberID(v)
+	return _c
+}
+
+// SetNillableRecipientMemberID sets the "recipient_member_id" field if the given value is not nil.
+func (_c *LogisticsNotificationCreate) SetNillableRecipientMemberID(v *uuid.UUID) *LogisticsNotificationCreate {
+	if v != nil {
+		_c.SetRecipientMemberID(*v)
+	}
+	return _c
+}
+
 // SetIsRead sets the "is_read" field.
 func (_c *LogisticsNotificationCreate) SetIsRead(v bool) *LogisticsNotificationCreate {
 	_c.mutation.SetIsRead(v)
@@ -261,6 +275,10 @@ func (_c *LogisticsNotificationCreate) createSpec() (*LogisticsNotification, *sq
 		_spec.SetField(logisticsnotification.FieldRelatedTaskID, field.TypeUUID, value)
 		_node.RelatedTaskID = &value
 	}
+	if value, ok := _c.mutation.RecipientMemberID(); ok {
+		_spec.SetField(logisticsnotification.FieldRecipientMemberID, field.TypeUUID, value)
+		_node.RecipientMemberID = &value
+	}
 	if value, ok := _c.mutation.IsRead(); ok {
 		_spec.SetField(logisticsnotification.FieldIsRead, field.TypeBool, value)
 		_node.IsRead = value
@@ -402,6 +420,24 @@ func (u *LogisticsNotificationUpsert) UpdateRelatedTaskID() *LogisticsNotificati
 // ClearRelatedTaskID clears the value of the "related_task_id" field.
 func (u *LogisticsNotificationUpsert) ClearRelatedTaskID() *LogisticsNotificationUpsert {
 	u.SetNull(logisticsnotification.FieldRelatedTaskID)
+	return u
+}
+
+// SetRecipientMemberID sets the "recipient_member_id" field.
+func (u *LogisticsNotificationUpsert) SetRecipientMemberID(v uuid.UUID) *LogisticsNotificationUpsert {
+	u.Set(logisticsnotification.FieldRecipientMemberID, v)
+	return u
+}
+
+// UpdateRecipientMemberID sets the "recipient_member_id" field to the value that was provided on create.
+func (u *LogisticsNotificationUpsert) UpdateRecipientMemberID() *LogisticsNotificationUpsert {
+	u.SetExcluded(logisticsnotification.FieldRecipientMemberID)
+	return u
+}
+
+// ClearRecipientMemberID clears the value of the "recipient_member_id" field.
+func (u *LogisticsNotificationUpsert) ClearRecipientMemberID() *LogisticsNotificationUpsert {
+	u.SetNull(logisticsnotification.FieldRecipientMemberID)
 	return u
 }
 
@@ -563,6 +599,27 @@ func (u *LogisticsNotificationUpsertOne) UpdateRelatedTaskID() *LogisticsNotific
 func (u *LogisticsNotificationUpsertOne) ClearRelatedTaskID() *LogisticsNotificationUpsertOne {
 	return u.Update(func(s *LogisticsNotificationUpsert) {
 		s.ClearRelatedTaskID()
+	})
+}
+
+// SetRecipientMemberID sets the "recipient_member_id" field.
+func (u *LogisticsNotificationUpsertOne) SetRecipientMemberID(v uuid.UUID) *LogisticsNotificationUpsertOne {
+	return u.Update(func(s *LogisticsNotificationUpsert) {
+		s.SetRecipientMemberID(v)
+	})
+}
+
+// UpdateRecipientMemberID sets the "recipient_member_id" field to the value that was provided on create.
+func (u *LogisticsNotificationUpsertOne) UpdateRecipientMemberID() *LogisticsNotificationUpsertOne {
+	return u.Update(func(s *LogisticsNotificationUpsert) {
+		s.UpdateRecipientMemberID()
+	})
+}
+
+// ClearRecipientMemberID clears the value of the "recipient_member_id" field.
+func (u *LogisticsNotificationUpsertOne) ClearRecipientMemberID() *LogisticsNotificationUpsertOne {
+	return u.Update(func(s *LogisticsNotificationUpsert) {
+		s.ClearRecipientMemberID()
 	})
 }
 
@@ -893,6 +950,27 @@ func (u *LogisticsNotificationUpsertBulk) UpdateRelatedTaskID() *LogisticsNotifi
 func (u *LogisticsNotificationUpsertBulk) ClearRelatedTaskID() *LogisticsNotificationUpsertBulk {
 	return u.Update(func(s *LogisticsNotificationUpsert) {
 		s.ClearRelatedTaskID()
+	})
+}
+
+// SetRecipientMemberID sets the "recipient_member_id" field.
+func (u *LogisticsNotificationUpsertBulk) SetRecipientMemberID(v uuid.UUID) *LogisticsNotificationUpsertBulk {
+	return u.Update(func(s *LogisticsNotificationUpsert) {
+		s.SetRecipientMemberID(v)
+	})
+}
+
+// UpdateRecipientMemberID sets the "recipient_member_id" field to the value that was provided on create.
+func (u *LogisticsNotificationUpsertBulk) UpdateRecipientMemberID() *LogisticsNotificationUpsertBulk {
+	return u.Update(func(s *LogisticsNotificationUpsert) {
+		s.UpdateRecipientMemberID()
+	})
+}
+
+// ClearRecipientMemberID clears the value of the "recipient_member_id" field.
+func (u *LogisticsNotificationUpsertBulk) ClearRecipientMemberID() *LogisticsNotificationUpsertBulk {
+	return u.Update(func(s *LogisticsNotificationUpsert) {
+		s.ClearRecipientMemberID()
 	})
 }
 

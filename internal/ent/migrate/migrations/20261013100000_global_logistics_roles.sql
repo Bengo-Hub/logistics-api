@@ -5,7 +5,7 @@
 CREATE TABLE IF NOT EXISTS logistics_roles_bk_global_20261013 AS SELECT * FROM logistics_roles;
 CREATE TABLE IF NOT EXISTS role_permissions_bk_global_20261013 AS SELECT * FROM role_permissions;
 CREATE TABLE IF NOT EXISTS user_role_assignments_bk_global_20261013 AS SELECT * FROM user_role_assignments;
-CREATE TEMP TABLE role_map ON COMMIT DROP AS
+CREATE TEMP TABLE role_map AS
   SELECT r.id AS old_id, c.id AS new_id
   FROM logistics_roles r
   JOIN (SELECT DISTINCT ON (role_code) role_code, id FROM logistics_roles ORDER BY role_code, created_at, id) c USING (role_code)
@@ -22,4 +22,5 @@ ALTER TABLE logistics_roles DROP COLUMN tenant_id;
 -- The old LogisticsRole.user_assignments edge.To added this never-set FK column; the edge now
 -- reuses role_id.
 ALTER TABLE user_role_assignments DROP COLUMN IF EXISTS logistics_role_user_assignments;
+DROP TABLE role_map;
 CREATE UNIQUE INDEX IF NOT EXISTS logisticsrole_role_code ON logistics_roles (role_code);

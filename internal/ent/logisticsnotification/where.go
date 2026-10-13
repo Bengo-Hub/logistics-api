@@ -80,6 +80,11 @@ func RelatedTaskID(v uuid.UUID) predicate.LogisticsNotification {
 	return predicate.LogisticsNotification(sql.FieldEQ(FieldRelatedTaskID, v))
 }
 
+// RecipientMemberID applies equality check predicate on the "recipient_member_id" field. It's identical to RecipientMemberIDEQ.
+func RecipientMemberID(v uuid.UUID) predicate.LogisticsNotification {
+	return predicate.LogisticsNotification(sql.FieldEQ(FieldRecipientMemberID, v))
+}
+
 // IsRead applies equality check predicate on the "is_read" field. It's identical to IsReadEQ.
 func IsRead(v bool) predicate.LogisticsNotification {
 	return predicate.LogisticsNotification(sql.FieldEQ(FieldIsRead, v))
@@ -383,6 +388,56 @@ func RelatedTaskIDIsNil() predicate.LogisticsNotification {
 // RelatedTaskIDNotNil applies the NotNil predicate on the "related_task_id" field.
 func RelatedTaskIDNotNil() predicate.LogisticsNotification {
 	return predicate.LogisticsNotification(sql.FieldNotNull(FieldRelatedTaskID))
+}
+
+// RecipientMemberIDEQ applies the EQ predicate on the "recipient_member_id" field.
+func RecipientMemberIDEQ(v uuid.UUID) predicate.LogisticsNotification {
+	return predicate.LogisticsNotification(sql.FieldEQ(FieldRecipientMemberID, v))
+}
+
+// RecipientMemberIDNEQ applies the NEQ predicate on the "recipient_member_id" field.
+func RecipientMemberIDNEQ(v uuid.UUID) predicate.LogisticsNotification {
+	return predicate.LogisticsNotification(sql.FieldNEQ(FieldRecipientMemberID, v))
+}
+
+// RecipientMemberIDIn applies the In predicate on the "recipient_member_id" field.
+func RecipientMemberIDIn(vs ...uuid.UUID) predicate.LogisticsNotification {
+	return predicate.LogisticsNotification(sql.FieldIn(FieldRecipientMemberID, vs...))
+}
+
+// RecipientMemberIDNotIn applies the NotIn predicate on the "recipient_member_id" field.
+func RecipientMemberIDNotIn(vs ...uuid.UUID) predicate.LogisticsNotification {
+	return predicate.LogisticsNotification(sql.FieldNotIn(FieldRecipientMemberID, vs...))
+}
+
+// RecipientMemberIDGT applies the GT predicate on the "recipient_member_id" field.
+func RecipientMemberIDGT(v uuid.UUID) predicate.LogisticsNotification {
+	return predicate.LogisticsNotification(sql.FieldGT(FieldRecipientMemberID, v))
+}
+
+// RecipientMemberIDGTE applies the GTE predicate on the "recipient_member_id" field.
+func RecipientMemberIDGTE(v uuid.UUID) predicate.LogisticsNotification {
+	return predicate.LogisticsNotification(sql.FieldGTE(FieldRecipientMemberID, v))
+}
+
+// RecipientMemberIDLT applies the LT predicate on the "recipient_member_id" field.
+func RecipientMemberIDLT(v uuid.UUID) predicate.LogisticsNotification {
+	return predicate.LogisticsNotification(sql.FieldLT(FieldRecipientMemberID, v))
+}
+
+// RecipientMemberIDLTE applies the LTE predicate on the "recipient_member_id" field.
+func RecipientMemberIDLTE(v uuid.UUID) predicate.LogisticsNotification {
+	return predicate.LogisticsNotification(sql.FieldLTE(FieldRecipientMemberID, v))
+}
+
+// RecipientMemberIDIsNil applies the IsNil predicate on the "recipient_member_id" field.
+func RecipientMemberIDIsNil() predicate.LogisticsNotification {
+	return predicate.LogisticsNotification(sql.FieldIsNull(FieldRecipientMemberID))
+}
+
+// RecipientMemberIDNotNil applies the NotNil predicate on the "recipient_member_id" field.
+func RecipientMemberIDNotNil() predicate.LogisticsNotification {
+	return predicate.LogisticsNotification(sql.FieldNotNull(FieldRecipientMemberID))
 }
 
 // IsReadEQ applies the EQ predicate on the "is_read" field.

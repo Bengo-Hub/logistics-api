@@ -31,6 +31,8 @@ type LogisticsNotification struct {
 	Payload map[string]interface{} `json:"payload,omitempty"`
 	// RelatedTaskID holds the value of the "related_task_id" field.
 	RelatedTaskID *uuid.UUID `json:"related_task_id,omitempty"`
+	// Rider (fleet member) the message is for; NULL = dispatcher alert for the tenant
+	RecipientMemberID *uuid.UUID `json:"recipient_member_id,omitempty"`
 	// IsRead holds the value of the "is_read" field.
 	IsRead bool `json:"is_read,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
@@ -43,7 +45,7 @@ func (*LogisticsNotification) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case logisticsnotification.FieldRelatedTaskID:
+		case logisticsnotification.FieldRelatedTaskID, logisticsnotification.FieldRecipientMemberID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case logisticsnotification.FieldPayload:
 			values[i] = new([]byte)
@@ -115,6 +117,13 @@ func (_m *LogisticsNotification) assignValues(columns []string, values []any) er
 				_m.RelatedTaskID = new(uuid.UUID)
 				*_m.RelatedTaskID = *value.S.(*uuid.UUID)
 			}
+		case logisticsnotification.FieldRecipientMemberID:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field recipient_member_id", values[i])
+			} else if value.Valid {
+				_m.RecipientMemberID = new(uuid.UUID)
+				*_m.RecipientMemberID = *value.S.(*uuid.UUID)
+			}
 		case logisticsnotification.FieldIsRead:
 			if value, ok := values[i].(*sql.NullBool); !ok {
 				return fmt.Errorf("unexpected type %T for field is_read", values[i])
@@ -180,6 +189,11 @@ func (_m *LogisticsNotification) String() string {
 	builder.WriteString(", ")
 	if v := _m.RelatedTaskID; v != nil {
 		builder.WriteString("related_task_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.RecipientMemberID; v != nil {
+		builder.WriteString("recipient_member_id=")
 		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
 	builder.WriteString(", ")

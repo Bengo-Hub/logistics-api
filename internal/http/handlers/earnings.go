@@ -14,6 +14,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/billingevent"
 	"github.com/bengobox/logistics-service/internal/ent/earningsstatement"
 	"github.com/bengobox/logistics-service/internal/modules/earnings"
+	notifmod "github.com/bengobox/logistics-service/internal/modules/notifications"
 )
 
 // EarningsHandler exposes earnings, billing event, and pricing rule endpoints.
@@ -28,7 +29,12 @@ type EarningsHandler struct {
 	// generating and settling statements and other riders' payout details
 	// (logistics.earnings.manage). Settling sends real money through treasury.
 	viewGate, manageGate func(http.Handler) http.Handler
+	// notif tells the rider in the rider app when a payout is sent.
+	notif *notifmod.Service
 }
+
+// SetNotifications wires the rider inbox used for payout notices.
+func (h *EarningsHandler) SetNotifications(s *notifmod.Service) { h.notif = s }
 
 // SetPricingGate sets the middleware that guards pricing-rule mutations.
 func (h *EarningsHandler) SetPricingGate(mw func(http.Handler) http.Handler) { h.pricingGate = mw }

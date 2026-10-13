@@ -372,6 +372,7 @@ var (
 		{Name: "body", Type: field.TypeString, Nullable: true, Size: 2147483647},
 		{Name: "payload", Type: field.TypeJSON},
 		{Name: "related_task_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "recipient_member_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "is_read", Type: field.TypeBool, Default: false},
 		{Name: "created_at", Type: field.TypeTime},
 	}
@@ -384,12 +385,17 @@ var (
 			{
 				Name:    "logisticsnotification_tenant_id_is_read_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{LogisticsNotificationsColumns[1], LogisticsNotificationsColumns[7], LogisticsNotificationsColumns[8]},
+				Columns: []*schema.Column{LogisticsNotificationsColumns[1], LogisticsNotificationsColumns[8], LogisticsNotificationsColumns[9]},
 			},
 			{
 				Name:    "logisticsnotification_tenant_id_notification_type_related_task_id",
 				Unique:  false,
 				Columns: []*schema.Column{LogisticsNotificationsColumns[1], LogisticsNotificationsColumns[2], LogisticsNotificationsColumns[6]},
+			},
+			{
+				Name:    "logisticsnotification_tenant_id_recipient_member_id_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{LogisticsNotificationsColumns[1], LogisticsNotificationsColumns[7], LogisticsNotificationsColumns[9]},
 			},
 		},
 	}
