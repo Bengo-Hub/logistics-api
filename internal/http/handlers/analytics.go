@@ -3,7 +3,6 @@ package handlers
 import (
 	"database/sql"
 	"net/http"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -32,21 +31,26 @@ func (h *AnalyticsHandler) RegisterRoutes(r chi.Router) {
 	r.Route("/analytics", func(a chi.Router) {
 		a.Get("/kpis", h.GetKPIs)
 		a.Get("/zones", h.GetZoneStats)
+		a.Get("/series", h.GetSeries)
+		a.Get("/riders", h.GetRiderStats)
 	})
 }
 
 // KPIResponse is the response body for GET /{tenant}/analytics/kpis.
 type KPIResponse struct {
-	Period          string  `json:"period"`
-	TotalTasks      int     `json:"total_tasks"`
-	PendingTasks    int     `json:"pending_tasks"`
-	ActiveTasks     int     `json:"active_tasks"`
-	CompletedTasks  int     `json:"completed_tasks"`
-	FailedTasks     int     `json:"failed_tasks"`
-	CancelledTasks  int     `json:"cancelled_tasks"`
-	OnTimePercent   float64 `json:"on_time_percent"`
-	ActiveRiders    int     `json:"active_riders"`
-	TotalRiders     int     `json:"total_riders"`
+	Period         string  `json:"period"`
+	TotalTasks     int     `json:"total_tasks"`
+	PendingTasks   int     `json:"pending_tasks"`
+	ActiveTasks    int     `json:"active_tasks"`
+	CompletedTasks int     `json:"completed_tasks"`
+	FailedTasks    int     `json:"failed_tasks"`
+	CancelledTasks int     `json:"cancelled_tasks"`
+	OnTimePercent  float64 `json:"on_time_percent"`
+	ActiveRiders   int     `json:"active_riders"`
+	TotalRiders    int     `json:"total_riders"`
+	// RidersWorking is how many riders held at least one job created in the period.
+	RidersWorking int `json:"riders_working"`
+	// UtilizationPct is RidersWorking as a share of active riders.
 	UtilizationPct  float64 `json:"utilization_percent"`
 	AvgDeliveryMins float64 `json:"avg_delivery_minutes"`
 }
@@ -60,23 +64,7 @@ func (h *AnalyticsHandler) GetKPIs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	periodStr := r.URL.Query().Get("period")
-	if periodStr == "" {
-		periodStr = "7d"
-	}
-
-	var since time.Time
-	switch periodStr {
-	case "today":
-		now := time.Now()
-		since = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-	case "30d":
-		since = time.Now().AddDate(0, 0, -30)
-	default: // 7d
-		since = time.Now().AddDate(0, 0, -7)
-		periodStr = "7d"
-	}
-
+	periodStr, since := analyticsPeriod(r, "7d")
 	ctx := r.Context()
 
 	// Counts by status in one GROUP BY, and on-time/average from proof of delivery, all in SQL.
@@ -126,9 +114,19 @@ func (h *AnalyticsHandler) GetKPIs(w http.ResponseWriter, r *http.Request) {
 		Where(fleetmember.TenantID(tenantID), fleetmember.Status("active")).
 		Count(ctx)
 
+	var ridersWorking int
+	if h.db != nil {
+		if err := h.db.QueryRowContext(ctx, `
+			SELECT count(DISTINCT a.fleet_member_id)
+			FROM tasks t JOIN task_assignments a ON a.task_id = t.id
+			WHERE t.tenant_id = $1 AND t.created_at >= $2
+			  AND a.status NOT IN ('declined', 'unassigned')`, tenantID, since).Scan(&ridersWorking); err != nil {
+			h.log.Warn("analytics: riders working", zap.Error(err))
+		}
+	}
 	var utilizationPct float64
-	if totalRiders > 0 {
-		utilizationPct = float64(activeRiders) / float64(totalRiders) * 100
+	if activeRiders > 0 {
+		utilizationPct = float64(ridersWorking) / float64(activeRiders) * 100
 	}
 
 	respondJSON(w, http.StatusOK, KPIResponse{
@@ -142,6 +140,7 @@ func (h *AnalyticsHandler) GetKPIs(w http.ResponseWriter, r *http.Request) {
 		OnTimePercent:   onTimePct,
 		ActiveRiders:    activeRiders,
 		TotalRiders:     totalRiders,
+		RidersWorking:   ridersWorking,
 		UtilizationPct:  utilizationPct,
 		AvgDeliveryMins: avgDeliveryMins,
 	})
@@ -208,16 +207,7 @@ func (h *AnalyticsHandler) GetZoneStats(w http.ResponseWriter, r *http.Request) 
 		respondJSON(w, http.StatusOK, []ZoneStat{})
 		return
 	}
-	since := time.Now().AddDate(0, 0, -30)
-	switch r.URL.Query().Get("period") {
-	case "today":
-		now := time.Now()
-		since = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-	case "7d":
-		since = time.Now().AddDate(0, 0, -7)
-	case "90d":
-		since = time.Now().AddDate(0, 0, -90)
-	}
+	_, since := analyticsPeriod(r, "30d")
 	// One grouped scan over the tenant's tasks of the period, served by the
 	// (tenant_id, created_at) index; tasks without a zone report as "Unzoned".
 	rows, err := h.db.QueryContext(r.Context(), `
