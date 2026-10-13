@@ -242,6 +242,8 @@ func New(ctx context.Context) (*App, error) {
 	// Integration tasks need an active fleet; the answer is cached and dropped on rider changes.
 	taskSvc.SetCache(cacheAside)
 	taskSvc.SetEntitlementGate(logisticsEntitled)
+	// Auto-assign is a tier 2 feature (auto_dispatch); background paths have no token to check.
+	taskSvc.SetFeatureGate(subsClient.ConsumerHasFeature)
 
 	// Earnings: records rider earnings on delivery completion, daily statement generation
 	earningsSvc := earnings.NewService(entClient, log).WithDB(sqlDB)

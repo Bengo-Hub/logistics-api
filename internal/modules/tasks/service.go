@@ -16,6 +16,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
+	"github.com/bengobox/logistics-service/internal/consts"
 	"github.com/bengobox/logistics-service/internal/ent"
 	"github.com/bengobox/logistics-service/internal/ent/fleet"
 	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
@@ -193,10 +194,14 @@ func taskCODAmount(t *ent.Task) float64 {
 	return 0
 }
 
-// AutoAssignEnabled reports whether the tenant wants new delivery tasks auto-assigned to the
-// nearest rider (setting logistics.auto_assign_enabled: the tenant's own value, else the platform
-// default, else on). A business with its own dispatcher turns it off and assigns from the board.
+// AutoAssignEnabled reports whether new delivery tasks are auto-assigned to the nearest rider:
+// the plan includes auto_dispatch (tier 2) and the tenant has not turned it off (setting
+// logistics.auto_assign_enabled: the tenant's own value, else the platform default, else on). A
+// business with its own dispatcher turns it off and assigns from the board.
 func (s *Service) AutoAssignEnabled(ctx context.Context, tenantID uuid.UUID) bool {
+	if s.featured != nil && !s.featured(ctx, tenantID.String(), consts.FeatureAutoDispatch) {
+		return false
+	}
 	return s.boolSetting(ctx, tenantID, "logistics.auto_assign_enabled", true)
 }
 
@@ -305,6 +310,7 @@ type Service struct {
 	earningsSvc    EarningsRecorder
 	cache          *sharedcache.Aside
 	entitled       func(ctx context.Context, tenantID string) bool
+	featured       func(ctx context.Context, tenantID, feature string) bool
 	perDiem        PerDiemRaiser
 	etaTrigger     ETATrigger
 	sseBroadcaster StatusBroadcaster

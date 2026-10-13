@@ -26,6 +26,12 @@ func (s *Service) SetEntitlementGate(fn func(ctx context.Context, tenantID strin
 	s.entitled = fn
 }
 
+// SetFeatureGate wires the subscription feature check used by background paths that have no
+// user token (auto-assign). It fails open when subscriptions-api cannot be reached.
+func (s *Service) SetFeatureGate(fn func(ctx context.Context, tenantID, feature string) bool) {
+	s.featured = fn
+}
+
 // intakeAllowed is the one check for tasks from other services: the plan includes logistics
 // and the tenant runs at least one active rider.
 func (s *Service) intakeAllowed(ctx context.Context, tenantID uuid.UUID) error {

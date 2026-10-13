@@ -23,6 +23,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/bengobox/logistics-service/internal/config"
+	"github.com/bengobox/logistics-service/internal/consts"
 	"github.com/bengobox/logistics-service/internal/http/handlers"
 	appmw "github.com/bengobox/logistics-service/internal/middleware"
 	"github.com/bengobox/logistics-service/internal/modules/identity"
@@ -348,7 +349,7 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 					// matrix optimisation is the premium "route_optimisation" surface.
 					routeR.Get("/route", rh.GetRoute)
 					routeR.Get("/eta", rh.GetETA)
-					routeR.With(appmw.RequireFeature("route_optimisation", cfg.Subscriptions.ServiceURL+"/upgrade")).
+					routeR.With(appmw.RequireFeature(consts.FeatureRouteOptimisation, cfg.Subscriptions.ServiceURL+"/upgrade")).
 						Post("/matrix", rh.GetMatrix)
 					routeR.Get("/isochrone", rh.GetIsochrone)
 					routeR.Get("/health", rh.HealthCheck)
@@ -365,7 +366,7 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 				tenant.Route("/tracking", func(trackR chi.Router) {
 					// Live GPS rider tracking is a premium feature. Customer-facing order
 					// tracking uses the public /api/v1/track/{code} endpoint, which is unaffected.
-					trackR.Use(appmw.RequireFeature("live_tracking", cfg.Subscriptions.ServiceURL+"/upgrade"))
+					trackR.Use(appmw.RequireFeature(consts.FeatureLiveTracking, cfg.Subscriptions.ServiceURL+"/upgrade"))
 					trackR.Use(appmw.RequireRateLimit(quota, "live_tracking_requests_per_month", cfg.Subscriptions.ServiceURL+"/upgrade"))
 					if telH != nil {
 						telH.RegisterFleetTrackingRoute(trackR)
@@ -425,9 +426,13 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 			if earningsH != nil {
 				if rbacSvc != nil {
 					earningsH.SetPricingGate(appmw.RequirePermission(rbacSvc, rbac.PermPricingManage))
+					// Statements and payouts are a tier 2 feature (rider_payouts).
+					payouts := appmw.RequireFeature(consts.FeatureRiderPayouts, cfg.Subscriptions.ServiceURL+"/upgrade")
+					earnView := appmw.RequirePermission(rbacSvc, rbac.PermEarningsView)
+					earnManage := appmw.RequirePermission(rbacSvc, rbac.PermEarningsManage)
 					earningsH.SetGates(
-						appmw.RequirePermission(rbacSvc, rbac.PermEarningsView),
-						appmw.RequirePermission(rbacSvc, rbac.PermEarningsManage),
+						func(next http.Handler) http.Handler { return payouts(earnView(next)) },
+						func(next http.Handler) http.Handler { return payouts(earnManage(next)) },
 					)
 				}
 				earningsH.RegisterRoutes(tenant)
@@ -443,11 +448,14 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 
 			if shiftH != nil {
 				// Shift schedule: dispatchers and admins. Riders go online through /riders/me/shift.
+				// The schedule is a tier 2 feature (rider_shifts); going online is not gated.
+				shiftFeature := appmw.RequireFeature(consts.FeatureRiderShifts, cfg.Subscriptions.ServiceURL+"/upgrade")
 				if rbacSvc != nil && lh != nil {
+					view := appmw.RequirePermission(rbacSvc, rbac.PermFleetView)
 					manage := appmw.RequirePermission(rbacSvc, rbac.PermTaskManage)
 					shiftH.SetGates(
-						appmw.RequirePermission(rbacSvc, rbac.PermFleetView),
-						func(next http.Handler) http.Handler { return manage(lh.DispatcherOnly(next)) },
+						func(next http.Handler) http.Handler { return shiftFeature(view(next)) },
+						func(next http.Handler) http.Handler { return shiftFeature(manage(lh.DispatcherOnly(next))) },
 					)
 				}
 				shiftH.RegisterRoutes(tenant)
@@ -456,7 +464,7 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 			if analyticsH != nil {
 				// Driver/fleet performance analytics are a premium surface.
 				tenant.Group(func(ag chi.Router) {
-					ag.Use(appmw.RequireAnyFeature(cfg.Subscriptions.ServiceURL+"/upgrade", "driver_analytics", "performance_reports"))
+					ag.Use(appmw.RequireAnyFeature(cfg.Subscriptions.ServiceURL+"/upgrade", consts.FeatureDriverAnalytics, consts.FeaturePerformanceReports))
 					// Operations analytics are for dispatchers and admins, not every user.
 					if rbacSvc != nil {
 						ag.Use(appmw.RequirePermission(rbacSvc, rbac.PermTaskView))
@@ -521,7 +529,8 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 							disp.Post("/{taskId}/assign", lh.AssignTask)
 							disp.Post("/{taskId}/unassign", lh.UnassignTask)
 							disp.Post("/{taskId}/cancel", lh.CancelTask)
-							disp.Post("/{taskId}/dispatch", lh.DispatchTask)
+							// "Nearest rider" is auto-dispatch: a tier 2 feature.
+							disp.With(appmw.RequireFeature(consts.FeatureAutoDispatch, cfg.Subscriptions.ServiceURL+"/upgrade")).Post("/{taskId}/dispatch", lh.DispatchTask)
 							disp.Post("/{taskId}/rate", lh.RateRider)
 						})
 					})
@@ -547,7 +556,7 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 						if rbacSvc != nil {
 							mut.Use(appmw.RequirePermission(rbacSvc, rbac.PermFleetManage))
 						}
-						mut.Use(appmw.RequireFeature("rider_management", cfg.Subscriptions.ServiceURL+"/upgrade"))
+						mut.Use(appmw.RequireFeature(consts.FeatureRiderManagement, cfg.Subscriptions.ServiceURL+"/upgrade"))
 						mut.Post("/members", lh.InviteMember)
 						mut.Post("/members/{memberId}/approve", lh.ApproveMember)
 						mut.Post("/members/{memberId}/suspend", lh.SuspendMember)
