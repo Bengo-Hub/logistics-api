@@ -8,7 +8,7 @@ info:
 servers:
   - url: https://logistics.codevertex.local
     description: Local development server (HTTPS)
-  - url: https://logistics.codevrtexitsolutions.com
+  - url: https://logisticsapi.codevertexafrica.com
     description: Production server
 paths:
   /healthz:
@@ -408,6 +408,197 @@ paths:
       responses:
         '200':
           description: Coverage
+  /api/v1/s2s/dispatch/{tenant}/riders:
+    get:
+      tags: [S2S]
+      summary: Active riders (service-to-service)
+      description: Slim rider view (id, name, phone, employment) for another service's rider picker; no KYC data. Tenant is a UUID.
+      security:
+        - serviceKey: []
+      parameters:
+        - {name: tenant, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: "{data: [{id, first_name, last_name, phone, employment}]}"
+  /api/v1/{tenant}/analytics/kpis:
+    get:
+      tags: [Analytics]
+      summary: Delivery and fleet KPIs
+      description: Needs logistics.tasks.view and the driver_analytics or performance_reports feature. Periods are calendar days in REPORTS_TIMEZONE (default Africa/Nairobi).
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: tenant, in: path, required: true, schema: {type: string}}
+        - {name: period, in: query, schema: {type: string, enum: [today, 7d, 30d, 90d]}}
+      responses:
+        '200':
+          description: Counts by outcome, on-time share, average delivery time, active riders, riders who worked and utilization
+  /api/v1/{tenant}/analytics/series:
+    get:
+      tags: [Analytics]
+      summary: Deliveries over time
+      description: Task outcomes per hour (today) or per day, empty buckets filled.
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: tenant, in: path, required: true, schema: {type: string}}
+        - {name: period, in: query, schema: {type: string, enum: [today, 7d, 30d, 90d]}}
+      responses:
+        '200':
+          description: "{period, unit: hour|day, points: [{start, total, delivered, failed, cancelled}]}"
+  /api/v1/{tenant}/analytics/riders:
+    get:
+      tags: [Analytics]
+      summary: Rider performance
+      description: Per rider jobs, deliveries, failures, average delivery time, on-time share and rating; top 50 by deliveries.
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: tenant, in: path, required: true, schema: {type: string}}
+        - {name: period, in: query, schema: {type: string, enum: [today, 7d, 30d, 90d]}}
+      responses:
+        '200':
+          description: Array of rider stats
+  /api/v1/{tenant}/shifts:
+    get:
+      tags: [Shifts]
+      summary: Shift schedule
+      description: Needs logistics.fleet.view and the rider_shifts feature. Shifts overlapping [from, to] when given.
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: tenant, in: path, required: true, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string, enum: [scheduled, active, completed, cancelled]}}
+        - {name: fleet_member_id, in: query, schema: {type: string, format: uuid}}
+        - {name: from, in: query, schema: {type: string, format: date-time}}
+        - {name: to, in: query, schema: {type: string, format: date-time}}
+        - {name: limit, in: query, schema: {type: integer}}
+        - {name: offset, in: query, schema: {type: integer}}
+      responses:
+        '200':
+          description: "{data: [shift with rider_name], total}"
+    post:
+      tags: [Shifts]
+      summary: Schedule a shift
+      description: Needs logistics.tasks.manage (dispatchers, not riders) and rider_shifts. Active riders only; one rider's shifts cannot overlap; at most 24 hours.
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: tenant, in: path, required: true, schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fleet_member_id, shift_start, shift_end]
+              properties:
+                fleet_member_id: {type: string, format: uuid}
+                shift_start: {type: string, format: date-time}
+                shift_end: {type: string, format: date-time}
+                zone_ids: {type: array, items: {type: string, format: uuid}}
+      responses:
+        '201': {description: Shift}
+        '400': {description: Invalid times or inactive rider}
+        '409': {description: Overlaps another shift of the rider}
+  /api/v1/{tenant}/shifts/{shiftId}/{action}:
+    post:
+      tags: [Shifts]
+      summary: Start, end or cancel a shift
+      description: start (scheduled to active), end (active to completed, early end recorded), cancel (scheduled to cancelled). DELETE /shifts/{shiftId} removes a shift that never ran.
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: tenant, in: path, required: true, schema: {type: string}}
+        - {name: shiftId, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: action, in: path, required: true, schema: {type: string, enum: [start, end, cancel]}}
+      responses:
+        '200': {description: Shift}
+        '409': {description: Not allowed from the current status}
+  /api/v1/{tenant}/riders/me/shift:
+    get:
+      tags: [Rider]
+      summary: The rider's shift (online when active)
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: tenant, in: path, required: true, schema: {type: string}}
+      responses:
+        '200':
+          description: "{online, shift, next_shift}"
+  /api/v1/{tenant}/riders/me/shift/{state}:
+    post:
+      tags: [Rider]
+      summary: Go online or offline
+      description: online starts the scheduled shift (from 30 minutes before) or an open-ended one; offline ends it now and drops the rider from auto-dispatch at once.
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: tenant, in: path, required: true, schema: {type: string}}
+        - {name: state, in: path, required: true, schema: {type: string, enum: [online, offline]}}
+      responses:
+        '200': {description: "{online, shift, next_shift}"}
+        '403': {description: rider_not_active}
+  /api/v1/{tenant}/riders/me/notifications:
+    get:
+      tags: [Rider]
+      summary: The rider's inbox
+      description: The signed-in rider's own messages (job assigned, moved, cancelled, payout sent). PATCH /{id}/read and POST /mark-all-read mark them read; GET /stream (WebSocket, ?token=) pushes new ones.
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: tenant, in: path, required: true, schema: {type: string}}
+        - {name: include_read, in: query, schema: {type: boolean}}
+      responses:
+        '200':
+          description: "{data, total, unread}"
+  /api/v1/{tenant}/riders/me/payout-method:
+    get:
+      tags: [Rider]
+      summary: Where the rider is paid
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: tenant, in: path, required: true, schema: {type: string}}
+      responses:
+        '200': {description: Payout method (account numbers masked)}
+    put:
+      tags: [Rider]
+      summary: Set where the rider is paid
+      description: M-Pesa needs a valid phone (normalised to 254...); bank needs bank code and account number. GET|PUT /riders/{riderID}/payout-method does the same for another rider with logistics.earnings.manage.
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: tenant, in: path, required: true, schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [payout_method]
+              properties:
+                payout_method: {type: string, enum: [mpesa_b2c, paystack_bank, paystack_mobile, cash, internal_wallet]}
+                payout_phone: {type: string}
+                payout_bank_code: {type: string}
+                account_number: {type: string}
+                account_name: {type: string}
+      responses:
+        '200': {description: Payout method}
+        '400': {description: Missing or invalid details for the method}
+  /api/v1/{tenant}/earnings/statements/{statementID}/settle:
+    post:
+      tags: [Earnings]
+      summary: Pay a statement
+      description: Needs logistics.earnings.manage and the rider_payouts feature. Sends a real payout through treasury; the statement is claimed (draft to processing) first, so it cannot be paid twice.
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: tenant, in: path, required: true, schema: {type: string}}
+        - {name: statementID, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200': {description: "{statement_id, status: processing, payout_reference}"}
+        '409': {description: Already being paid or not a draft}
 components:
   securitySchemes:
     bearerAuth:

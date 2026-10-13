@@ -121,9 +121,12 @@ func (Task) Indexes() []ent.Index {
 		// Period reports over one task type (deliveries by zone, delivery KPIs).
 		index.Fields("tenant_id", "task_type", "created_at"),
 		// SLA monitor scan: open tasks past their due time. Partial, so it stays as small as
-		// the set of open tasks no matter how many completed tasks accumulate.
+		// the set of open tasks no matter how many completed tasks accumulate. The predicate is
+		// written in the canonical form Postgres stores (pg_get_expr), so migration diffs do not
+		// keep proposing to drop and recreate the index; it means: due date set and status not
+		// delivered, completed, cancelled, failed or returned.
 		index.Fields("sla_due_at").
 			StorageKey("task_sla_open").
-			Annotations(entsql.IndexWhere("sla_due_at IS NOT NULL AND status NOT IN ('delivered', 'completed', 'cancelled', 'failed', 'returned')")),
+			Annotations(entsql.IndexWhere("((sla_due_at IS NOT NULL) AND ((status)::text <> ALL ((ARRAY['delivered'::character varying, 'completed'::character varying, 'cancelled'::character varying, 'failed'::character varying, 'returned'::character varying])::text[])))")),
 	}
 }

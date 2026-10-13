@@ -930,7 +930,7 @@ var (
 				Unique:  false,
 				Columns: []*schema.Column{TasksColumns[8]},
 				Annotation: &entsql.IndexAnnotation{
-					Where: "sla_due_at IS NOT NULL AND status NOT IN ('delivered', 'completed', 'cancelled', 'failed', 'returned')",
+					Where: "((sla_due_at IS NOT NULL) AND ((status)::text <> ALL ((ARRAY['delivered'::character varying, 'completed'::character varying, 'cancelled'::character varying, 'failed'::character varying, 'returned'::character varying])::text[])))",
 				},
 			},
 		},

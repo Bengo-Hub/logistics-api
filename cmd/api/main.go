@@ -6,8 +6,6 @@ import (
 	"os/signal"
 	"syscall"
 
-	_ "github.com/bengobox/logistics-service/internal/http/docs"
-
 	"github.com/bengobox/logistics-service/internal/app"
 )
 
@@ -34,4 +32,3 @@ func main() {
 		log.Fatalf("runtime error: %v", err)
 	}
 }
-
