@@ -27,12 +27,6 @@ type LogisticsRoleCreate struct {
 	conflict []sql.ConflictOption
 }
 
-// SetTenantID sets the "tenant_id" field.
-func (_c *LogisticsRoleCreate) SetTenantID(v uuid.UUID) *LogisticsRoleCreate {
-	_c.mutation.SetTenantID(v)
-	return _c
-}
-
 // SetRoleCode sets the "role_code" field.
 func (_c *LogisticsRoleCreate) SetRoleCode(v string) *LogisticsRoleCreate {
 	_c.mutation.SetRoleCode(v)
@@ -215,9 +209,6 @@ func (_c *LogisticsRoleCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_c *LogisticsRoleCreate) check() error {
-	if _, ok := _c.mutation.TenantID(); !ok {
-		return &ValidationError{Name: "tenant_id", err: errors.New(`ent: missing required field "LogisticsRole.tenant_id"`)}
-	}
 	if _, ok := _c.mutation.RoleCode(); !ok {
 		return &ValidationError{Name: "role_code", err: errors.New(`ent: missing required field "LogisticsRole.role_code"`)}
 	}
@@ -279,10 +270,6 @@ func (_c *LogisticsRoleCreate) createSpec() (*LogisticsRole, *sqlgraph.CreateSpe
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := _c.mutation.TenantID(); ok {
-		_spec.SetField(logisticsrole.FieldTenantID, field.TypeUUID, value)
-		_node.TenantID = value
-	}
 	if value, ok := _c.mutation.RoleCode(); ok {
 		_spec.SetField(logisticsrole.FieldRoleCode, field.TypeString, value)
 		_node.RoleCode = value
@@ -326,7 +313,7 @@ func (_c *LogisticsRoleCreate) createSpec() (*LogisticsRole, *sqlgraph.CreateSpe
 	if nodes := _c.mutation.UserAssignmentsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
-			Inverse: false,
+			Inverse: true,
 			Table:   logisticsrole.UserAssignmentsTable,
 			Columns: []string{logisticsrole.UserAssignmentsColumn},
 			Bidi:    false,
@@ -362,7 +349,7 @@ func (_c *LogisticsRoleCreate) createSpec() (*LogisticsRole, *sqlgraph.CreateSpe
 // of the `INSERT` statement. For example:
 //
 //	client.LogisticsRole.Create().
-//		SetTenantID(v).
+//		SetRoleCode(v).
 //		OnConflict(
 //			// Update the row with the new values
 //			// the was proposed for insertion.
@@ -371,7 +358,7 @@ func (_c *LogisticsRoleCreate) createSpec() (*LogisticsRole, *sqlgraph.CreateSpe
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.LogisticsRoleUpsert) {
-//			SetTenantID(v+v).
+//			SetRoleCode(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *LogisticsRoleCreate) OnConflict(opts ...sql.ConflictOption) *LogisticsRoleUpsertOne {
@@ -406,18 +393,6 @@ type (
 		*sql.UpdateSet
 	}
 )
-
-// SetTenantID sets the "tenant_id" field.
-func (u *LogisticsRoleUpsert) SetTenantID(v uuid.UUID) *LogisticsRoleUpsert {
-	u.Set(logisticsrole.FieldTenantID, v)
-	return u
-}
-
-// UpdateTenantID sets the "tenant_id" field to the value that was provided on create.
-func (u *LogisticsRoleUpsert) UpdateTenantID() *LogisticsRoleUpsert {
-	u.SetExcluded(logisticsrole.FieldTenantID)
-	return u
-}
 
 // SetRoleCode sets the "role_code" field.
 func (u *LogisticsRoleUpsert) SetRoleCode(v string) *LogisticsRoleUpsert {
@@ -534,20 +509,6 @@ func (u *LogisticsRoleUpsertOne) Update(set func(*LogisticsRoleUpsert)) *Logisti
 		set(&LogisticsRoleUpsert{UpdateSet: update})
 	}))
 	return u
-}
-
-// SetTenantID sets the "tenant_id" field.
-func (u *LogisticsRoleUpsertOne) SetTenantID(v uuid.UUID) *LogisticsRoleUpsertOne {
-	return u.Update(func(s *LogisticsRoleUpsert) {
-		s.SetTenantID(v)
-	})
-}
-
-// UpdateTenantID sets the "tenant_id" field to the value that was provided on create.
-func (u *LogisticsRoleUpsertOne) UpdateTenantID() *LogisticsRoleUpsertOne {
-	return u.Update(func(s *LogisticsRoleUpsert) {
-		s.UpdateTenantID()
-	})
 }
 
 // SetRoleCode sets the "role_code" field.
@@ -763,7 +724,7 @@ func (_c *LogisticsRoleCreateBulk) ExecX(ctx context.Context) {
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.LogisticsRoleUpsert) {
-//			SetTenantID(v+v).
+//			SetRoleCode(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *LogisticsRoleCreateBulk) OnConflict(opts ...sql.ConflictOption) *LogisticsRoleUpsertBulk {
@@ -843,20 +804,6 @@ func (u *LogisticsRoleUpsertBulk) Update(set func(*LogisticsRoleUpsert)) *Logist
 		set(&LogisticsRoleUpsert{UpdateSet: update})
 	}))
 	return u
-}
-
-// SetTenantID sets the "tenant_id" field.
-func (u *LogisticsRoleUpsertBulk) SetTenantID(v uuid.UUID) *LogisticsRoleUpsertBulk {
-	return u.Update(func(s *LogisticsRoleUpsert) {
-		s.SetTenantID(v)
-	})
-}
-
-// UpdateTenantID sets the "tenant_id" field to the value that was provided on create.
-func (u *LogisticsRoleUpsertBulk) UpdateTenantID() *LogisticsRoleUpsertBulk {
-	return u.Update(func(s *LogisticsRoleUpsert) {
-		s.UpdateTenantID()
-	})
 }
 
 // SetRoleCode sets the "role_code" field.

@@ -127,7 +127,7 @@ Post-MVP, outlet-level dispatch rules and zone fencing will gate task routing pe
 
 ## Database schema (Ent)
 
-Implemented tables: `fleets`, `fleet_members`, `vehicles`, `tasks`, `logistics_roles`, `logistics_role_assignments`, `outbox_events`.
+Implemented tables: `fleets`, `fleet_members`, `vehicles`, `tasks`, `logistics_roles`, `user_role_assignments`, `outbox_events`.
 
 Planned (documented in `erd.md`): `vehicle_documents`, `rider_shifts`, `task_steps`, `task_events`, `task_assignments`, `task_documents`, `dispatch_rules`, `dispatch_batches`, `routes`, `route_segments`, `route_metrics`, `telemetry_streams`, `telemetry_points`, `geo_fence_events`, `telemetry_alerts`, `proof_of_delivery`, `customer_feedback`, `delivery_incidents`, `geo_fences`, `delivery_zones`, `tariff_profiles`, `tariff_rules`, `earnings`, `expense_claims`.
 
@@ -169,7 +169,7 @@ PostGIS columns (`GEOGRAPHY(Point, 4326)`) planned for `telemetry_points.geo_poi
 
 ## RBAC & auth
 
-**Roles/permissions source of truth:** auth-service (auth-api). Frontend (logistics-ui) loads user and RBAC from auth-api `GET /me` with TanStack Query and TTL for nav visibility and route protection. Logistics-api has local RBAC (logistics_roles, logistics_role_assignments) and in-memory default roles in `internal/services/rbac` for service-specific permission checks; role/permission seed is not duplicated here—auth-api remains the source of truth. RBAC handlers: assign/revoke/list assignments; repository may sync from auth or use local tables per tenant.
+**Roles/permissions source of truth:** auth-service (auth-api). Frontend (logistics-ui) loads user and RBAC from auth-api `GET /me` with TanStack Query and TTL for nav visibility and route protection. Logistics-api has local RBAC in `internal/modules/rbac`: platform-wide roles (`logistics_roles`, defined once in `rbac.SystemRoles` and reset by the seed), the permission catalogue, and tenant-scoped `user_role_assignments`. `rbac.Service.HasPermission` is the one rule: tenant admins hold everything, SSO roles map to system roles, plus assigned roles in the tenant.
 
 ---
 

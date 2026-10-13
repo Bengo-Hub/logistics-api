@@ -102,7 +102,7 @@ func (_q *LogisticsRoleQuery) QueryUserAssignments() *UserRoleAssignmentQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(logisticsrole.Table, logisticsrole.FieldID, selector),
 			sqlgraph.To(userroleassignment.Table, userroleassignment.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, logisticsrole.UserAssignmentsTable, logisticsrole.UserAssignmentsColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, logisticsrole.UserAssignmentsTable, logisticsrole.UserAssignmentsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -372,12 +372,12 @@ func (_q *LogisticsRoleQuery) WithRolePermissions(opts ...func(*RolePermissionQu
 // Example:
 //
 //	var v []struct {
-//		TenantID uuid.UUID `json:"tenant_id,omitempty"`
+//		RoleCode string `json:"role_code,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.LogisticsRole.Query().
-//		GroupBy(logisticsrole.FieldTenantID).
+//		GroupBy(logisticsrole.FieldRoleCode).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (_q *LogisticsRoleQuery) GroupBy(field string, fields ...string) *LogisticsRoleGroupBy {
@@ -395,11 +395,11 @@ func (_q *LogisticsRoleQuery) GroupBy(field string, fields ...string) *Logistics
 // Example:
 //
 //	var v []struct {
-//		TenantID uuid.UUID `json:"tenant_id,omitempty"`
+//		RoleCode string `json:"role_code,omitempty"`
 //	}
 //
 //	client.LogisticsRole.Query().
-//		Select(logisticsrole.FieldTenantID).
+//		Select(logisticsrole.FieldRoleCode).
 //		Scan(ctx, &v)
 func (_q *LogisticsRoleQuery) Select(fields ...string) *LogisticsRoleSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
@@ -567,7 +567,9 @@ func (_q *LogisticsRoleQuery) loadUserAssignments(ctx context.Context, query *Us
 			init(nodes[i])
 		}
 	}
-	query.withFKs = true
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(userroleassignment.FieldRoleID)
+	}
 	query.Where(predicate.UserRoleAssignment(func(s *sql.Selector) {
 		s.Where(sql.InValues(s.C(logisticsrole.UserAssignmentsColumn), fks...))
 	}))
@@ -576,13 +578,10 @@ func (_q *LogisticsRoleQuery) loadUserAssignments(ctx context.Context, query *Us
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.logistics_role_user_assignments
-		if fk == nil {
-			return fmt.Errorf(`foreign-key "logistics_role_user_assignments" is nil for node %v`, n.ID)
-		}
-		node, ok := nodeids[*fk]
+		fk := n.RoleID
+		node, ok := nodeids[fk]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "logistics_role_user_assignments" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "role_id" returned %v for node %v`, fk, n.ID)
 		}
 		assign(node, n)
 	}

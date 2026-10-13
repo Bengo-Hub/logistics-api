@@ -10,7 +10,6 @@ import (
 
 	"github.com/bengobox/logistics-service/internal/ent"
 	"github.com/bengobox/logistics-service/internal/ent/logisticspermission"
-	"github.com/bengobox/logistics-service/internal/ent/logisticsrole"
 	"github.com/bengobox/logistics-service/internal/ent/user"
 	"github.com/bengobox/logistics-service/internal/ent/userroleassignment"
 )
@@ -54,13 +53,13 @@ type AssignmentView struct {
 // Assignment errors the handler maps to 409 and 400.
 var (
 	ErrAlreadyAssigned = fmt.Errorf("rbac: the user already has this role")
-	ErrRoleNotInTenant = fmt.Errorf("rbac: role not found for this tenant")
+	ErrRoleNotFound    = fmt.Errorf("rbac: role not found")
 )
 
-// ListRoleViews returns the tenant's roles, system roles first.
+// ListRoleViews returns the platform roles, system roles first, with how many of the tenant's
+// users hold each.
 func ListRoleViews(ctx context.Context, client *ent.Client, tenantID uuid.UUID) ([]RoleView, error) {
 	roles, err := client.LogisticsRole.Query().
-		Where(logisticsrole.TenantID(tenantID)).
 		WithPermissions(func(q *ent.LogisticsPermissionQuery) {
 			q.Select(logisticspermission.FieldPermissionCode)
 		}).

@@ -2513,7 +2513,7 @@ func (c *LogisticsRoleClient) QueryUserAssignments(_m *LogisticsRole) *UserRoleA
 		step := sqlgraph.NewStep(
 			sqlgraph.From(logisticsrole.Table, logisticsrole.FieldID, id),
 			sqlgraph.To(userroleassignment.Table, userroleassignment.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, logisticsrole.UserAssignmentsTable, logisticsrole.UserAssignmentsColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, logisticsrole.UserAssignmentsTable, logisticsrole.UserAssignmentsColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil

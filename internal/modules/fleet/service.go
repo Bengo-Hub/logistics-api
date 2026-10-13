@@ -401,20 +401,20 @@ func (s *Service) ApproveMember(ctx context.Context, tenantID, memberID uuid.UUI
 	return updated, nil
 }
 
-// ensureDriverRole assigns the tenant's "driver" logistics role to a user if they
-// don't already have it. This is what gives newly-activated riders the permissions
+// ensureDriverRole assigns the platform "driver" logistics role to a user in the tenant if
+// they don't already have it. This is what gives newly-activated riders the permissions
 // (notably logistics.tasks.manage) they need for task status/POD updates. The driver
 // role is one of rbac.SystemRoles, created here when missing. Idempotent and
 // non-fatal: any failure is logged but does not block fleet onboarding.
 func (s *Service) ensureDriverRole(ctx context.Context, tenantID, userID uuid.UUID) {
 	role, err := s.client.LogisticsRole.Query().
-		Where(logisticsrole.TenantID(tenantID), logisticsrole.RoleCode(rbac.RoleDriver)).
+		Where(logisticsrole.RoleCode(rbac.RoleDriver)).
 		Only(ctx)
 	if ent.IsNotFound(err) {
-		// First rider of a tenant the seed has not reached yet: create the system roles.
-		if eerr := rbac.EnsureSystemRoles(ctx, s.client, tenantID); eerr == nil {
+		// Before the seed has run on a fresh database: create the system roles.
+		if eerr := rbac.EnsureSystemRoles(ctx, s.client); eerr == nil {
 			role, err = s.client.LogisticsRole.Query().
-				Where(logisticsrole.TenantID(tenantID), logisticsrole.RoleCode(rbac.RoleDriver)).
+				Where(logisticsrole.RoleCode(rbac.RoleDriver)).
 				Only(ctx)
 		}
 	}

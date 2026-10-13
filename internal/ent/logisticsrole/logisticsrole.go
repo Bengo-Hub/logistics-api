@@ -15,8 +15,6 @@ const (
 	Label = "logistics_role"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
-	// FieldTenantID holds the string denoting the tenant_id field in the database.
-	FieldTenantID = "tenant_id"
 	// FieldRoleCode holds the string denoting the role_code field in the database.
 	FieldRoleCode = "role_code"
 	// FieldName holds the string denoting the name field in the database.
@@ -48,7 +46,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "userroleassignment" package.
 	UserAssignmentsInverseTable = "user_role_assignments"
 	// UserAssignmentsColumn is the table column denoting the user_assignments relation/edge.
-	UserAssignmentsColumn = "logistics_role_user_assignments"
+	UserAssignmentsColumn = "role_id"
 	// RolePermissionsTable is the table that holds the role_permissions relation/edge.
 	RolePermissionsTable = "role_permissions"
 	// RolePermissionsInverseTable is the table name for the RolePermission entity.
@@ -61,7 +59,6 @@ const (
 // Columns holds all SQL columns for logisticsrole fields.
 var Columns = []string{
 	FieldID,
-	FieldTenantID,
 	FieldRoleCode,
 	FieldName,
 	FieldDescription,
@@ -109,11 +106,6 @@ type OrderOption func(*sql.Selector)
 // ByID orders the results by the id field.
 func ByID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldID, opts...).ToFunc()
-}
-
-// ByTenantID orders the results by the tenant_id field.
-func ByTenantID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldTenantID, opts...).ToFunc()
 }
 
 // ByRoleCode orders the results by the role_code field.
@@ -198,7 +190,7 @@ func newUserAssignmentsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(UserAssignmentsInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, UserAssignmentsTable, UserAssignmentsColumn),
+		sqlgraph.Edge(sqlgraph.O2M, true, UserAssignmentsTable, UserAssignmentsColumn),
 	)
 }
 func newRolePermissionsStep() *sqlgraph.Step {

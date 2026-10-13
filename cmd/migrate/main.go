@@ -46,6 +46,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to open database: %v", err)
 	}
+	defer db.Close()
 
 	// Every replica runs this binary on startup — without coordination, N pods launching at
 	// once each run their own Schema.Create concurrently against the same tables. This exact
@@ -71,8 +72,9 @@ func main() {
 	}()
 
 	drv := entsql.OpenDB(dialect.Postgres, db)
+	// Not closed with a defer: the connection is closed after the advisory unlock below (deferred
+	// earlier, so it would otherwise run after the close and fail to release).
 	client := ent.NewClient(ent.Driver(drv))
-	defer client.Close()
 
 	if os.Getenv("RESET_DB") == "true" {
 		log.Println("resetting database...")
@@ -91,6 +93,12 @@ func main() {
 	// so Atlas only runs genuinely new migrations going forward.
 	if err := baselineAtlasIfNeeded(ctx, db); err != nil {
 		log.Fatalf("failed to baseline Atlas migrations: %v", err)
+	}
+
+	// One-time data cutover that Schema.Create cannot do on its own (it never drops columns or
+	// indexes here): make logistics roles platform-wide. Idempotent; runs under the lock above.
+	if err := globalizeRoles(ctx, db); err != nil {
+		log.Fatalf("failed to make logistics roles platform-wide: %v", err)
 	}
 
 	if err := client.Schema.Create(ctx,
@@ -216,4 +224,84 @@ func parseAtlasSum() (map[string]string, error) {
 		}
 	}
 	return hashes, nil
+}
+
+// globalizeRoles makes logistics roles platform reference data (feedback_shared_core_reference_data):
+// the per-tenant copies of each system role become one role, every tenant's assignments and the
+// permission links point at it, and the tenant_id column and its indexes go. It also drops the
+// never-set user_role_assignments.logistics_role_user_assignments column the old role edge
+// created. Rows are backed up to *_bk_global_20261013 first, all in one transaction. A database
+// that is already global (no logistics_roles.tenant_id) is left alone.
+func globalizeRoles(ctx context.Context, db *sql.DB) error {
+	var pending bool
+	if err := db.QueryRowContext(ctx, `
+		SELECT EXISTS (SELECT 1 FROM information_schema.columns
+		WHERE table_schema = 'public' AND table_name = 'logistics_roles' AND column_name = 'tenant_id')
+	`).Scan(&pending); err != nil {
+		return fmt.Errorf("check logistics_roles.tenant_id: %w", err)
+	}
+	if !pending {
+		return nil
+	}
+
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	steps := []struct{ name, sql string }{
+		{"backup roles", `CREATE TABLE IF NOT EXISTS logistics_roles_bk_global_20261013 AS SELECT * FROM logistics_roles`},
+		{"backup role permissions", `CREATE TABLE IF NOT EXISTS role_permissions_bk_global_20261013 AS SELECT * FROM role_permissions`},
+		{"backup assignments", `CREATE TABLE IF NOT EXISTS user_role_assignments_bk_global_20261013 AS SELECT * FROM user_role_assignments`},
+		// The oldest row of each role code is kept; every other copy maps to it.
+		{"map duplicates", `CREATE TEMP TABLE role_map ON COMMIT DROP AS
+			SELECT r.id AS old_id, c.id AS new_id
+			FROM logistics_roles r
+			JOIN (SELECT DISTINCT ON (role_code) role_code, id FROM logistics_roles
+			      ORDER BY role_code, created_at, id) c USING (role_code)
+			WHERE r.id <> c.id`},
+		// An assignment that would duplicate one the user already has in that tenant goes.
+		{"drop duplicate assignments", `DELETE FROM user_role_assignments a USING role_map m
+			WHERE a.role_id = m.old_id AND EXISTS (
+				SELECT 1 FROM user_role_assignments b
+				WHERE b.tenant_id = a.tenant_id AND b.user_id = a.user_id AND b.role_id = m.new_id)`},
+		{"repoint assignments", `UPDATE user_role_assignments a SET role_id = m.new_id
+			FROM role_map m WHERE a.role_id = m.old_id`},
+		// The kept role's permission set is reset from rbac.SystemRoles by the seed after this.
+		{"drop duplicate permission links", `DELETE FROM role_permissions p USING role_map m WHERE p.role_id = m.old_id`},
+		{"drop duplicate roles", `DELETE FROM logistics_roles r USING role_map m WHERE r.id = m.old_id`},
+		{"drop tenant role indexes", `DROP INDEX IF EXISTS logisticsrole_tenant_id_role_code; DROP INDEX IF EXISTS logisticsrole_tenant_id`},
+		{"drop roles.tenant_id", `ALTER TABLE logistics_roles DROP COLUMN tenant_id`},
+		{"drop stray assignment column", `ALTER TABLE user_role_assignments DROP COLUMN IF EXISTS logistics_role_user_assignments`},
+	}
+	for _, st := range steps {
+		res, err := tx.ExecContext(ctx, st.sql)
+		if err != nil {
+			return fmt.Errorf("%s: %w", st.name, err)
+		}
+		n, _ := res.RowsAffected()
+		log.Printf("  roles cutover: %s (%d rows)", st.name, n)
+	}
+
+	var roles, dupCodes int
+	if err := tx.QueryRowContext(ctx, `SELECT count(*), count(*) - count(DISTINCT role_code) FROM logistics_roles`).Scan(&roles, &dupCodes); err != nil {
+		return fmt.Errorf("verify roles: %w", err)
+	}
+	if dupCodes != 0 {
+		return fmt.Errorf("verify roles: %d duplicate role codes remain", dupCodes)
+	}
+	var orphans int
+	if err := tx.QueryRowContext(ctx, `SELECT count(*) FROM user_role_assignments a
+		LEFT JOIN logistics_roles r ON r.id = a.role_id WHERE r.id IS NULL`).Scan(&orphans); err != nil {
+		return fmt.Errorf("verify assignments: %w", err)
+	}
+	if orphans != 0 {
+		return fmt.Errorf("verify assignments: %d point at no role", orphans)
+	}
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	log.Printf("logistics roles are platform-wide: %d roles", roles)
+	return nil
 }

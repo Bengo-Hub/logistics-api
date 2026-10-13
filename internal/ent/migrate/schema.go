@@ -435,7 +435,6 @@ var (
 	// LogisticsRolesColumns holds the columns for the "logistics_roles" table.
 	LogisticsRolesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
-		{Name: "tenant_id", Type: field.TypeUUID},
 		{Name: "role_code", Type: field.TypeString},
 		{Name: "name", Type: field.TypeString},
 		{Name: "description", Type: field.TypeString, Nullable: true, Size: 2147483647},
@@ -450,19 +449,14 @@ var (
 		PrimaryKey: []*schema.Column{LogisticsRolesColumns[0]},
 		Indexes: []*schema.Index{
 			{
-				Name:    "logisticsrole_tenant_id",
-				Unique:  false,
-				Columns: []*schema.Column{LogisticsRolesColumns[1]},
-			},
-			{
-				Name:    "logisticsrole_tenant_id_role_code",
+				Name:    "logisticsrole_role_code",
 				Unique:  true,
-				Columns: []*schema.Column{LogisticsRolesColumns[1], LogisticsRolesColumns[2]},
+				Columns: []*schema.Column{LogisticsRolesColumns[1]},
 			},
 			{
 				Name:    "logisticsrole_is_system_role",
 				Unique:  false,
-				Columns: []*schema.Column{LogisticsRolesColumns[5]},
+				Columns: []*schema.Column{LogisticsRolesColumns[4]},
 			},
 		},
 	}
@@ -1214,7 +1208,6 @@ var (
 		{Name: "assigned_by", Type: field.TypeUUID},
 		{Name: "assigned_at", Type: field.TypeTime},
 		{Name: "expires_at", Type: field.TypeTime, Nullable: true},
-		{Name: "logistics_role_user_assignments", Type: field.TypeUUID, Nullable: true},
 		{Name: "user_id", Type: field.TypeUUID},
 		{Name: "role_id", Type: field.TypeUUID},
 	}
@@ -1225,20 +1218,14 @@ var (
 		PrimaryKey: []*schema.Column{UserRoleAssignmentsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "user_role_assignments_logistics_roles_user_assignments",
-				Columns:    []*schema.Column{UserRoleAssignmentsColumns[5]},
-				RefColumns: []*schema.Column{LogisticsRolesColumns[0]},
-				OnDelete:   schema.SetNull,
-			},
-			{
 				Symbol:     "user_role_assignments_users_user",
-				Columns:    []*schema.Column{UserRoleAssignmentsColumns[6]},
+				Columns:    []*schema.Column{UserRoleAssignmentsColumns[5]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "user_role_assignments_logistics_roles_role",
-				Columns:    []*schema.Column{UserRoleAssignmentsColumns[7]},
+				Columns:    []*schema.Column{UserRoleAssignmentsColumns[6]},
 				RefColumns: []*schema.Column{LogisticsRolesColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -1247,7 +1234,7 @@ var (
 			{
 				Name:    "userroleassignment_tenant_id_user_id_role_id",
 				Unique:  true,
-				Columns: []*schema.Column{UserRoleAssignmentsColumns[1], UserRoleAssignmentsColumns[6], UserRoleAssignmentsColumns[7]},
+				Columns: []*schema.Column{UserRoleAssignmentsColumns[1], UserRoleAssignmentsColumns[5], UserRoleAssignmentsColumns[6]},
 			},
 			{
 				Name:    "userroleassignment_tenant_id",
@@ -1257,12 +1244,12 @@ var (
 			{
 				Name:    "userroleassignment_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{UserRoleAssignmentsColumns[6]},
+				Columns: []*schema.Column{UserRoleAssignmentsColumns[5]},
 			},
 			{
 				Name:    "userroleassignment_role_id",
 				Unique:  false,
-				Columns: []*schema.Column{UserRoleAssignmentsColumns[7]},
+				Columns: []*schema.Column{UserRoleAssignmentsColumns[6]},
 			},
 			{
 				Name:    "userroleassignment_expires_at",
@@ -1370,8 +1357,7 @@ func init() {
 	TaskStepsTable.ForeignKeys[0].RefTable = TasksTable
 	TelemetryPointsTable.ForeignKeys[0].RefTable = TelemetryStreamsTable
 	UsersTable.ForeignKeys[0].RefTable = TenantsTable
-	UserRoleAssignmentsTable.ForeignKeys[0].RefTable = LogisticsRolesTable
-	UserRoleAssignmentsTable.ForeignKeys[1].RefTable = UsersTable
-	UserRoleAssignmentsTable.ForeignKeys[2].RefTable = LogisticsRolesTable
+	UserRoleAssignmentsTable.ForeignKeys[0].RefTable = UsersTable
+	UserRoleAssignmentsTable.ForeignKeys[1].RefTable = LogisticsRolesTable
 	VehiclesTable.ForeignKeys[0].RefTable = FleetsTable
 }

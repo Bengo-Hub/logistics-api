@@ -34,9 +34,8 @@ type UserRoleAssignment struct {
 	ExpiresAt time.Time `json:"expires_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the UserRoleAssignmentQuery when eager-loading is set.
-	Edges                           UserRoleAssignmentEdges `json:"edges"`
-	logistics_role_user_assignments *uuid.UUID
-	selectValues                    sql.SelectValues
+	Edges        UserRoleAssignmentEdges `json:"edges"`
+	selectValues sql.SelectValues
 }
 
 // UserRoleAssignmentEdges holds the relations/edges for other nodes in the graph.
@@ -81,8 +80,6 @@ func (*UserRoleAssignment) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullTime)
 		case userroleassignment.FieldID, userroleassignment.FieldTenantID, userroleassignment.FieldUserID, userroleassignment.FieldRoleID, userroleassignment.FieldAssignedBy:
 			values[i] = new(uuid.UUID)
-		case userroleassignment.ForeignKeys[0]: // logistics_role_user_assignments
-			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -139,13 +136,6 @@ func (_m *UserRoleAssignment) assignValues(columns []string, values []any) error
 				return fmt.Errorf("unexpected type %T for field expires_at", values[i])
 			} else if value.Valid {
 				_m.ExpiresAt = value.Time
-			}
-		case userroleassignment.ForeignKeys[0]:
-			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field logistics_role_user_assignments", values[i])
-			} else if value.Valid {
-				_m.logistics_role_user_assignments = new(uuid.UUID)
-				*_m.logistics_role_user_assignments = *value.S.(*uuid.UUID)
 			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])

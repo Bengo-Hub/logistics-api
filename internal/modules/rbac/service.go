@@ -64,11 +64,10 @@ func (s *Service) EffectivePermissions(ctx context.Context, tenantID, userID uui
 	return codes, false, nil
 }
 
-// EnsureSystemRoles creates the tenant's admin, dispatcher and driver roles if missing and
-// resets their permission sets. Called by the seed for every tenant and when a tenant first
-// needs a role at runtime.
-func (s *Service) EnsureSystemRoles(ctx context.Context, tenantID uuid.UUID) error {
-	return s.repo.EnsureSystemRoles(ctx, tenantID)
+// EnsureSystemRoles creates the platform's admin, dispatcher and driver roles if missing and
+// resets their permission sets. Called by the seed at startup.
+func (s *Service) EnsureSystemRoles(ctx context.Context) error {
+	return s.repo.EnsureSystemRoles(ctx)
 }
 
 // GetUserRoles returns all roles assigned to a user in a tenant.
@@ -76,32 +75,10 @@ func (s *Service) GetUserRoles(ctx context.Context, tenantID uuid.UUID, userID u
 	return s.repo.GetUserRoles(ctx, tenantID, userID)
 }
 
-// GetUserPermissions returns all permissions granted to a user in a tenant (via their roles).
-func (s *Service) GetUserPermissions(ctx context.Context, tenantID uuid.UUID, userID uuid.UUID) ([]*LogisticsPermission, error) {
-	return s.repo.GetUserPermissions(ctx, tenantID, userID)
-}
-
-// HasRole checks if a user has a specific role.
-func (s *Service) HasRole(ctx context.Context, tenantID uuid.UUID, userID uuid.UUID, roleCode string) (bool, error) {
-	roles, err := s.repo.GetUserRoles(ctx, tenantID, userID)
-	if err != nil {
-		return false, fmt.Errorf("get user roles: %w", err)
-	}
-
-	for _, role := range roles {
-		if role.RoleCode == roleCode {
-			return true, nil
-		}
-	}
-
-	return false, nil
-}
-
 // AssignRole assigns a role to a user.
 func (s *Service) AssignRole(ctx context.Context, tenantID uuid.UUID, userID uuid.UUID, roleID uuid.UUID, assignedBy uuid.UUID) error {
-	// The role must be one of this tenant's roles; never another tenant's.
-	if _, err := s.repo.GetRole(ctx, tenantID, roleID); err != nil {
-		return ErrRoleNotInTenant
+	if _, err := s.repo.GetRole(ctx, roleID); err != nil {
+		return ErrRoleNotFound
 	}
 	// Check if assignment already exists
 	assignments, err := s.repo.ListUserAssignments(ctx, tenantID, AssignmentFilters{
@@ -153,17 +130,12 @@ func (s *Service) RevokeRole(ctx context.Context, tenantID uuid.UUID, userID uui
 	return nil
 }
 
-
 // AllPermissionCodes returns every logistics permission code. Tenant admins and platform
 // owners hold all of them, so /auth/me reports the full list for them.
 func (s *Service) AllPermissionCodes(ctx context.Context) ([]string, error) {
-	perms, err := s.repo.ListPermissions(ctx, PermissionFilters{})
+	codes, err := s.repo.PermissionCodeList(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list permissions: %w", err)
-	}
-	codes := make([]string, 0, len(perms))
-	for _, p := range perms {
-		codes = append(codes, p.PermissionCode)
 	}
 	return codes, nil
 }

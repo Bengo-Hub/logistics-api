@@ -22,14 +22,12 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
 	"github.com/bengobox/logistics-service/internal/ent/geofence"
 	"github.com/bengobox/logistics-service/internal/ent/integrationsetting"
-	"github.com/bengobox/logistics-service/internal/ent/logisticsrole"
 	"github.com/bengobox/logistics-service/internal/ent/outboxevent"
 	"github.com/bengobox/logistics-service/internal/ent/outlet"
 	"github.com/bengobox/logistics-service/internal/ent/pricingrule"
 	"github.com/bengobox/logistics-service/internal/ent/proofofdelivery"
 	"github.com/bengobox/logistics-service/internal/ent/riderrating"
 	"github.com/bengobox/logistics-service/internal/ent/ridershift"
-	"github.com/bengobox/logistics-service/internal/ent/rolepermission"
 	"github.com/bengobox/logistics-service/internal/ent/serviceconfig"
 	"github.com/bengobox/logistics-service/internal/ent/shipment"
 	"github.com/bengobox/logistics-service/internal/ent/task"
@@ -195,10 +193,6 @@ func (c *TenantPurgeConsumer) purgeTenant(ctx context.Context, tenantID uuid.UUI
 	if err != nil {
 		return err
 	}
-	roleIDs, err := tx.LogisticsRole.Query().Where(logisticsrole.TenantID(tenantID)).IDs(ctx)
-	if err != nil {
-		return err
-	}
 
 	// 1. Task children (FK → tasks; ON DELETE NO ACTION). Scope by the tenant's task IDs.
 	if len(taskIDs) > 0 {
@@ -234,14 +228,9 @@ func (c *TenantPurgeConsumer) purgeTenant(ctx context.Context, tenantID uuid.UUI
 		}
 	}
 
-	// 4. RBAC join + assignments (FK → logistics_roles / users / fleet_members).
+	// 4. The tenant's role assignments (roles and their permissions are platform-wide and stay).
 	if counts["user_role_assignments"], err = tx.UserRoleAssignment.Delete().Where(userroleassignment.TenantID(tenantID)).Exec(ctx); err != nil {
 		return err
-	}
-	if len(roleIDs) > 0 {
-		if counts["role_permissions"], err = tx.RolePermission.Delete().Where(rolepermission.RoleIDIn(roleIDs...)).Exec(ctx); err != nil {
-			return err
-		}
 	}
 
 	// 5. Parent task/shipment/stream rows (children now gone).
@@ -266,12 +255,7 @@ func (c *TenantPurgeConsumer) purgeTenant(ctx context.Context, tenantID uuid.UUI
 		return err
 	}
 
-	// 7. RBAC roles (referenced rows above already gone).
-	if counts["logistics_roles"], err = tx.LogisticsRole.Delete().Where(logisticsrole.TenantID(tenantID)).Exec(ctx); err != nil {
-		return err
-	}
-
-	// 8. Remaining flat tenant-scoped tables (no inbound FKs left).
+	// 7. Remaining flat tenant-scoped tables (no inbound FKs left).
 	if counts["ridershifts"], err = tx.RiderShift.Delete().Where(ridershift.TenantID(tenantID)).Exec(ctx); err != nil {
 		return err
 	}
@@ -315,7 +299,7 @@ func (c *TenantPurgeConsumer) purgeTenant(ctx context.Context, tenantID uuid.UUI
 		return err
 	}
 
-	// 9. Users (FK → tenants). Delete after fleet_members/role assignments that reference them.
+	// 8. Users (FK → tenants). Delete after fleet_members/role assignments that reference them.
 	if counts["users"], err = tx.User.Delete().Where(user.TenantID(tenantID)).Exec(ctx); err != nil {
 		return err
 	}

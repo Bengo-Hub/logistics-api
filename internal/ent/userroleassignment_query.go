@@ -27,7 +27,6 @@ type UserRoleAssignmentQuery struct {
 	predicates []predicate.UserRoleAssignment
 	withUser   *UserQuery
 	withRole   *LogisticsRoleQuery
-	withFKs    bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -407,16 +406,12 @@ func (_q *UserRoleAssignmentQuery) prepareQuery(ctx context.Context) error {
 func (_q *UserRoleAssignmentQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*UserRoleAssignment, error) {
 	var (
 		nodes       = []*UserRoleAssignment{}
-		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
 		loadedTypes = [2]bool{
 			_q.withUser != nil,
 			_q.withRole != nil,
 		}
 	)
-	if withFKs {
-		_spec.Node.Columns = append(_spec.Node.Columns, userroleassignment.ForeignKeys...)
-	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*UserRoleAssignment).scanValues(nil, columns)
 	}

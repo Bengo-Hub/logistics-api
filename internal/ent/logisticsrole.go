@@ -18,9 +18,7 @@ type LogisticsRole struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
-	// Tenant identifier
-	TenantID uuid.UUID `json:"tenant_id,omitempty"`
-	// Role code: logistics_admin, dispatcher, fleet_manager, rider, viewer
+	// Role code (rbac.SystemRoles: admin, dispatcher, driver). Platform-wide: the same role grants the same permissions in every tenant
 	RoleCode string `json:"role_code,omitempty"`
 	// Display name
 	Name string `json:"name,omitempty"`
@@ -89,7 +87,7 @@ func (*LogisticsRole) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullString)
 		case logisticsrole.FieldCreatedAt, logisticsrole.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
-		case logisticsrole.FieldID, logisticsrole.FieldTenantID:
+		case logisticsrole.FieldID:
 			values[i] = new(uuid.UUID)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -111,12 +109,6 @@ func (_m *LogisticsRole) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field id", values[i])
 			} else if value != nil {
 				_m.ID = *value
-			}
-		case logisticsrole.FieldTenantID:
-			if value, ok := values[i].(*uuid.UUID); !ok {
-				return fmt.Errorf("unexpected type %T for field tenant_id", values[i])
-			} else if value != nil {
-				_m.TenantID = *value
 			}
 		case logisticsrole.FieldRoleCode:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -205,9 +197,6 @@ func (_m *LogisticsRole) String() string {
 	var builder strings.Builder
 	builder.WriteString("LogisticsRole(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
-	builder.WriteString("tenant_id=")
-	builder.WriteString(fmt.Sprintf("%v", _m.TenantID))
-	builder.WriteString(", ")
 	builder.WriteString("role_code=")
 	builder.WriteString(_m.RoleCode)
 	builder.WriteString(", ")

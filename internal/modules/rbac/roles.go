@@ -86,10 +86,11 @@ func SystemRolesForSSO(roles []string) []string {
 	return out
 }
 
-// EnsureSystemRoles creates the tenant's system roles if missing and resets their permission
+// EnsureSystemRoles creates the platform system roles if missing and resets their permission
 // sets to SystemRoles, so a stale grant (for example riders reading the whole fleet) is
-// removed on the next run. Idempotent.
-func EnsureSystemRoles(ctx context.Context, client *ent.Client, tenantID uuid.UUID) error {
+// removed on the next run. Roles are platform-wide, so this runs once, not per tenant.
+// Idempotent.
+func EnsureSystemRoles(ctx context.Context, client *ent.Client) error {
 	all, err := client.LogisticsPermission.Query().All(ctx)
 	if err != nil {
 		return fmt.Errorf("rbac: list permissions: %w", err)
@@ -114,12 +115,12 @@ func EnsureSystemRoles(ctx context.Context, client *ent.Client, tenantID uuid.UU
 			}
 		}
 		role, err := client.LogisticsRole.Query().
-			Where(logisticsrole.TenantID(tenantID), logisticsrole.RoleCode(sr.Code)).
+			Where(logisticsrole.RoleCode(sr.Code)).
 			Only(ctx)
 		switch {
 		case ent.IsNotFound(err):
 			if _, err := client.LogisticsRole.Create().
-				SetTenantID(tenantID).SetRoleCode(sr.Code).SetName(sr.Name).
+				SetRoleCode(sr.Code).SetName(sr.Name).
 				SetDescription(sr.Description).SetIsSystemRole(true).
 				AddPermissionIDs(want...).Save(ctx); err != nil && !ent.IsConstraintError(err) {
 				return fmt.Errorf("rbac: create %s role: %w", sr.Code, err)
@@ -150,7 +151,7 @@ func permissionCodes(ctx context.Context, client *ent.Client, tenantID, userID u
 		match = logisticsrole.Or(match, logisticsrole.RoleCodeIn(ssoRoleCodes...))
 	}
 	return client.LogisticsRole.Query().
-		Where(logisticsrole.TenantID(tenantID), match).
+		Where(match).
 		QueryPermissions().
 		Unique(true).
 		Select(logisticspermission.FieldPermissionCode).

@@ -60,8 +60,8 @@ func (h *RBACHandler) AssignRole(w http.ResponseWriter, r *http.Request) {
 	case errors.Is(err, rbac.ErrAlreadyAssigned):
 		respondJSON(w, http.StatusConflict, map[string]string{"error": "the user already has this role"})
 		return
-	case errors.Is(err, rbac.ErrRoleNotInTenant):
-		respondJSON(w, http.StatusBadRequest, map[string]string{"error": "role not found for this tenant"})
+	case errors.Is(err, rbac.ErrRoleNotFound):
+		respondJSON(w, http.StatusBadRequest, map[string]string{"error": "role not found"})
 		return
 	case err != nil:
 		h.logger.Error("failed to assign role", zap.Error(err))
@@ -128,16 +128,13 @@ func (h *RBACHandler) ListAssignments(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, map[string]any{"assignments": views})
 }
 
-// ListRoles handles GET /{tenant}/rbac/roles: roles with permission codes and holder counts.
+// ListRoles handles GET /{tenant}/rbac/roles: the platform roles with permission codes and how
+// many of the tenant's users hold each. The seed keeps the system roles in place.
 func (h *RBACHandler) ListRoles(w http.ResponseWriter, r *http.Request) {
 	tenantID := tenantIDFromClaims(r)
 	if tenantID == uuid.Nil {
 		respondJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 		return
-	}
-	// A tenant opening the page before the seed reached it still sees its system roles.
-	if err := h.rbacService.EnsureSystemRoles(r.Context(), tenantID); err != nil {
-		h.logger.Warn("ensure system roles", zap.Error(err))
 	}
 	views, err := rbac.ListRoleViews(r.Context(), h.client, tenantID)
 	if err != nil {

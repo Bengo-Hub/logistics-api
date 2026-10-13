@@ -213,14 +213,14 @@ This section defines how Logistics Service entities relate to other services to 
 | Table | Key Columns | Description |
 |-------|-------------|-------------|
 | `logistics_permissions` | `id`, `permission_code`, `name`, `module`, `action`, `resource`, `description`, `created_at` | Granular permission definitions. Code format: `logistics.{module}.{action}`. |
-| `logistics_roles` | `id`, `tenant_id`, `role_code`, `name`, `description`, `is_system_role`, `created_at`, `updated_at` | Tenant-scoped role definitions (logistics_admin, dispatcher, fleet_manager, rider, viewer). |
+| `logistics_roles` | `id`, `role_code` (unique), `name`, `description`, `is_system_role`, `created_at`, `updated_at` | Platform-wide role definitions (`rbac.SystemRoles`: admin, dispatcher, driver), the same in every tenant. |
 | `role_permissions` | `role_id`, `permission_id` | Junction table linking roles to permissions. |
-| `user_role_assignments` | `id`, `tenant_id`, `user_id`, `role_id`, `assigned_by`, `assigned_at`, `expires_at` | Assigns roles to users with optional expiry. |
+| `user_role_assignments` | `id`, `tenant_id`, `user_id`, `role_id`, `assigned_by`, `assigned_at`, `expires_at` | Assigns a role to a user in a tenant, with optional expiry. |
 | `rate_limit_configs` | `id`, `service_name`, `key_type`, `endpoint_pattern`, `requests_per_window`, `window_seconds`, `burst_multiplier`, `is_active`, `description`, `created_at`, `updated_at` | DB-driven rate limit rules per service/endpoint. |
 | `service_configs` | `id`, `tenant_id` (nullable), `config_key`, `config_value`, `config_type`, `description`, `is_secret`, `created_at`, `updated_at` | Platform-level defaults and tenant-specific overrides for service configuration. |
 
 - `user_role_assignments.user_id` references `users.id` (the existing logistics user table).
-- `logistics_roles` are tenant-scoped; `logistics_permissions` are global (shared across tenants).
+- `logistics_roles` and `logistics_permissions` are global (shared across tenants); only `user_role_assignments` carry the tenant. Roles were per-tenant copies until 2026-10-13 (merged by `cmd/migrate` `globalizeRoles`, backups `*_bk_global_20261013`).
 - `service_configs` with `tenant_id = NULL` are platform defaults; non-null entries are tenant overrides.
 
 ## Seed & Reference Data

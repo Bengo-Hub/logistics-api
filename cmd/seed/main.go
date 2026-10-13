@@ -63,19 +63,14 @@ func main() {
 		log.Printf("  ✓ Tenant synced: %s", slug)
 	}
 
-	// System roles (admin, dispatcher, driver) for every tenant logistics knows, reset to the
-	// one definition in rbac.SystemRoles. Tenant admins need no role row (their token grants
-	// everything); riders get the driver role when activated.
-	tenantIDs, err := client.Tenant.Query().IDs(ctx)
-	if err != nil {
-		log.Fatalf("list tenants: %v", err)
+	// System roles (admin, dispatcher, driver), platform-wide and reset to the one definition in
+	// rbac.SystemRoles. Tenant admins need no role row (their token grants everything); riders
+	// get the driver role in their tenant when activated.
+	if err := rbac.EnsureSystemRoles(ctx, client); err != nil {
+		log.Printf("  [WARN] system roles: %v", err)
+	} else {
+		log.Printf("  system roles ensured")
 	}
-	for _, id := range tenantIDs {
-		if err := rbac.EnsureSystemRoles(ctx, client, id); err != nil {
-			log.Printf("  [WARN] system roles for %s: %v", id, err)
-		}
-	}
-	log.Printf("  ✓ system roles ensured for %d tenants", len(tenantIDs))
 
 	log.Println("database seed completed successfully")
 }

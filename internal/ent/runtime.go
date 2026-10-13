@@ -428,23 +428,23 @@ func init() {
 	logisticsroleFields := schema.LogisticsRole{}.Fields()
 	_ = logisticsroleFields
 	// logisticsroleDescRoleCode is the schema descriptor for role_code field.
-	logisticsroleDescRoleCode := logisticsroleFields[2].Descriptor()
+	logisticsroleDescRoleCode := logisticsroleFields[1].Descriptor()
 	// logisticsrole.RoleCodeValidator is a validator for the "role_code" field. It is called by the builders before save.
 	logisticsrole.RoleCodeValidator = logisticsroleDescRoleCode.Validators[0].(func(string) error)
 	// logisticsroleDescName is the schema descriptor for name field.
-	logisticsroleDescName := logisticsroleFields[3].Descriptor()
+	logisticsroleDescName := logisticsroleFields[2].Descriptor()
 	// logisticsrole.NameValidator is a validator for the "name" field. It is called by the builders before save.
 	logisticsrole.NameValidator = logisticsroleDescName.Validators[0].(func(string) error)
 	// logisticsroleDescIsSystemRole is the schema descriptor for is_system_role field.
-	logisticsroleDescIsSystemRole := logisticsroleFields[5].Descriptor()
+	logisticsroleDescIsSystemRole := logisticsroleFields[4].Descriptor()
 	// logisticsrole.DefaultIsSystemRole holds the default value on creation for the is_system_role field.
 	logisticsrole.DefaultIsSystemRole = logisticsroleDescIsSystemRole.Default.(bool)
 	// logisticsroleDescCreatedAt is the schema descriptor for created_at field.
-	logisticsroleDescCreatedAt := logisticsroleFields[6].Descriptor()
+	logisticsroleDescCreatedAt := logisticsroleFields[5].Descriptor()
 	// logisticsrole.DefaultCreatedAt holds the default value on creation for the created_at field.
 	logisticsrole.DefaultCreatedAt = logisticsroleDescCreatedAt.Default.(func() time.Time)
 	// logisticsroleDescUpdatedAt is the schema descriptor for updated_at field.
-	logisticsroleDescUpdatedAt := logisticsroleFields[7].Descriptor()
+	logisticsroleDescUpdatedAt := logisticsroleFields[6].Descriptor()
 	// logisticsrole.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	logisticsrole.DefaultUpdatedAt = logisticsroleDescUpdatedAt.Default.(func() time.Time)
 	// logisticsrole.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

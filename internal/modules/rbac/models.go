@@ -6,10 +6,10 @@ import (
 	"github.com/google/uuid"
 )
 
-// LogisticsRole represents a logistics service role.
+// LogisticsRole represents a logistics service role. Roles are platform-wide: the same role
+// grants the same permissions in every tenant (assignments are what is tenant-scoped).
 type LogisticsRole struct {
 	ID           uuid.UUID
-	TenantID     uuid.UUID
 	RoleCode     string
 	Name         string
 	Description  *string
@@ -18,7 +18,7 @@ type LogisticsRole struct {
 	UpdatedAt    time.Time
 }
 
-// Permission code constants — follow the logistics.<module>.<action> convention
+// Permission code constants follow the logistics.<module>.<action> convention
 // seeded by cmd/seed/main.go.
 const (
 	PermTaskView     = "logistics.tasks.view"
@@ -37,18 +37,6 @@ const (
 	PermPricingManage = "logistics.pricing.manage"
 	PermConfigManage  = "logistics.config.manage"
 )
-
-// LogisticsPermission represents a logistics service permission.
-type LogisticsPermission struct {
-	ID             uuid.UUID
-	PermissionCode string
-	Name           string
-	Module         string
-	Action         string
-	Resource       *string
-	Description    *string
-	CreatedAt      time.Time
-}
 
 // UserRoleAssignment represents a user role assignment.
 type UserRoleAssignment struct {

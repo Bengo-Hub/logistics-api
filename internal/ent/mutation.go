@@ -13300,7 +13300,6 @@ type LogisticsRoleMutation struct {
 	op                      Op
 	typ                     string
 	id                      *uuid.UUID
-	tenant_id               *uuid.UUID
 	role_code               *string
 	name                    *string
 	description             *string
@@ -13424,42 +13423,6 @@ func (m *LogisticsRoleMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
-}
-
-// SetTenantID sets the "tenant_id" field.
-func (m *LogisticsRoleMutation) SetTenantID(u uuid.UUID) {
-	m.tenant_id = &u
-}
-
-// TenantID returns the value of the "tenant_id" field in the mutation.
-func (m *LogisticsRoleMutation) TenantID() (r uuid.UUID, exists bool) {
-	v := m.tenant_id
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldTenantID returns the old "tenant_id" field's value of the LogisticsRole entity.
-// If the LogisticsRole object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *LogisticsRoleMutation) OldTenantID(ctx context.Context) (v uuid.UUID, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldTenantID is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldTenantID requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldTenantID: %w", err)
-	}
-	return oldValue.TenantID, nil
-}
-
-// ResetTenantID resets all changes to the "tenant_id" field.
-func (m *LogisticsRoleMutation) ResetTenantID() {
-	m.tenant_id = nil
 }
 
 // SetRoleCode sets the "role_code" field.
@@ -13887,10 +13850,7 @@ func (m *LogisticsRoleMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *LogisticsRoleMutation) Fields() []string {
-	fields := make([]string, 0, 7)
-	if m.tenant_id != nil {
-		fields = append(fields, logisticsrole.FieldTenantID)
-	}
+	fields := make([]string, 0, 6)
 	if m.role_code != nil {
 		fields = append(fields, logisticsrole.FieldRoleCode)
 	}
@@ -13917,8 +13877,6 @@ func (m *LogisticsRoleMutation) Fields() []string {
 // schema.
 func (m *LogisticsRoleMutation) Field(name string) (ent.Value, bool) {
 	switch name {
-	case logisticsrole.FieldTenantID:
-		return m.TenantID()
 	case logisticsrole.FieldRoleCode:
 		return m.RoleCode()
 	case logisticsrole.FieldName:
@@ -13940,8 +13898,6 @@ func (m *LogisticsRoleMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *LogisticsRoleMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
-	case logisticsrole.FieldTenantID:
-		return m.OldTenantID(ctx)
 	case logisticsrole.FieldRoleCode:
 		return m.OldRoleCode(ctx)
 	case logisticsrole.FieldName:
@@ -13963,13 +13919,6 @@ func (m *LogisticsRoleMutation) OldField(ctx context.Context, name string) (ent.
 // type.
 func (m *LogisticsRoleMutation) SetField(name string, value ent.Value) error {
 	switch name {
-	case logisticsrole.FieldTenantID:
-		v, ok := value.(uuid.UUID)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetTenantID(v)
-		return nil
 	case logisticsrole.FieldRoleCode:
 		v, ok := value.(string)
 		if !ok {
@@ -14070,9 +14019,6 @@ func (m *LogisticsRoleMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *LogisticsRoleMutation) ResetField(name string) error {
 	switch name {
-	case logisticsrole.FieldTenantID:
-		m.ResetTenantID()
-		return nil
 	case logisticsrole.FieldRoleCode:
 		m.ResetRoleCode()
 		return nil

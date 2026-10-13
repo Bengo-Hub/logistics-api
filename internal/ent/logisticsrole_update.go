@@ -32,20 +32,6 @@ func (_u *LogisticsRoleUpdate) Where(ps ...predicate.LogisticsRole) *LogisticsRo
 	return _u
 }
 
-// SetTenantID sets the "tenant_id" field.
-func (_u *LogisticsRoleUpdate) SetTenantID(v uuid.UUID) *LogisticsRoleUpdate {
-	_u.mutation.SetTenantID(v)
-	return _u
-}
-
-// SetNillableTenantID sets the "tenant_id" field if the given value is not nil.
-func (_u *LogisticsRoleUpdate) SetNillableTenantID(v *uuid.UUID) *LogisticsRoleUpdate {
-	if v != nil {
-		_u.SetTenantID(*v)
-	}
-	return _u
-}
-
 // SetRoleCode sets the "role_code" field.
 func (_u *LogisticsRoleUpdate) SetRoleCode(v string) *LogisticsRoleUpdate {
 	_u.mutation.SetRoleCode(v)
@@ -290,9 +276,6 @@ func (_u *LogisticsRoleUpdate) sqlSave(ctx context.Context) (_node int, err erro
 			}
 		}
 	}
-	if value, ok := _u.mutation.TenantID(); ok {
-		_spec.SetField(logisticsrole.FieldTenantID, field.TypeUUID, value)
-	}
 	if value, ok := _u.mutation.RoleCode(); ok {
 		_spec.SetField(logisticsrole.FieldRoleCode, field.TypeString, value)
 	}
@@ -359,7 +342,7 @@ func (_u *LogisticsRoleUpdate) sqlSave(ctx context.Context) (_node int, err erro
 	if _u.mutation.UserAssignmentsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
-			Inverse: false,
+			Inverse: true,
 			Table:   logisticsrole.UserAssignmentsTable,
 			Columns: []string{logisticsrole.UserAssignmentsColumn},
 			Bidi:    false,
@@ -372,7 +355,7 @@ func (_u *LogisticsRoleUpdate) sqlSave(ctx context.Context) (_node int, err erro
 	if nodes := _u.mutation.RemovedUserAssignmentsIDs(); len(nodes) > 0 && !_u.mutation.UserAssignmentsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
-			Inverse: false,
+			Inverse: true,
 			Table:   logisticsrole.UserAssignmentsTable,
 			Columns: []string{logisticsrole.UserAssignmentsColumn},
 			Bidi:    false,
@@ -388,7 +371,7 @@ func (_u *LogisticsRoleUpdate) sqlSave(ctx context.Context) (_node int, err erro
 	if nodes := _u.mutation.UserAssignmentsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
-			Inverse: false,
+			Inverse: true,
 			Table:   logisticsrole.UserAssignmentsTable,
 			Columns: []string{logisticsrole.UserAssignmentsColumn},
 			Bidi:    false,
@@ -464,20 +447,6 @@ type LogisticsRoleUpdateOne struct {
 	fields   []string
 	hooks    []Hook
 	mutation *LogisticsRoleMutation
-}
-
-// SetTenantID sets the "tenant_id" field.
-func (_u *LogisticsRoleUpdateOne) SetTenantID(v uuid.UUID) *LogisticsRoleUpdateOne {
-	_u.mutation.SetTenantID(v)
-	return _u
-}
-
-// SetNillableTenantID sets the "tenant_id" field if the given value is not nil.
-func (_u *LogisticsRoleUpdateOne) SetNillableTenantID(v *uuid.UUID) *LogisticsRoleUpdateOne {
-	if v != nil {
-		_u.SetTenantID(*v)
-	}
-	return _u
 }
 
 // SetRoleCode sets the "role_code" field.
@@ -754,9 +723,6 @@ func (_u *LogisticsRoleUpdateOne) sqlSave(ctx context.Context) (_node *Logistics
 			}
 		}
 	}
-	if value, ok := _u.mutation.TenantID(); ok {
-		_spec.SetField(logisticsrole.FieldTenantID, field.TypeUUID, value)
-	}
 	if value, ok := _u.mutation.RoleCode(); ok {
 		_spec.SetField(logisticsrole.FieldRoleCode, field.TypeString, value)
 	}
@@ -823,7 +789,7 @@ func (_u *LogisticsRoleUpdateOne) sqlSave(ctx context.Context) (_node *Logistics
 	if _u.mutation.UserAssignmentsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
-			Inverse: false,
+			Inverse: true,
 			Table:   logisticsrole.UserAssignmentsTable,
 			Columns: []string{logisticsrole.UserAssignmentsColumn},
 			Bidi:    false,
@@ -836,7 +802,7 @@ func (_u *LogisticsRoleUpdateOne) sqlSave(ctx context.Context) (_node *Logistics
 	if nodes := _u.mutation.RemovedUserAssignmentsIDs(); len(nodes) > 0 && !_u.mutation.UserAssignmentsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
-			Inverse: false,
+			Inverse: true,
 			Table:   logisticsrole.UserAssignmentsTable,
 			Columns: []string{logisticsrole.UserAssignmentsColumn},
 			Bidi:    false,
@@ -852,7 +818,7 @@ func (_u *LogisticsRoleUpdateOne) sqlSave(ctx context.Context) (_node *Logistics
 	if nodes := _u.mutation.UserAssignmentsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
-			Inverse: false,
+			Inverse: true,
 			Table:   logisticsrole.UserAssignmentsTable,
 			Columns: []string{logisticsrole.UserAssignmentsColumn},
 			Bidi:    false,
