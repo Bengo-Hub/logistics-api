@@ -133,6 +133,11 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 						next.ServeHTTP(w, r)
 						return
 					}
+					// The OpenAPI spec is public so the /v1/docs page can load it.
+					if path == "/api/v1/openapi.json" {
+						next.ServeHTTP(w, r)
+						return
+					}
 					// WebSocket handshakes: a browser's native WebSocket API cannot set an
 					// Authorization header, so these routes authenticate via a "?token="
 					// query param fallback instead (still fully verified, see AuthenticateWS's
