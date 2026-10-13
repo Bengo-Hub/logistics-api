@@ -113,8 +113,14 @@ func (s *Service) GetOrCreateFleet(ctx context.Context, tenantID uuid.UUID, tena
 func (s *Service) ListMembers(ctx context.Context, tenantID uuid.UUID, status, search string, limit, offset int) ([]*ent.FleetMember, int, error) {
 	q := s.client.FleetMember.Query().Where(fleetmember.TenantID(tenantID))
 
+	// status is one value or several comma-separated ("pending,pending_review" lists everyone
+	// waiting for approval).
 	if status != "" {
-		q = q.Where(fleetmember.Status(status))
+		if strings.Contains(status, ",") {
+			q = q.Where(fleetmember.StatusIn(strings.Split(status, ",")...))
+		} else {
+			q = q.Where(fleetmember.Status(status))
+		}
 	}
 	if search != "" {
 		q = q.Where(fleetmember.HasUserWith(
@@ -320,6 +326,40 @@ func (s *Service) InviteMember(ctx context.Context, tenantID uuid.UUID, tenantSl
 		}
 	}
 
+	return m, nil
+}
+
+// Apply records a rider who signed up in the rider app without an invite: a pending freelance
+// member the business approves or rejects on the Riders page (pending members not completed in
+// 7 days are cleaned up). An existing membership is returned as it is.
+func (s *Service) Apply(ctx context.Context, tenantID uuid.UUID, tenantSlug string, userID uuid.UUID) (*ent.FleetMember, error) {
+	existing, err := s.client.FleetMember.Query().
+		Where(fleetmember.TenantID(tenantID), fleetmember.UserID(userID)).
+		First(ctx)
+	if err == nil {
+		return existing, nil
+	}
+	if !ent.IsNotFound(err) {
+		return nil, fmt.Errorf("fleet: apply: %w", err)
+	}
+	fl, err := s.GetOrCreateFleet(ctx, tenantID, tenantSlug)
+	if err != nil {
+		return nil, err
+	}
+	m, err := s.client.FleetMember.Create().
+		SetTenantID(tenantID).
+		SetFleetID(fl.ID).
+		SetUserID(userID).
+		SetStatus("pending").
+		SetMetadata(map[string]any{
+			MetaEmployment: Employment{Type: EmploymentFreelance}.ToMap(),
+			"source":       "self_signup",
+		}).
+		Save(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("fleet: apply: %w", err)
+	}
+	s.log.Info("rider applied", zap.String("member_id", m.ID.String()), zap.String("user_id", userID.String()))
 	return m, nil
 }
 

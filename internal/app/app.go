@@ -251,6 +251,7 @@ func New(ctx context.Context) (*App, error) {
 	log.Info("app: earnings statement job started (daily)")
 
 	fleetSvc := fleetmod.NewService(entClient, log, eventPublisher)
+	identitySvc.SetRiderApplications(fleetSvc.Apply)
 	fleetSvc.OnStatusChange(taskSvc.InvalidateFleetGate)
 	go fleetSvc.StartStaleRiderCleanup(ctx)
 

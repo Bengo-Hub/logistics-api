@@ -150,7 +150,7 @@ func (h *IdentityHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) 
 		*u = httpware.StripMediaSignature(*u)
 	}
 
-	u, err := h.svc.UpdateRiderProfile(r.Context(), authID, tenantID, req)
+	u, err := h.svc.UpdateRiderProfile(r.Context(), authID, tenantID, claims.GetTenantSlug(), req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

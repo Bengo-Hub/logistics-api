@@ -41,6 +41,13 @@ type Service struct {
 	tenantSyncer *tenant.Syncer
 	publisher    *events.Publisher
 	log          *zap.Logger
+	// apply records a rider with no fleet membership as a pending application (fleet.Service.Apply).
+	apply func(ctx context.Context, tenantID uuid.UUID, tenantSlug string, userID uuid.UUID) (*ent.FleetMember, error)
+}
+
+// SetRiderApplications lets a rider who signed up without an invite apply by saving their profile.
+func (s *Service) SetRiderApplications(apply func(ctx context.Context, tenantID uuid.UUID, tenantSlug string, userID uuid.UUID) (*ent.FleetMember, error)) {
+	s.apply = apply
 }
 
 // NewService creates a new Identity Service.
@@ -182,7 +189,19 @@ func (s *Service) GetRiderProfile(ctx context.Context, authServiceID, tenantID u
 }
 
 // UpdateRiderProfile updates a rider's contact and KYC details.
-func (s *Service) UpdateRiderProfile(ctx context.Context, authServiceID, tenantID uuid.UUID, req UpdateRiderProfileRequest) (*ent.User, error) {
+func (s *Service) UpdateRiderProfile(ctx context.Context, authServiceID, tenantID uuid.UUID, tenantSlug string, req UpdateRiderProfileRequest) (*ent.User, error) {
+	// A rider who signed up without an invite has no membership yet: their first profile save
+	// is their application (pending, approved by the business).
+	if s.apply != nil {
+		if u, uerr := s.client.User.Query().
+			Where(user.AuthServiceUserIDEQ(authServiceID), user.TenantID(tenantID)).
+			Only(ctx); uerr == nil {
+			if _, aerr := s.apply(ctx, tenantID, tenantSlug, u.ID); aerr != nil {
+				return nil, fmt.Errorf("rider application: %w", aerr)
+			}
+		}
+	}
+
 	tx, err := s.client.Tx(ctx)
 	if err != nil {
 		return nil, err
@@ -209,7 +228,7 @@ func (s *Service) UpdateRiderProfile(ctx context.Context, authServiceID, tenantI
 
 	// 2. Ensure FleetMember exists
 	fm, err := tx.FleetMember.Query().
-		Where(fleetmember.UserIDEQ(u.ID)).
+		Where(fleetmember.UserIDEQ(u.ID), fleetmember.TenantID(tenantID)).
 		Only(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("rider record not found: %w", err)
