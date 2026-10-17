@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Bengo-Hub/httpware/money"
+
 	"github.com/google/uuid"
 
 	"github.com/bengobox/logistics-service/internal/ent"
@@ -100,7 +102,7 @@ func TestQuotePerKmInsideBuffer(t *testing.T) {
 	}
 	// Road estimate = straight x 1.25; fee = 50/km rounded up to 10, at least 100.
 	straight := geo.Distance(busiaOutlet.Point, p)
-	want := math.Ceil(math.Max(50*round2(straight*1.25), 100)/10) * 10
+	want := math.Ceil(math.Max(50*money.Round2(straight*1.25), 100)/10) * 10
 	if q.Fee != want || q.DistanceType != "estimated" {
 		t.Fatalf("fee = %v (%s), want %v", q.Fee, q.DistanceType, want)
 	}

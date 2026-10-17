@@ -4,11 +4,14 @@ import (
 	"context"
 	"database/sql"
 
-	entsql "entgo.io/ent/dialect/sql"
+	"github.com/Bengo-Hub/httpware/money"
+
 	"fmt"
+	"time"
+
+	entsql "entgo.io/ent/dialect/sql"
 	sharedcache "github.com/Bengo-Hub/cache"
 	"github.com/bengobox/logistics-service/internal/ent/earningsstatement"
-	"time"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -61,7 +64,7 @@ func (s *Service) RecordEarning(ctx context.Context, tenantID, taskID, memberID 
 		if err != nil {
 			return fmt.Errorf("earnings: fallback pricing: %w", err)
 		}
-		fee = roundCents(fee)
+		fee = money.Round2(fee)
 	}
 
 	// Create billing event (fleet_member_id stored in metadata since schema uses generic metadata JSON)
@@ -87,7 +90,7 @@ func (s *Service) RecordEarning(ctx context.Context, tenantID, taskID, memberID 
 // from distance and pricing rules. Used when ordering-backend propagates the
 // real delivery_fee onto the task metadata.
 func (s *Service) RecordEarningWithAmount(ctx context.Context, tenantID, taskID, memberID uuid.UUID, amount float64) error {
-	fee := roundCents(amount)
+	fee := money.Round2(amount)
 	if err := s.createEarningEvent(ctx, tenantID, taskID, memberID, fee, map[string]any{
 		"source":      "delivery_fee",
 		"description": "Delivery earning for task (order delivery fee)",
@@ -212,7 +215,7 @@ func (s *Service) memberTotals(ctx context.Context, tenantID uuid.UUID, from, to
 			return nil, err
 		}
 		if id, err := uuid.Parse(member); err == nil {
-			out[id] = roundCents(sum)
+			out[id] = money.Round2(sum)
 		}
 	}
 	return out, rows.Err()
@@ -307,5 +310,5 @@ func (s *Service) RiderTotals(ctx context.Context, tenantID, memberID uuid.UUID,
 		WHERE tenant_id = $1 AND event_type = 'delivery_earning'
 		  AND metadata @> $2::jsonb AND occurred_at >= $6`,
 		tenantID, memberMeta(memberID), today, week, month, earliest).Scan(&d, &w, &m)
-	return roundCents(d), roundCents(w), roundCents(m), err
+	return money.Round2(d), money.Round2(w), money.Round2(m), err
 }

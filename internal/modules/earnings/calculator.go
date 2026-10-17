@@ -7,6 +7,8 @@ import (
 	"math"
 	"sort"
 
+	"github.com/Bengo-Hub/httpware/money"
+
 	"github.com/google/uuid"
 
 	"github.com/bengobox/logistics-service/internal/ent"
@@ -42,12 +44,12 @@ func CalculateDeliveryFee(ctx context.Context, client *ent.Client, tenantID uuid
 	for _, rule := range rules {
 		fee, ok := applyRule(rule, distanceKm)
 		if ok {
-			return roundCents(fee), nil
+			return money.Round2(fee), nil
 		}
 	}
 
 	// Fallback: use the highest-priority rule's base fee.
-	return roundCents(rules[0].BaseFee), nil
+	return money.Round2(rules[0].BaseFee), nil
 }
 
 // applyRule attempts to calculate a fee from a single PricingRule.
@@ -157,9 +159,4 @@ func toFloat64(v interface{}) (float64, bool) {
 	default:
 		return 0, false
 	}
-}
-
-// roundCents rounds to 2 decimal places for currency.
-func roundCents(v float64) float64 {
-	return math.Round(v*100) / 100
 }

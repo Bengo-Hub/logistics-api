@@ -5,6 +5,8 @@ import (
 	"sort"
 	"time"
 
+	"github.com/Bengo-Hub/httpware/money"
+
 	"github.com/google/uuid"
 
 	"github.com/bengobox/logistics-service/internal/modules/zones/geo"
@@ -187,7 +189,7 @@ func computeQuote(in QuoteInput, snap snapshot, distance DistanceFunc) Quote {
 	}
 	if nearest != nil {
 		q.NearestArea = &ZoneRef{ID: nearest.ID, Name: nearest.Name}
-		q.NearestAreaKm = round2(nearestKm)
+		q.NearestAreaKm = money.Round2(nearestKm)
 	}
 
 	if pol.Fallback != FallbackPerKm {
@@ -216,7 +218,7 @@ func computeQuote(in QuoteInput, snap snapshot, distance DistanceFunc) Quote {
 	q.Fee = perKmFee(pol, km)
 	q.DistanceKm, q.DistanceType = km, kind
 	q.EtaMinutes = estimateEta(km, pol)
-	q.Breakdown = &Breakdown{BaseFee: pol.BaseFee, PerKmRate: pol.PerKmRate, Raw: round2(raw), MinFee: pol.MinFee, Rounding: pol.Rounding}
+	q.Breakdown = &Breakdown{BaseFee: pol.BaseFee, PerKmRate: pol.PerKmRate, Raw: money.Round2(raw), MinFee: pol.MinFee, Rounding: pol.Rounding}
 	applyMinOrder(&q, in.OrderTotal)
 	return q
 }
@@ -228,7 +230,7 @@ func perKmFee(pol Policy, km float64) float64 {
 	if pol.Rounding > 0 {
 		fee = math.Ceil(fee/pol.Rounding-1e-9) * pol.Rounding
 	}
-	return round2(fee)
+	return money.Round2(fee)
 }
 
 func pickOutlet(in QuoteInput, outlets []OutletPoint) *OutletPoint {
@@ -252,14 +254,14 @@ func pickOutlet(in QuoteInput, outlets []OutletPoint) *OutletPoint {
 func measure(from, to geo.Point, pol Policy, distance DistanceFunc) (float64, string) {
 	if pol.DistanceSource == DistanceRoad && distance != nil {
 		if km, road := distance(from, to); road && km > 0 {
-			return round2(km), DistanceRoad
+			return money.Round2(km), DistanceRoad
 		}
 	}
 	straight := geo.Distance(from, to)
 	if pol.DistanceSource == DistanceRoad {
-		return round2(straight * pol.RoadFactorFallback), "estimated"
+		return money.Round2(straight * pol.RoadFactorFallback), "estimated"
 	}
-	return round2(straight), DistanceStraight
+	return money.Round2(straight), DistanceStraight
 }
 
 func estimateEta(km float64, pol Policy) int {
@@ -271,8 +273,6 @@ func applyMinOrder(q *Quote, total float64) {
 		q.BelowMinOrder = true
 	}
 }
-
-func round2(v float64) float64 { return math.Round(v*100) / 100 }
 
 // versionOf fingerprints the latest change across zones and the policy row so callers
 // can store which configuration priced an order.

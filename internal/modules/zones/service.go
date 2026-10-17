@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Bengo-Hub/httpware/money"
+
 	sharedcache "github.com/Bengo-Hub/cache"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -256,7 +258,7 @@ func toView(z *ent.GeoFence) *ZoneView {
 	return &ZoneView{
 		ID: z.ID, TenantID: z.TenantID, Name: z.Name, ZoneType: z.ZoneType, Status: z.Status,
 		Color: z.Color, Boundary: z.Boundary, Settings: SettingsFromMetadata(z.Metadata),
-		AreaKm2: round2(geo.RingAreaKm2(z.Boundary)), Metadata: z.Metadata,
+		AreaKm2: money.Round2(geo.RingAreaKm2(z.Boundary)), Metadata: z.Metadata,
 		CreatedAt: z.CreatedAt, UpdatedAt: z.UpdatedAt,
 	}
 }
@@ -524,7 +526,7 @@ func (s *Service) NearestArea(ctx context.Context, tenantID uuid.UUID, p geo.Poi
 	if best == nil {
 		return nil, 0, nil
 	}
-	return &ZoneRef{ID: best.ID, Name: best.Name}, round2(bestKm), nil
+	return &ZoneRef{ID: best.ID, Name: best.Name}, money.Round2(bestKm), nil
 }
 
 // snapshot loads (or returns the cached) zones, outlets and policy for one tenant.

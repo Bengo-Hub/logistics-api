@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Bengo-Hub/httpware/money"
+
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -74,8 +76,6 @@ func notRemitted() predicate.ProofOfDelivery {
 	})
 }
 
-func round2(v float64) float64 { return math.Round(v*100) / 100 }
-
 // outstandingCash loads the cash deliveries not yet handed in, for one rider or (memberID nil)
 // every rider of the tenant.
 func (s *Service) outstandingCash(ctx context.Context, tenantID uuid.UUID, memberID *uuid.UUID) ([]*ent.ProofOfDelivery, map[uuid.UUID]*ent.Task, error) {
@@ -135,7 +135,7 @@ func (s *Service) buildRiderCash(ctx context.Context, tenantID uuid.UUID, pods [
 		}
 		t := tasksByID[p.TaskID]
 		amount := cashAmount(p, t)
-		rc.Held = round2(rc.Held + amount)
+		rc.Held = money.Round2(rc.Held + amount)
 		orderNo := ""
 		if t != nil {
 			orderNo = metadataString(t.Metadata, "order_number")
@@ -222,9 +222,9 @@ func (s *Service) RecordRemittance(ctx context.Context, tenantID, memberID uuid.
 	for _, p := range pods {
 		expected += cashAmount(p, tasksByID[p.TaskID])
 	}
-	expected = round2(expected)
-	received = round2(received)
-	shortfall := round2(math.Max(0, expected-received))
+	expected = money.Round2(expected)
+	received = money.Round2(received)
+	shortfall := money.Round2(math.Max(0, expected-received))
 
 	rem := Remittance{
 		ID: uuid.New(), FleetMemberID: memberID, Deliveries: len(pods),
