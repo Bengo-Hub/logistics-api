@@ -36,9 +36,6 @@ COPY internal/ent/migrate/migrations ./internal/ent/migrate/migrations
 COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# Media folder setup
-RUN mkdir -p /media && chown -R app:app /media && chmod -R 775 /media
-
 USER app
 EXPOSE 4000
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

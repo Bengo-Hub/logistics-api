@@ -11,12 +11,6 @@ echo "=========================================="
 echo "Logistics-API Service Startup"
 echo "=========================================="
 
-# Create media directories if they don't exist
-# MEDIA_ROOT defaults to /data/media (set via values.yaml in production)
-MEDIA_DIR="${MEDIA_ROOT:-/data/media}"
-mkdir -p "$MEDIA_DIR/uploads/kyc"
-echo "Media directory ready: $MEDIA_DIR"
-
 echo "Waiting for database and running migrations..."
 MAX_RETRIES=60
 RETRY_COUNT=0
