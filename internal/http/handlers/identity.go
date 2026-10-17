@@ -2,9 +2,11 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	authclient "github.com/Bengo-Hub/shared-auth-client"
+	"github.com/bengobox/logistics-service/internal/ent"
 	"github.com/bengobox/logistics-service/internal/modules/fleet"
 	"github.com/bengobox/logistics-service/internal/modules/identity"
 	"github.com/bengobox/logistics-service/internal/modules/rbac"
@@ -107,26 +109,8 @@ func (h *IdentityHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Combine data for the rider response
-	resp := map[string]any{
-		"user": u,
-	}
-
-	if len(u.Edges.FleetMemberships) > 0 {
-		fm := u.Edges.FleetMemberships[0]
-		resp["status"] = fm.Status
-		// freelance riders go through KYC; staff riders (HR-vetted employees) do not.
-		resp["employment"] = fleet.EmploymentOf(fm).Type
-		resp["rider"] = signFleetMemberMedia(fm)
-		if fm.Edges.Vehicle != nil {
-			resp["vehicle"] = fm.Edges.Vehicle
-		}
-	} else {
-		resp["status"] = "none"
-	}
-
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	json.NewEncoder(w).Encode(riderResponse(u))
 }
 
 func (h *IdentityHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
@@ -151,28 +135,38 @@ func (h *IdentityHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) 
 
 	u, err := h.svc.UpdateRiderProfile(r.Context(), authID, tenantID, claims.GetTenantSlug(), req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		status := http.StatusInternalServerError
+		switch {
+		case errors.Is(err, identity.ErrInvalidProfile):
+			status = http.StatusBadRequest
+		case errors.Is(err, fleet.ErrPlateInUse):
+			status = http.StatusConflict
+		}
+		http.Error(w, err.Error(), status)
 		return
 	}
 
-	// Combine data for the rider response
-	resp := map[string]any{
-		"user": u,
-	}
-
-	if len(u.Edges.FleetMemberships) > 0 {
-		fm := u.Edges.FleetMemberships[0]
-		resp["status"] = fm.Status
-		// freelance riders go through KYC; staff riders (HR-vetted employees) do not.
-		resp["employment"] = fleet.EmploymentOf(fm).Type
-		resp["rider"] = signFleetMemberMedia(fm)
-		if fm.Edges.Vehicle != nil {
-			resp["vehicle"] = fm.Edges.Vehicle
-		}
-	} else {
-		resp["status"] = "none"
-	}
-
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	json.NewEncoder(w).Encode(riderResponse(u))
+}
+
+// riderResponse is the rider-app's profile payload, shared by GET /riders/me and the profile save.
+func riderResponse(u *ent.User) map[string]any {
+	resp := map[string]any{"user": u}
+	if len(u.Edges.FleetMemberships) == 0 {
+		resp["status"] = "none"
+		return resp
+	}
+	fm := u.Edges.FleetMemberships[0]
+	resp["status"] = fm.Status
+	// freelance riders go through KYC; staff riders (HR-vetted employees) do not.
+	emp := fleet.EmploymentOf(fm)
+	resp["employment"] = emp.Type
+	// payroll riders earn nothing per delivery; earning_rules riders see their earnings.
+	resp["pay_basis"] = emp.PayBasis
+	resp["rider"] = signFleetMemberMedia(fm)
+	if fm.Edges.Vehicle != nil {
+		resp["vehicle"] = fm.Edges.Vehicle
+	}
+	return resp
 }

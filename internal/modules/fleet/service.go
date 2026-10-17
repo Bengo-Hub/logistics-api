@@ -312,21 +312,27 @@ func (s *Service) InviteMember(ctx context.Context, tenantID uuid.UUID, tenantSl
 		zap.String("user_id", req.UserID.String()),
 	)
 
-	// Publish fleet member invited event
-	if s.publisher != nil {
-		email, name := s.resolveUserInfo(ctx, req.UserID)
-		if email != "" {
-			if pubErr := s.publisher.PublishFleetMemberInvited(ctx, tenantID, events.FleetMemberEventData{
-				MemberID: m.ID.String(), UserID: req.UserID.String(),
-				FleetID: fleetID.String(), UserEmail: email, UserName: name,
-				TenantSlug: tenantSlug,
-			}); pubErr != nil {
-				s.log.Warn("failed to publish fleet.member_invited", zap.Error(pubErr))
-			}
-		}
-	}
-
+	s.publishInvited(ctx, tenantID, tenantSlug, m)
 	return m, nil
+}
+
+// publishInvited emits fleet.member_invited, which notifications turns into the rider's
+// sign-up email. Best effort: a publish failure never blocks onboarding.
+func (s *Service) publishInvited(ctx context.Context, tenantID uuid.UUID, tenantSlug string, m *ent.FleetMember) {
+	if s.publisher == nil {
+		return
+	}
+	email, name := s.resolveUserInfo(ctx, m.UserID)
+	if email == "" {
+		return
+	}
+	if err := s.publisher.PublishFleetMemberInvited(ctx, tenantID, events.FleetMemberEventData{
+		MemberID: m.ID.String(), UserID: m.UserID.String(),
+		FleetID: m.FleetID.String(), UserEmail: email, UserName: name,
+		TenantSlug: tenantSlug,
+	}); err != nil {
+		s.log.Warn("failed to publish fleet.member_invited", zap.Error(err))
+	}
 }
 
 // Apply records a rider who signed up in the rider app without an invite: a pending freelance
@@ -545,14 +551,16 @@ func (s *Service) DeleteMember(ctx context.Context, tenantID, memberID uuid.UUID
 		return fmt.Errorf("fleet: get for delete: %w", err)
 	}
 
-	// Delete any associated vehicle record
-	if m.VehicleID != nil {
-		_ = s.client.Vehicle.DeleteOneID(*m.VehicleID).Exec(ctx)
-	}
-
 	// Delete the fleet member
 	if err := s.client.FleetMember.DeleteOneID(m.ID).Exec(ctx); err != nil {
 		return fmt.Errorf("fleet: delete member: %w", err)
+	}
+	// A vehicle the rider registered on their own profile goes with them. One the business
+	// owns is a fleet asset and stays for the next rider.
+	if m.VehicleID != nil {
+		if v, verr := s.client.Vehicle.Get(ctx, *m.VehicleID); verr == nil && v.Metadata[MetaVehicleOwner] == VehicleOwnerRider {
+			_ = s.client.Vehicle.DeleteOne(v).Exec(ctx)
+		}
 	}
 	s.statusChanged(ctx, tenantID)
 
@@ -684,34 +692,38 @@ func (s *Service) CreateVehicle(ctx context.Context, tenantID, fleetID uuid.UUID
 		fleetID = fl.ID
 	}
 
-	v, err := s.client.Vehicle.Create().
-		SetTenantID(tenantID).
-		SetFleetID(fleetID).
-		SetVehicleType(req.VehicleType).
-		SetMake(req.Make).
-		SetModel(req.Model).
-		SetLicensePlate(req.LicensePlate).
-		SetStatus("active").
-		SetComplianceStatus("pending").
-		Save(ctx)
+	v, err := CreateVehicleRecord(ctx, s.client.Vehicle, tenantID, fleetID, req, nil)
 	if err != nil {
-		return nil, fmt.Errorf("fleet: create vehicle: %w", err)
+		return nil, err
 	}
 
 	s.log.Info("vehicle created",
 		zap.String("vehicle_id", v.ID.String()),
-		zap.String("type", req.VehicleType),
-		zap.String("plate", req.LicensePlate),
+		zap.String("type", v.VehicleType),
+		zap.String("plate", v.LicensePlate),
 	)
 	return v, nil
 }
 
-// AssignVehicle assigns a vehicle to a fleet member.
+// AssignVehicle links a vehicle to a rider, or unlinks it when vehicleID is uuid.Nil. Both must
+// belong to the tenant and a vehicle rides with one rider at a time.
 func (s *Service) AssignVehicle(ctx context.Context, tenantID, memberID, vehicleID uuid.UUID) error {
-	_, err := s.client.FleetMember.UpdateOneID(memberID).
-		SetVehicleID(vehicleID).
-		Save(ctx)
+	m, err := s.client.FleetMember.Query().
+		Where(fleetmember.ID(memberID), fleetmember.TenantID(tenantID)).
+		Only(ctx)
 	if err != nil {
+		if ent.IsNotFound(err) {
+			return fmt.Errorf("fleet: member not found")
+		}
+		return fmt.Errorf("fleet: assign vehicle: %w", err)
+	}
+	if vehicleID == uuid.Nil {
+		return s.client.FleetMember.UpdateOne(m).ClearVehicleID().Exec(ctx)
+	}
+	if err := requireFreeVehicle(ctx, s.client, nil, tenantID, vehicleID, memberID); err != nil {
+		return err
+	}
+	if err := s.client.FleetMember.UpdateOne(m).SetVehicleID(vehicleID).Exec(ctx); err != nil {
 		return fmt.Errorf("fleet: assign vehicle: %w", err)
 	}
 	return nil
@@ -740,7 +752,11 @@ func (s *Service) UpdateVehicle(ctx context.Context, tenantID, vehicleID uuid.UU
 
 	upd := s.client.Vehicle.UpdateOne(existing)
 	if req.VehicleType != nil {
-		upd = upd.SetVehicleType(*req.VehicleType)
+		vt, verr := NormalizeVehicleType(*req.VehicleType)
+		if verr != nil {
+			return nil, verr
+		}
+		upd = upd.SetVehicleType(vt)
 	}
 	if req.Make != nil {
 		upd = upd.SetMake(*req.Make)
@@ -749,7 +765,11 @@ func (s *Service) UpdateVehicle(ctx context.Context, tenantID, vehicleID uuid.UU
 		upd = upd.SetModel(*req.Model)
 	}
 	if req.LicensePlate != nil {
-		upd = upd.SetLicensePlate(*req.LicensePlate)
+		plate := NormalizePlate(*req.LicensePlate)
+		if plate == "" {
+			return nil, fmt.Errorf("fleet: number plate is required")
+		}
+		upd = upd.SetLicensePlate(plate)
 	}
 	if req.Status != nil {
 		upd = upd.SetStatus(*req.Status)
@@ -757,6 +777,9 @@ func (s *Service) UpdateVehicle(ctx context.Context, tenantID, vehicleID uuid.UU
 
 	v, err := upd.Save(ctx)
 	if err != nil {
+		if ent.IsConstraintError(err) {
+			return nil, ErrPlateInUse
+		}
 		return nil, fmt.Errorf("fleet: update vehicle: %w", err)
 	}
 	return v, nil

@@ -1271,7 +1271,7 @@ var (
 		{Name: "vehicle_type", Type: field.TypeString},
 		{Name: "make", Type: field.TypeString},
 		{Name: "model", Type: field.TypeString},
-		{Name: "license_plate", Type: field.TypeString, Unique: true},
+		{Name: "license_plate", Type: field.TypeString},
 		{Name: "capacity_json", Type: field.TypeJSON, Nullable: true},
 		{Name: "status", Type: field.TypeString, Default: "active"},
 		{Name: "compliance_status", Type: field.TypeString, Default: "pending"},

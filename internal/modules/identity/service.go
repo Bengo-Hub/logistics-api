@@ -235,8 +235,11 @@ func (s *Service) UpdateRiderProfile(ctx context.Context, authServiceID, tenantI
 	}
 
 	if fleetmod.EmploymentOf(fm).IsStaff() {
-		// Staff riders were vetted by HR: no KYC review. Save what they filled in and keep
-		// their status.
+		// Staff riders were vetted by HR: no KYC review and no mandatory uploads once the ID
+		// number is on file. Save what they filled in and keep their status.
+		if strings.TrimSpace(req.IDNumber) == "" && fm.IDNumber == "" {
+			return nil, fmt.Errorf("%w: ID number is required", ErrInvalidProfile)
+		}
 		upd := tx.FleetMember.UpdateOne(fm)
 		if req.IDNumber != "" {
 			upd.SetIDNumber(req.IDNumber)
@@ -263,30 +266,11 @@ func (s *Service) UpdateRiderProfile(ctx context.Context, authServiceID, tenantI
 		return nil, fmt.Errorf("update fleet member: %w", err)
 	}
 
-	// 3. Update or Create Vehicle
-	if fm.VehicleID != nil {
-		err = tx.Vehicle.UpdateOneID(*fm.VehicleID).
-			SetVehicleType(req.VehicleType).
-			SetLicensePlate(req.LicensePlate).
-			SetImageLicensePlate(req.ImageLicensePlate).
-			SetImageSideView(req.ImageSideView).
-			SetComplianceStatus("pending").
-			Exec(ctx)
-	} else {
-		v, err := tx.Vehicle.Create().
-			SetTenantID(u.TenantID).
-			SetVehicleType(req.VehicleType).
-			SetLicensePlate(req.LicensePlate).
-			SetImageLicensePlate(req.ImageLicensePlate).
-			SetImageSideView(req.ImageSideView).
-			SetComplianceStatus("pending").
-			Save(ctx)
-		if err == nil {
-			err = tx.FleetMember.UpdateOne(fm).SetVehicleID(v.ID).Exec(ctx)
-		}
-	}
-	if err != nil {
-		return nil, fmt.Errorf("update vehicle: %w", err)
+	// 3. Update the linked vehicle or register the rider's own. Only what the rider filled in is
+	// written, so a vehicle the admin linked keeps its details; a company vehicle's plate and
+	// type are the admin's to change.
+	if err := s.saveRiderVehicle(ctx, tx, fm, fleetmod.EmploymentOf(fm).IsStaff(), req); err != nil {
+		return nil, err
 	}
 
 	if err := tx.Commit(); err != nil {

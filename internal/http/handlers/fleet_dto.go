@@ -93,6 +93,38 @@ func toFleetMemberResponse(m *ent.FleetMember) *FleetMemberResponse {
 	return resp
 }
 
+// VehicleAssignee is the rider a vehicle is linked to.
+type VehicleAssignee struct {
+	MemberID uuid.UUID `json:"member_id"`
+	Name     string    `json:"name"`
+	Phone    string    `json:"phone,omitempty"`
+}
+
+// VehicleResponse is a vehicle with the rider it is linked to (nil when it is free).
+type VehicleResponse struct {
+	*ent.Vehicle
+	AssignedTo *VehicleAssignee `json:"assigned_to,omitempty"`
+}
+
+// toVehicleResponses maps vehicles loaded with their members (and users) to response DTOs and
+// signs the private plate and side-view photos.
+func toVehicleResponses(vehicles []*ent.Vehicle) []*VehicleResponse {
+	out := make([]*VehicleResponse, len(vehicles))
+	for i, v := range vehicles {
+		r := &VehicleResponse{Vehicle: signVehicleMedia(v)}
+		if len(v.Edges.Members) > 0 {
+			m := v.Edges.Members[0]
+			a := &VehicleAssignee{MemberID: m.ID}
+			if u := m.Edges.User; u != nil {
+				a.Name, a.Phone = u.FullName, u.Phone
+			}
+			r.AssignedTo = a
+		}
+		out[i] = r
+	}
+	return out
+}
+
 // toFleetMemberResponses maps a slice of ent.FleetMember to response DTOs.
 func toFleetMemberResponses(members []*ent.FleetMember) []*FleetMemberResponse {
 	out := make([]*FleetMemberResponse, len(members))

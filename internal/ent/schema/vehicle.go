@@ -29,9 +29,10 @@ func (Vehicle) Fields() []ent.Field {
 			NotEmpty(),
 		field.String("model").
 			NotEmpty(),
+		// Unique per tenant only (composite index below). A field-level Unique() would add a
+		// global index and stop two tenants registering the same plate.
 		field.String("license_plate").
-			NotEmpty().
-			Unique(),
+			NotEmpty(),
 		field.JSON("capacity_json", map[string]any{}).
 			Optional(),
 		field.String("status").

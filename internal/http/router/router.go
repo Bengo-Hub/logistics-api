@@ -558,6 +558,7 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 					fleetR.Method(http.MethodGet, "/", fleetView(lh.GetFleet))
 					fleetR.Method(http.MethodGet, "/members", fleetView(lh.ListMembers))
 					fleetR.Method(http.MethodGet, "/members/{memberId}", fleetView(lh.GetMember))
+					fleetR.Method(http.MethodGet, "/vehicles", fleetView(lh.ListVehicles))
 
 					// Mutations: require fleet management permission + the rider_management
 					// subscription feature (cross-service tenants with only basic_logistics_access
@@ -568,6 +569,7 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 						}
 						mut.Use(appmw.RequireFeature(consts.FeatureRiderManagement, cfg.Subscriptions.ServiceURL+"/upgrade"))
 						mut.Post("/members", lh.InviteMember)
+						mut.Post("/members/onboard", lh.OnboardRider)
 						mut.Post("/members/{memberId}/approve", lh.ApproveMember)
 						mut.Post("/members/{memberId}/suspend", lh.SuspendMember)
 						mut.Post("/members/{memberId}/reject", lh.RejectMember)

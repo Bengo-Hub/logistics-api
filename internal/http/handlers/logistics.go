@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"strings"
@@ -540,6 +541,39 @@ func (h *LogisticsHandler) InviteMember(w http.ResponseWriter, r *http.Request) 
 	respondJSON(w, http.StatusCreated, signFleetMemberMedia(m))
 }
 
+// OnboardRider handles POST /api/v1/{tenant}/fleet/members/onboard: the admin fills in an
+// internal rider completely (details, pay basis, vehicle) and the rider is active at once.
+// "send_invite": true also emails the rider the sign-up link.
+func (h *LogisticsHandler) OnboardRider(w http.ResponseWriter, r *http.Request) {
+	tenantID := tenantIDFromClaims(r)
+	if tenantID == uuid.Nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	slug := chi.URLParam(r, "tenant")
+	if claims, ok := authclient.ClaimsFromContext(r.Context()); ok && claims.GetTenantSlug() != "" {
+		slug = claims.GetTenantSlug()
+	}
+
+	if count, cerr := h.fleetSvc.CountActiveMembers(r.Context(), tenantID); cerr == nil {
+		if !subscriptions.CheckStructuralLimit(w, r, "riders", subscriptions.LimitRiders, count) {
+			return
+		}
+	}
+
+	var req fleet.OnboardRiderRequest
+	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<20)).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	m, err := h.fleetSvc.OnboardInternalRider(r.Context(), tenantID, slug, req)
+	if err != nil {
+		http.Error(w, err.Error(), fleetErrorStatus(err))
+		return
+	}
+	respondJSON(w, http.StatusCreated, toFleetMemberResponse(m))
+}
+
 // ApproveMember handles POST /api/v1/{tenant}/fleet/members/{memberId}/approve
 func (h *LogisticsHandler) ApproveMember(w http.ResponseWriter, r *http.Request) {
 	tenantID := tenantIDFromClaims(r)
@@ -712,6 +746,42 @@ func (h *LogisticsHandler) BatchInviteMembers(w http.ResponseWriter, r *http.Req
 	respondJSON(w, http.StatusOK, results)
 }
 
+// ListVehicles handles GET /api/v1/{tenant}/fleet/vehicles?search=&status=&assigned=true|false.
+// The page's total and a fleet-wide summary come with it.
+func (h *LogisticsHandler) ListVehicles(w http.ResponseWriter, r *http.Request) {
+	tenantID := tenantIDFromClaims(r)
+	if tenantID == uuid.Nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	p := pagination.Parse(r)
+	q := r.URL.Query()
+	params := fleet.ListVehiclesParams{
+		Search: q.Get("search"),
+		Status: q.Get("status"),
+		Limit:  p.Limit,
+		Offset: p.Offset,
+	}
+	switch q.Get("assigned") {
+	case "true":
+		t := true
+		params.Assigned = &t
+	case "false":
+		f := false
+		params.Assigned = &f
+	}
+	vehicles, total, summary, err := h.fleetSvc.ListVehicles(r.Context(), tenantID, params)
+	if err != nil {
+		h.log.Error("list vehicles", zap.Error(err))
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, struct {
+		pagination.Response[*VehicleResponse]
+		Summary fleet.VehicleSummary `json:"summary"`
+	}{pagination.NewResponse(toVehicleResponses(vehicles), total, p), summary})
+}
+
 // CreateVehicle handles POST /api/v1/{tenant}/fleet/vehicles
 func (h *LogisticsHandler) CreateVehicle(w http.ResponseWriter, r *http.Request) {
 	tenantID := tenantIDFromClaims(r)
@@ -728,7 +798,7 @@ func (h *LogisticsHandler) CreateVehicle(w http.ResponseWriter, r *http.Request)
 
 	v, err := h.fleetSvc.CreateVehicle(r.Context(), tenantID, uuid.Nil, req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), fleetErrorStatus(err))
 		return
 	}
 
@@ -757,18 +827,38 @@ func (h *LogisticsHandler) AssignVehicle(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	vehicleID, err := uuid.Parse(body.VehicleID)
-	if err != nil {
-		http.Error(w, "invalid vehicle id", http.StatusBadRequest)
-		return
+	// An empty vehicle_id unlinks the rider's vehicle.
+	vehicleID := uuid.Nil
+	if strings.TrimSpace(body.VehicleID) != "" {
+		vehicleID, err = uuid.Parse(body.VehicleID)
+		if err != nil {
+			http.Error(w, "invalid vehicle id", http.StatusBadRequest)
+			return
+		}
 	}
 
 	if err := h.fleetSvc.AssignVehicle(r.Context(), tenantID, memberID, vehicleID); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), fleetErrorStatus(err))
 		return
 	}
 
-	respondJSON(w, http.StatusOK, map[string]string{"status": "assigned"})
+	status := "assigned"
+	if vehicleID == uuid.Nil {
+		status = "unassigned"
+	}
+	respondJSON(w, http.StatusOK, map[string]string{"status": status})
+}
+
+// fleetErrorStatus maps a fleet service error to its HTTP status: clashes are 409, a missing
+// record is 404, anything else the caller got wrong is 400.
+func fleetErrorStatus(err error) int {
+	switch {
+	case errors.Is(err, fleet.ErrAlreadyRider), errors.Is(err, fleet.ErrVehicleTaken), errors.Is(err, fleet.ErrPlateInUse):
+		return http.StatusConflict
+	case errors.Is(err, fleet.ErrVehicleAbsent), strings.Contains(err.Error(), "not found"):
+		return http.StatusNotFound
+	}
+	return http.StatusBadRequest
 }
 
 // UpdateVehicle handles PATCH /api/v1/{tenant}/fleet/vehicles/{vehicleId}
@@ -793,11 +883,7 @@ func (h *LogisticsHandler) UpdateVehicle(w http.ResponseWriter, r *http.Request)
 
 	v, err := h.fleetSvc.UpdateVehicle(r.Context(), tenantID, vehicleID, req)
 	if err != nil {
-		status := http.StatusBadRequest
-		if strings.Contains(err.Error(), "not found") {
-			status = http.StatusNotFound
-		}
-		http.Error(w, err.Error(), status)
+		http.Error(w, err.Error(), fleetErrorStatus(err))
 		return
 	}
 

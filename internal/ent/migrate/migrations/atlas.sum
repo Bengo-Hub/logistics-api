@@ -1,4 +1,4 @@
-h1:nRe4cUO93aMA2I2XHitZeO0wgX6wFKh1JsaEmfE3mBU=
+h1:DQp0b4HmSvaTuyioW/iD5LcTdQHgc48RF7b8JVuXXWo=
 20260314184847_initial_schema.sql h1:L0wAADcTDNVU6BeR2ScWX5poErpcRylCO9xWQakqX+M=
 20260320140940_add_tracking_code_and_routing.sql h1:kfFLd/S6aqmD3l6l5aHN+44M18ct8inCdUO/ebQVzPs=
 20260320144356_add_geo_fence_zones.sql h1:DIWWryUDFzragzPYE4N/Qag94zVyu/XejorTCXB5eUc=
@@ -23,3 +23,4 @@ h1:nRe4cUO93aMA2I2XHitZeO0wgX6wFKh1JsaEmfE3mBU=
 20261009183751_add_task_type_period_index.sql h1:t7Ngx3P22WMtyTj8F5RWOMs37Nk/yRF0dVpefRT0H0o=
 20261013100000_global_logistics_roles.sql h1:8obMz+x2f9hPrTQjEaU09/gsnqWvVxrKLJW2Fvkwdp0=
 20261013110000_add_notification_recipient.sql h1:1wyTqr6CKynFL4nJ8OugyAjZPqhmH+xjaGaEivuC+HA=
+20261017120000_vehicle_plate_unique_per_tenant.sql h1:SN/BedgmT2xPTefZCI+J0J5BRCLZwxgd0Bs/IqDYcw8=

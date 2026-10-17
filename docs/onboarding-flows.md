@@ -134,6 +134,48 @@ invited → pending → pending_review → active
 3. Join page shows "Sign Up to Deliver" heading (vs "You've been invited")
 4. Same SSO → KYC → review flow as Path A
 
+### Path C: Internal Rider Added by the Admin (employment = staff)
+Internal riders are the business's own employees, so there is no invite step and no KYC review.
+1. Tenant admin opens Riders, Add rider, and picks "Internal rider"
+2. Fills in first name, email, phone and ID number (all required), plus optional licence number
+3. Chooses the pay basis (see below) and the vehicle: none yet, link a free vehicle from the fleet,
+   or register a new one (a motorbike is type `motorcycle`; make and model are optional)
+4. Optionally ticks "Also email them the sign-in link". Without it the rider is still active and
+   links up on first sign-in with the same email (identity `EnsureUserFromToken` matches the stub user)
+5. `POST /fleet/members/onboard` creates the stub user, the vehicle (when new) and the member in one
+   transaction. The member is `active` at once, `onboarding_source = company_created`, and gets the
+   driver role
+
+ID and photo uploads are optional for internal riders. The ID number is the one identity detail
+required: the API refuses an onboarding without it, and the rider-app asks for it when a staff
+rider saves their profile with none on file.
+
+Pay basis (`fleet_members.metadata.employment.pay_basis`, no new column):
+
+| Pay basis | Who | Per-delivery earnings | Per diem |
+|-----------|-----|-----------------------|----------|
+| `payroll` (default for staff) | Salaried employee | None. Salary is erp-api payroll | erp-api claim raised from the trip |
+| `earning_rules` | Internal rider paid like a freelancer | Yes, from the rider pricing rules | erp-api claim as for any staff rider |
+| `earning_rules` (always) | Freelance rider | Yes | None |
+
+`SetEmployment` (`PUT /fleet/members/{id}/employment`, body `{type, pay_basis}`) changes either.
+The old `per_task_earnings` flag is replaced by `pay_basis`; it is still read for members saved
+with it and never written. `GET /riders/me` returns `employment` and `pay_basis`, and the rider-app
+shows the trips and per diem screen only to payroll riders.
+
+### Vehicles
+- One rule set in `fleet/vehicle_rules.go`: types are normalised (`bike`, `motorbike`, `boda` all
+  store `motorcycle`), plates are upper-cased and space-collapsed, and a plate is unique per tenant
+  (the old global unique index `vehicles_license_plate_key` was dropped on 2026-10-17).
+- A vehicle belongs to one rider at a time. Linking checks both rows belong to the tenant and the
+  vehicle is free (`409` otherwise). `POST /fleet/members/{id}/vehicle` with an empty `vehicle_id`
+  unlinks.
+- Deleting a rider keeps company vehicles. Only a vehicle the rider registered on their own profile
+  (`metadata.owner = rider`) goes with them.
+- `GET /fleet/vehicles?search=&status=&assigned=true|false&page=&limit=` lists every vehicle,
+  assigned or not, with `assigned_to`, plus a fleet-wide `summary` counted in SQL. The Vehicles page
+  and the rider vehicle pickers use it.
+
 ### 7-Day Auto-Cleanup
 - Hourly background job checks for stale riders
 - Riders in `invited`/`pending`/`pending_review` status older than 7 days
@@ -169,6 +211,8 @@ invited → pending → pending_review → active
 - `GET /fleet/members` — List members (filter by status)
 - `POST /fleet/members` — Invite single member
 - `POST /fleet/members/batch` — Batch invite
+- `POST /fleet/members/onboard` — Add an internal rider directly (active at once, optional invite email)
+- `PUT /fleet/members/{id}/employment` — Set type and pay basis
 - `GET /fleet/members/{id}` — Get member with user + vehicle edges
 - `POST /fleet/members/{id}/approve` — Approve (pending_review → active)
 - `POST /fleet/members/{id}/reject` — Reject with reason
@@ -177,8 +221,10 @@ invited → pending → pending_review → active
 - `DELETE /fleet/members/{id}` — Permanently delete
 
 ### Vehicle Management
+- `GET /fleet/vehicles` — List vehicles (search, status, assigned filter) with fleet summary
 - `POST /fleet/vehicles` — Create vehicle
+- `PATCH /fleet/vehicles/{id}` and `DELETE /fleet/vehicles/{id}` — Update or delete (delete refused while linked)
 
 ### Rider Profile (Identity)
 - `GET /riders/me/profile` — Get own profile
-- `PATCH /riders/me/profile` — Update profile + KYC docs (triggers pending_review)
+- `PATCH /riders/me/profile` — Update profile + KYC docs (triggers pending_review; staff riders keep their status and need only an ID number on file)

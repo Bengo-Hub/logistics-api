@@ -101,6 +101,13 @@ func main() {
 		log.Fatalf("failed to make logistics roles platform-wide: %v", err)
 	}
 
+	// Vehicle plates are unique per tenant only; the global index left by the old field-level
+	// Unique() would stop two tenants registering the same plate. Relaxes a constraint, so safe
+	// and idempotent. Schema.Create never drops indexes here.
+	if _, err := db.ExecContext(ctx, `DROP INDEX IF EXISTS vehicles_license_plate_key`); err != nil {
+		log.Fatalf("failed to drop the global vehicle plate index: %v", err)
+	}
+
 	if err := client.Schema.Create(ctx,
 		schema.WithDir(migrate.Dir),
 	); err != nil {
