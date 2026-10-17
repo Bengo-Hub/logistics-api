@@ -19,7 +19,6 @@ type Config struct {
 	Events        EventsConfig
 	Telemetry     TelemetryConfig
 	Auth          AuthConfig
-	Media         MediaConfig
 	Subscriptions SubscriptionsConfig
 	Routing       RoutingConfig
 	Treasury      TreasuryConfig
@@ -133,14 +132,6 @@ type AuthConfig struct {
 	JWKSRefreshInterval time.Duration `envconfig:"AUTH_JWKS_REFRESH_INTERVAL" default:"300s"`
 	// EnableAPIKeyAuth allows S2S callers to authenticate with INTERNAL_SERVICE_KEY via X-API-Key header.
 	EnableAPIKeyAuth bool `envconfig:"AUTH_ENABLE_API_KEY_AUTH" default:"true"`
-}
-
-type MediaConfig struct {
-	Root    string `envconfig:"MEDIA_ROOT" default:"./media"`
-	URLBase string `envconfig:"MEDIA_URL_BASE" default:"http://localhost:4005/media"`
-	// SigningSecret keys the signed URLs for private KYC media; falls back to
-	// INTERNAL_SERVICE_KEY, which every replica already shares.
-	SigningSecret string `envconfig:"MEDIA_SIGNING_SECRET" default:""`
 }
 
 // Load gathers configuration from environment variables and optional .env files.

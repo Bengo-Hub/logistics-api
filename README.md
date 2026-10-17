@@ -86,8 +86,8 @@ atlas migrate hash --dir "file://internal/ent/migrate/migrations"
 | `AUTH_JWKS_URL` | JWKS endpoint from auth-api |
 | `AUTH_ISSUER` | JWT issuer (must match token) |
 | `ROUTING_PRIMARY_URL` | Valhalla base URL |
-| `MEDIA_ROOT` | Local path for uploaded files |
-| `MEDIA_URL_BASE` | Public base URL for media files |
+| `OBJECT_STORAGE_*` | Shared object storage (Cloudflare R2) for rider KYC documents and proof-of-delivery files, all private with presigned links; from the `object-storage` Secret in the cluster (see devops-k8s `docs/object-storage.md`) |
+| `MEDIA_ROOT`, `MEDIA_URL_BASE` | Local development only: without an object storage endpoint, files are kept under `MEDIA_ROOT` and served at `MEDIA_URL_BASE/media` with signed links |
 
 The service binds to `http://localhost:4103` by default (configurable via `LOGISTICS_HTTP_PORT`).
 

@@ -19,6 +19,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/Bengo-Hub/httpware"
+	"github.com/Bengo-Hub/httpware/objectstore"
 	authclient "github.com/Bengo-Hub/shared-auth-client"
 	"github.com/redis/go-redis/v9"
 
@@ -62,30 +63,27 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 	r.Get("/metrics", health.Metrics)
 	r.Get("/v1/docs/*", handlers.SwaggerUI)
 
-	// Signed URLs for rider KYC media; every replica shares the secret (MEDIA_SIGNING_SECRET,
-	// falling back to INTERNAL_SERVICE_KEY).
-	var mediaSigner *httpware.MediaSigner
+	// Rider KYC documents and proof-of-delivery files on the shared object storage
+	// (httpware/objectstore), private: responses carry presigned links. Local development keeps
+	// files under MEDIA_ROOT, served at /media with links signed by the internal service key.
+	handlers.RegisterMediaTypes()
 	if cfg != nil {
-		secret := cfg.Media.SigningSecret
-		if secret == "" {
-			secret = cfg.Subscriptions.APIKey
+		store, err := objectstore.New("logistics", objectstore.FromEnv(),
+			objectstore.WithLocalSigner(httpware.NewMediaSigner(cfg.Subscriptions.APIKey, 12*time.Hour)))
+		if err != nil {
+			log.Error("object storage misconfigured, uploads unavailable", zap.Error(err))
+		} else {
+			handlers.SetMediaStore(store)
+			if files := store.MediaHandler(); files != nil {
+				r.Handle("/media/*", http.StripPrefix("/media", files))
+			}
 		}
-		mediaSigner = httpware.NewMediaSigner(secret, 12*time.Hour)
-		handlers.SetMediaSigner(mediaSigner)
 	}
 
-	mediaHandler := handlers.NewMediaHandler(log, cfg)
-	r.Post("/api/v1/media/upload", mediaHandler.Upload)
-
-	// Serve media files
-	if cfg != nil {
-		// No directory listings; immutable caching for fingerprinted uploads.
-		// Rider KYC documents are personal data: never stored by shared caches, the CDN or
-		// service workers, and served only with a short-lived signed URL the API issues.
-		r.Handle("/media/*", http.StripPrefix("/media", httpware.StaticMedia(cfg.Media.Root, httpware.MediaOptions{
-			Private: func(p string) bool { return strings.HasPrefix(p, "/uploads/kyc/") },
-			Signer:  mediaSigner,
-		})))
+	// Upload requires a signed-in tenant user (it accepted anonymous uploads before).
+	mediaHandler := handlers.NewMediaHandler(log)
+	if authMiddleware != nil {
+		r.With(authMiddleware.RequireAuth).Post("/api/v1/media/upload", mediaHandler.Upload)
 	}
 
 	// Public tracking endpoint (no auth required)

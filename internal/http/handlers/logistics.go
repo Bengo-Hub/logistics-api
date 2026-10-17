@@ -289,8 +289,8 @@ func (h *LogisticsHandler) SubmitPoD(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// The photo is a private upload (customer doorsteps); keep the plain URL and sign on read.
-	req.PhotoURL = httpware.StripMediaSignature(req.PhotoURL)
-	req.SignatureURL = httpware.StripMediaSignature(req.SignatureURL)
+	req.PhotoURL = mediaRef(req.PhotoURL)
+	req.SignatureURL = mediaRef(req.SignatureURL)
 
 	pod, err := h.taskSvc.SubmitPoD(r.Context(), tenantID, taskID, req)
 	if err != nil {

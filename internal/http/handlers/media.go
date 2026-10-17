@@ -1,156 +1,74 @@
 package handlers
 
 import (
-	"fmt"
-	"image"
-	"image/jpeg"
-	"image/png"
-	"io"
 	"net/http"
-	"os"
-	"path/filepath"
-	"strings"
-	"time"
+	"path"
 
-	"github.com/google/uuid"
+	"github.com/Bengo-Hub/httpware/objectstore"
+	authclient "github.com/Bengo-Hub/shared-auth-client"
 	"go.uber.org/zap"
-
-	"github.com/bengobox/logistics-service/internal/config"
 )
 
+// RegisterMediaTypes sets logistics' KYC rules on the shared registry (5 MB; JPEG, PNG, WebP or
+// PDF; private). Call once at startup.
+func RegisterMediaTypes() {
+	objectstore.Register(objectstore.MediaType{
+		Name: objectstore.TypeKYC, MaxBytes: 5 << 20, Image: true,
+		Allowed: []string{"image/jpeg", "image/png", "image/webp", "application/pdf"},
+	})
+}
+
+// MediaHandler stores rider KYC documents and proof-of-delivery photos privately.
 type MediaHandler struct {
 	log *zap.Logger
-	cfg *config.Config
 }
 
-func NewMediaHandler(log *zap.Logger, cfg *config.Config) *MediaHandler {
-	return &MediaHandler{
-		log: log,
-		cfg: cfg,
-	}
+// NewMediaHandler creates the upload handler (storage: SetMediaStore).
+func NewMediaHandler(log *zap.Logger) *MediaHandler {
+	return &MediaHandler{log: log.Named("media")}
 }
 
-// Upload handles file uploads for KYC documents.
-// It validates file size, extension, and saves the file to the media root.
+// Upload stores one KYC or proof-of-delivery file for the caller's tenant: JPEG, PNG, WebP or PDF
+// up to 5 MB, checked from the bytes, images re-encoded. It answers a signed link to preview it;
+// sending that link back on a profile or proof of delivery stores the key. Requires a signed-in
+// user of a tenant.
+//
+// @Summary Upload a KYC or proof-of-delivery file
+// @Tags Media
+// @Accept multipart/form-data
+// @Produce json
+// @Param file formData file true "JPEG, PNG, WebP or PDF, up to 5 MB"
+// @Success 201 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Router /api/v1/media/upload [post]
 func (h *MediaHandler) Upload(w http.ResponseWriter, r *http.Request) {
-	// 1. Limit upload size (5MB as per ERD)
-	r.Body = http.MaxBytesReader(w, r.Body, 5*1024*1024)
-	if err := r.ParseMultipartForm(5 * 1024 * 1024); err != nil {
-		h.log.Error("failed to parse multipart form", zap.Error(err))
-		http.Error(w, "File too large (max 5MB)", http.StatusBadRequest)
+	claims, ok := authclient.ClaimsFromContext(r.Context())
+	if !ok || claims.TenantID == "" {
+		http.Error(w, "Sign in to an organisation to upload", http.StatusUnauthorized)
 		return
 	}
-
-	file, header, err := r.FormFile("file")
+	if !kycMedia.Enabled() {
+		http.Error(w, "File storage is not configured", http.StatusServiceUnavailable)
+		return
+	}
+	up, err := objectstore.ReadUpload(w, r, "file", objectstore.TypeKYC)
 	if err != nil {
-		h.log.Error("failed to get file from form", zap.Error(err))
-		http.Error(w, "Invalid file upload", http.StatusBadRequest)
-		return
-	}
-	defer file.Close()
-
-	// 2. Detect Content Type
-	buffer := make([]byte, 512)
-	n, _ := file.Read(buffer)
-	contentType := http.DetectContentType(buffer[:n])
-	file.Seek(0, 0) // Reset after detection
-
-	allowedTypes := map[string]bool{
-		"image/jpeg":      true,
-		"image/jpg":       true,
-		"image/png":       true,
-		"image/webp":      true,
-		"application/pdf": true,
-	}
-
-	// Go's http.DetectContentType cannot detect WebP (may return
-	// application/octet-stream). Fall back to file extension and
-	// the multipart Content-Type header.
-	if !allowedTypes[contentType] {
-		ext := strings.ToLower(filepath.Ext(header.Filename))
-		headerCT := header.Header.Get("Content-Type")
-
-		switch {
-		case ext == ".webp" || headerCT == "image/webp":
-			contentType = "image/webp"
-		case ext == ".jpg" || ext == ".jpeg" || headerCT == "image/jpeg":
-			contentType = "image/jpeg"
-		case ext == ".png" || headerCT == "image/png":
-			contentType = "image/png"
-		case ext == ".pdf" || headerCT == "application/pdf":
-			contentType = "application/pdf"
+		if objectstore.IsUploadError(err) {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
 		}
-	}
-
-	if !allowedTypes[contentType] {
-		http.Error(w, "Invalid file type. Supported: JPEG, JPG, PNG, WEBP, PDF", http.StatusBadRequest)
+		http.Error(w, "Failed to read the upload", http.StatusInternalServerError)
 		return
 	}
-
-	// 3. Generate unique filename
-	ext := strings.ToLower(filepath.Ext(header.Filename))
-	if ext == "" {
-		switch contentType {
-		case "image/jpeg":
-			ext = ".jpg"
-		case "image/png":
-			ext = ".png"
-		case "image/webp":
-			ext = ".webp"
-		case "application/pdf":
-			ext = ".pdf"
-		}
-	}
-	filename := fmt.Sprintf("%s_%d%s", uuid.New().String(), time.Now().Unix(), ext)
-
-	// Create subdirectory for kyc
-	dir := filepath.Join(h.cfg.Media.Root, "uploads", "kyc")
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		h.log.Error("failed to create upload directory", zap.Error(err))
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	dstPath := filepath.Join(dir, filename)
-	dst, err := os.Create(dstPath)
+	key, err := kycMedia.NewKey(objectstore.Owner{TenantID: claims.TenantID}, objectstore.TypeKYC, up.Ext)
 	if err != nil {
-		h.log.Error("failed to create destination file", zap.Error(err))
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		http.Error(w, "Invalid organisation", http.StatusBadRequest)
 		return
 	}
-	defer dst.Close()
-
-	// 4. Sanitize and Compress (Re-encode supported images)
-	if contentType == "image/jpeg" || contentType == "image/png" {
-		img, _, err := image.Decode(file)
-		if err == nil {
-			if contentType == "image/jpeg" {
-				err = jpeg.Encode(dst, img, &jpeg.Options{Quality: 80}) // Slightly more compression for KYC docs
-			} else {
-				err = png.Encode(dst, img)
-			}
-			if err == nil {
-				goto response
-			}
-			h.log.Warn("re-encoding failed, falling back to direct copy", zap.Error(err))
-			file.Seek(0, 0)
-			dst.Seek(0, 0)
-			dst.Truncate(0)
-		}
-	}
-
-	if _, err := io.Copy(dst, file); err != nil {
-		h.log.Error("failed to copy file", zap.Error(err))
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	if err := kycMedia.Put(r.Context(), key, up.Data, up.ContentType); err != nil {
+		h.log.Error("kyc upload not stored", zap.Error(err))
+		http.Error(w, "File storage is unavailable", http.StatusBadGateway)
 		return
 	}
-
-response:
-
-	// 4. Return URL
-	// Note: In production, URLBase is defined in values.yaml
-	url := fmt.Sprintf("%s/media/uploads/kyc/%s", h.cfg.Media.URLBase, filename)
-
-	// Signed so the form can preview the private file; profile updates store the plain form.
-	respondJSON(w, http.StatusCreated, map[string]string{"url": kycSigner.Sign(url), "filename": filename})
+	respondJSON(w, http.StatusCreated, map[string]string{"url": mediaLink(key), "filename": path.Base(key)})
 }

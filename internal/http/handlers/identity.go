@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"github.com/Bengo-Hub/httpware"
 	"net/http"
 
 	authclient "github.com/Bengo-Hub/shared-auth-client"
@@ -147,7 +146,7 @@ func (h *IdentityHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) 
 	}
 	// The form re-submits the signed URLs it was given; store the plain form.
 	for _, u := range []*string{&req.IDPassportAttachment, &req.RiderPhoto, &req.ImageLicensePlate, &req.ImageSideView} {
-		*u = httpware.StripMediaSignature(*u)
+		*u = mediaRef(*u)
 	}
 
 	u, err := h.svc.UpdateRiderProfile(r.Context(), authID, tenantID, claims.GetTenantSlug(), req)
