@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/google/uuid"
+
 	"github.com/bengobox/logistics-service/internal/ent"
 	fleetmod "github.com/bengobox/logistics-service/internal/modules/fleet"
 )
@@ -82,4 +84,17 @@ func (s *Service) saveRiderVehicle(ctx context.Context, tx *ent.Tx, fm *ent.Flee
 		return fmt.Errorf("link vehicle: %w", err)
 	}
 	return nil
+}
+
+// rekey moves a stub user onto its auth id in its own transaction (fleet.RekeyUser).
+func (s *Service) rekey(ctx context.Context, stub *ent.User, authID uuid.UUID, f fleetmod.RekeyFields) error {
+	tx, err := s.client.Tx(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+	if _, err := fleetmod.RekeyUser(ctx, tx, stub, authID, f); err != nil {
+		return err
+	}
+	return tx.Commit()
 }

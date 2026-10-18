@@ -566,12 +566,20 @@ func (h *LogisticsHandler) OnboardRider(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
-	m, err := h.fleetSvc.OnboardInternalRider(r.Context(), tenantID, slug, req)
+	res, err := h.fleetSvc.OnboardInternalRider(r.Context(), tenantID, slug, req)
 	if err != nil {
 		http.Error(w, err.Error(), fleetErrorStatus(err))
 		return
 	}
-	respondJSON(w, http.StatusCreated, toFleetMemberResponse(m))
+	// The temporary password is in this response once, for the admin to hand over; it is not
+	// stored anywhere in logistics. no-store keeps it out of caches.
+	w.Header().Set("Cache-Control", "no-store")
+	respondJSON(w, http.StatusCreated, struct {
+		*FleetMemberResponse
+		TempPassword    string `json:"temp_password,omitempty"`
+		ExistingAccount bool   `json:"existing_account"`
+		EmailSent       bool   `json:"email_sent"`
+	}{toFleetMemberResponse(res.Member), res.TempPassword, res.ExistingAccount, res.EmailSent})
 }
 
 // ApproveMember handles POST /api/v1/{tenant}/fleet/members/{memberId}/approve
@@ -853,8 +861,11 @@ func (h *LogisticsHandler) AssignVehicle(w http.ResponseWriter, r *http.Request)
 // record is 404, anything else the caller got wrong is 400.
 func fleetErrorStatus(err error) int {
 	switch {
-	case errors.Is(err, fleet.ErrAlreadyRider), errors.Is(err, fleet.ErrVehicleTaken), errors.Is(err, fleet.ErrPlateInUse):
+	case errors.Is(err, fleet.ErrAlreadyRider), errors.Is(err, fleet.ErrVehicleTaken), errors.Is(err, fleet.ErrPlateInUse),
+		errors.Is(err, fleet.ErrOtherBusiness):
 		return http.StatusConflict
+	case errors.Is(err, fleet.ErrAccountsUnavailable):
+		return http.StatusBadGateway
 	case errors.Is(err, fleet.ErrVehicleAbsent), strings.Contains(err.Error(), "not found"):
 		return http.StatusNotFound
 	}

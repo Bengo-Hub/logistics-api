@@ -23,6 +23,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/taskassignment"
 	"github.com/bengobox/logistics-service/internal/ent/user"
 	"github.com/bengobox/logistics-service/internal/ent/userroleassignment"
+	fleetmod "github.com/bengobox/logistics-service/internal/modules/fleet"
 )
 
 // RoleDriver is the universal role for all delivery/courier/taxi/ride use cases.
@@ -378,49 +379,10 @@ func (h *EventHandler) handleUserCreated(ctx context.Context, evt *sharedevents.
 	role := resolveRole(roles, tenantSlug)
 
 	if stub != nil {
-		// The stub was created at invite time with a random PK (auth id unknown then);
-		// fleet_members and user_role_assignments reference that PK. RBAC keys on the
-		// AUTH id (middleware parses claims.Subject → HasPermission(tenant, authID)), so
-		// simply linking the stub (keeping its random PK) leaves role grants unreachable
-		// → 403. Reconcile: recreate the user under the auth id, repoint its child rows,
-		// then delete the stub — all in one transaction.
-		tx, txErr := h.service.client.Tx(ctx)
-		if txErr != nil {
-			return fmt.Errorf("reconcile stub: begin tx: %w", txErr)
-		}
-		if _, err = tx.User.Create().
-			SetID(authUserID).
-			SetAuthServiceUserID(authUserID).
-			SetTenantID(tenantID).
-			SetEmail(email).
-			SetFullName(coalesce(fullName, stub.FullName)).
-			SetPhone(coalesce(phone, stub.Phone)).
-			SetStatus("active").
-			SetSyncStatus("synced").
-			SetSyncAt(time.Now()).
-			SetRole(role).
-			Save(ctx); err != nil {
-			_ = tx.Rollback()
-			return fmt.Errorf("reconcile stub: create user under auth id: %w", err)
-		}
-		if _, err = tx.FleetMember.Update().
-			Where(fleetmember.TenantID(tenantID), fleetmember.UserID(stub.ID)).
-			SetUserID(authUserID).Save(ctx); err != nil {
-			_ = tx.Rollback()
-			return fmt.Errorf("reconcile stub: repoint fleet members: %w", err)
-		}
-		if _, err = tx.UserRoleAssignment.Update().
-			Where(userroleassignment.TenantID(tenantID), userroleassignment.UserID(stub.ID)).
-			SetUserID(authUserID).Save(ctx); err != nil {
-			_ = tx.Rollback()
-			return fmt.Errorf("reconcile stub: repoint role assignments: %w", err)
-		}
-		if err = tx.User.DeleteOneID(stub.ID).Exec(ctx); err != nil {
-			_ = tx.Rollback()
-			return fmt.Errorf("reconcile stub: delete stub: %w", err)
-		}
-		if err = tx.Commit(); err != nil {
-			return fmt.Errorf("reconcile stub: commit: %w", err)
+		// The stub was created at invite time with a random PK (auth id unknown then). RBAC
+		// keys on the AUTH id, so the stub moves onto it with its membership and grants.
+		if err := h.service.rekey(ctx, stub, authUserID, fleetmod.RekeyFields{FullName: fullName, Phone: phone, Role: role}); err != nil {
+			return fmt.Errorf("reconcile stub: %w", err)
 		}
 		log.Printf("[identity-event] reconciled stub user %s to auth id %s (repointed fleet+roles) role=%s", email, authUserID, role)
 		return nil

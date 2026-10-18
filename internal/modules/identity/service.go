@@ -92,6 +92,19 @@ func (s *Service) EnsureUserFromToken(ctx context.Context, authServiceID uuid.UU
 		Only(ctx)
 
 	if err == nil {
+		// A stub linked in place before 2026-10-18 kept its random key; RBAC keys on the auth
+		// id, so its role grants never matched. Move it onto the auth id on this sign-in.
+		if u.ID != authServiceID {
+			if err := s.rekey(ctx, u, authServiceID, fleetmod.RekeyFields{}); err != nil {
+				// A parallel request of the same rider may have moved it already.
+				if moved, gerr := s.client.User.Get(ctx, authServiceID); gerr == nil {
+					return moved, nil
+				}
+				return nil, fmt.Errorf("identity.Service: rekey user: %w", err)
+			}
+			log.Printf("  [jit-provisioning] moved user %s onto AuthID %s", u.Email, authServiceID)
+			return s.client.User.Get(ctx, authServiceID)
+		}
 		return u, nil
 	}
 
@@ -99,24 +112,19 @@ func (s *Service) EnsureUserFromToken(ctx context.Context, authServiceID uuid.UU
 		return nil, fmt.Errorf("identity.Service: query user: %w", err)
 	}
 
-	// 3. Fallback: check if user exists by email (may exist without auth_service_user_id linked)
+	// 3. Fallback: an invite or onboarding stub with this email, created before the auth
+	// account. It moves onto the auth id (RBAC keys on it), taking its membership and grants.
 	email, _ := claims["email"].(string)
 	if email != "" {
 		existing, emailErr := s.client.User.Query().
-			Where(user.EmailEQ(email), user.TenantID(tenantID)).
+			Where(user.EmailEqualFold(email), user.TenantID(tenantID)).
 			Only(ctx)
 		if emailErr == nil && existing != nil {
-			// Link existing user to auth-service ID
-			updated, updErr := existing.Update().
-				SetAuthServiceUserID(authServiceID).
-				SetSyncStatus("synced").
-				SetSyncAt(time.Now()).
-				Save(ctx)
-			if updErr != nil {
-				return nil, fmt.Errorf("identity.Service: link user to auth-service: %w", updErr)
+			if err := s.rekey(ctx, existing, authServiceID, fleetmod.RekeyFields{}); err != nil {
+				return nil, fmt.Errorf("identity.Service: link user to auth-service: %w", err)
 			}
 			log.Printf("  [jit-provisioning] linked existing user %s to AuthID %s", email, authServiceID)
-			return updated, nil
+			return s.client.User.Get(ctx, authServiceID)
 		}
 	}
 

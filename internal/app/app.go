@@ -41,9 +41,11 @@ import (
 	telemetrymod "github.com/bengobox/logistics-service/internal/modules/telemetry"
 	"github.com/bengobox/logistics-service/internal/modules/tenant"
 	zonesmod "github.com/bengobox/logistics-service/internal/modules/zones"
+	"github.com/bengobox/logistics-service/internal/platform/authapi"
 	"github.com/bengobox/logistics-service/internal/platform/database"
 	"github.com/bengobox/logistics-service/internal/platform/erp"
 	"github.com/bengobox/logistics-service/internal/platform/events"
+	"github.com/bengobox/logistics-service/internal/platform/notify"
 	"github.com/bengobox/logistics-service/internal/platform/subscriptions"
 	"github.com/bengobox/logistics-service/internal/shared/logger"
 )
@@ -253,6 +255,13 @@ func New(ctx context.Context) (*App, error) {
 	log.Info("app: earnings statement job started (daily)")
 
 	fleetSvc := fleetmod.NewService(entClient, log, eventPublisher)
+	// Internal riders get their SSO account from auth-api and their sign-in email from
+	// notifications-api when the admin onboards them.
+	fleetSvc.SetAccounts(
+		authapi.NewClient(cfg.Auth.ServiceURL, cfg.Auth.InternalServiceKey, 15*time.Second),
+		notify.NewClient(cfg.Notifications.ServiceURL, cfg.Notifications.APIKey, cfg.Notifications.RequestTimeout),
+		cfg.Notifications.RiderAppURL,
+	)
 	identitySvc.SetRiderApplications(fleetSvc.Apply)
 	fleetSvc.OnStatusChange(taskSvc.InvalidateFleetGate)
 	go fleetSvc.StartStaleRiderCleanup(ctx)

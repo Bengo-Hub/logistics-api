@@ -23,7 +23,18 @@ type Config struct {
 	Routing       RoutingConfig
 	Treasury      TreasuryConfig
 	ERP           ERPConfig
+	Notifications NotificationsConfig
 	Backup        BackupConfig
+}
+
+// NotificationsConfig is the notifications-api client used for direct messages that must not
+// go through the event outbox (an internal rider's account email with a temporary password).
+// RiderAppURL is where that email sends the rider.
+type NotificationsConfig struct {
+	ServiceURL     string        `envconfig:"NOTIFICATIONS_SERVICE_URL" default:"http://notifications-api.notifications.svc.cluster.local:4000"`
+	APIKey         string        `envconfig:"INTERNAL_SERVICE_KEY"`
+	RequestTimeout time.Duration `envconfig:"NOTIFICATIONS_REQUEST_TIMEOUT" default:"10s"`
+	RiderAppURL    string        `envconfig:"RIDER_APP_URL" default:"https://riderapp.codevertexafrica.com"`
 }
 
 // BackupConfig controls the tenant-scoped backup scheduler + retention churn. Artifacts are
@@ -132,6 +143,8 @@ type AuthConfig struct {
 	JWKSRefreshInterval time.Duration `envconfig:"AUTH_JWKS_REFRESH_INTERVAL" default:"300s"`
 	// EnableAPIKeyAuth allows S2S callers to authenticate with INTERNAL_SERVICE_KEY via X-API-Key header.
 	EnableAPIKeyAuth bool `envconfig:"AUTH_ENABLE_API_KEY_AUTH" default:"true"`
+	// InternalServiceKey signs logistics' own S2S calls to auth-api (rider accounts).
+	InternalServiceKey string `envconfig:"INTERNAL_SERVICE_KEY"`
 }
 
 // Load gathers configuration from environment variables and optional .env files.

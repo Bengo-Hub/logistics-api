@@ -140,11 +140,34 @@ Internal riders are the business's own employees, so there is no invite step and
 2. Fills in first name, email, phone and ID number (all required), plus optional licence number
 3. Chooses the pay basis (see below) and the vehicle: none yet, link a free vehicle from the fleet,
    or register a new one (a motorbike is type `motorcycle`; make and model are optional)
-4. Optionally ticks "Also email them the sign-in link". Without it the rider is still active and
-   links up on first sign-in with the same email (identity `EnsureUserFromToken` matches the stub user)
-5. `POST /fleet/members/onboard` creates the stub user, the vehicle (when new) and the member in one
-   transaction. The member is `active` at once, `onboarding_source = company_created`, and gets the
-   driver role
+4. "Email them their sign-in details" is ticked by default
+5. `POST /fleet/members/onboard` (`fleet.Service.OnboardInternalRider`) then runs in this order:
+   - Checks first, so a refusal never leaves an account behind: already a rider here (`409`),
+     linked vehicle taken or foreign, new plate already in the fleet.
+   - auth-api `POST /api/v1/s2s/tenants/{tenant}/members` (role `driver`, `merge_roles`,
+     `skip_welcome`) finds or creates the SSO account. A new account gets a temporary password and
+     `must_change_password`, so the rider must set their own on first sign-in. Called once with no
+     retries (`platform/authapi`): a retried create answers "existing user" without the password.
+     auth-api down answers `502` and nothing is saved.
+   - One transaction writes the local user under the auth user id (the key RBAC uses), the vehicle
+     and the `active` member (`onboarding_source = company_created`). An older stub with the same
+     email is moved onto the auth id (`fleet.RekeyUser`). If `auth.user.created` inserts the user
+     first, the transaction runs once more and finds it. An account that already rides for another
+     business answers `409` (user ids are platform-wide here).
+   - Driver role granted on the auth id.
+   - With the email ticked, `logistics/rider_account` goes straight to notifications-api
+     (`platform/notify`, `Idempotency-Key rider-account:<member>`), never through the event outbox:
+     email, temporary password (new accounts only) and a link to the rider app. An existing account
+     is told to use its own password.
+6. The response carries `temp_password` once (`Cache-Control: no-store`), plus `existing_account`
+   and `email_sent`. The admin sees it in a one-time panel to hand over if the email did not go.
+   Logistics never stores it. In transit it sits in the notifications NATS stream until retention
+   drops it, as with the Digitika portal-account emails.
+
+`fleet.RekeyUser` is the one re-key path, also used by `auth.user.created` and first sign-in
+(`identity.EnsureUserFromToken`). Before 2026-10-18 both of those failed or kept the stub's random
+key: the event handler created the auth-id row while the stub still held `(tenant_id, email)`, and
+sign-in linked the stub in place, so an invited rider's role grants never matched their token.
 
 ID and photo uploads are optional for internal riders. The ID number is the one identity detail
 required: the API refuses an onboarding without it, and the rider-app asks for it when a staff

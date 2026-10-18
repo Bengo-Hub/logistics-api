@@ -459,6 +459,88 @@ paths:
       responses:
         '200':
           description: Array of rider stats
+  /api/v1/{tenant}/fleet/members/onboard:
+    post:
+      tags: [Fleet]
+      summary: Add an internal rider directly
+      description: >-
+        Needs logistics.fleet.manage and rider_management. Creates or finds the rider's SSO account in
+        auth-api (a new one gets a temporary password that must be changed on first sign-in), then an
+        active staff rider with the pay basis and an optional vehicle. ID number is required; ID and photo
+        uploads are optional. send_invite emails the sign-in details. The response carries temp_password
+        once (no-store) for the admin to hand over.
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: tenant, in: path, required: true, schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [first_name, email, phone, id_number]
+              properties:
+                first_name: {type: string}
+                last_name: {type: string}
+                email: {type: string, format: email}
+                phone: {type: string}
+                id_number: {type: string}
+                license_no: {type: string}
+                pay_basis: {type: string, enum: [payroll, earning_rules], default: payroll}
+                vehicle_id: {type: string, format: uuid, description: Link a free fleet vehicle}
+                vehicle:
+                  type: object
+                  description: Register a new vehicle (not with vehicle_id)
+                  required: [vehicle_type, license_plate]
+                  properties:
+                    vehicle_type: {type: string, description: "motorcycle, bicycle, car, van, truck or other (bike and motorbike are accepted)"}
+                    make: {type: string}
+                    model: {type: string}
+                    license_plate: {type: string}
+                send_invite: {type: boolean}
+      responses:
+        '201': {description: "Rider, plus temp_password (new accounts only), existing_account and email_sent"}
+        '400': {description: Missing or invalid details}
+        '409': {description: Already a rider, plate or vehicle taken, or the account rides for another business}
+        '502': {description: auth-api could not create the account; nothing was saved}
+  /api/v1/{tenant}/fleet/vehicles:
+    get:
+      tags: [Fleet]
+      summary: List fleet vehicles
+      description: Needs logistics.fleet.view. Every vehicle, linked or free, with assigned_to, plus a fleet-wide summary counted in SQL.
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: tenant, in: path, required: true, schema: {type: string}}
+        - {name: search, in: query, schema: {type: string}, description: Plate, make or model}
+        - {name: status, in: query, schema: {type: string, enum: [active, maintenance, inactive]}}
+        - {name: assigned, in: query, schema: {type: boolean}}
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: limit, in: query, schema: {type: integer}}
+      responses:
+        '200': {description: "{data, total, page, limit, hasMore, summary: {active, maintenance, inactive, assigned, unassigned}}"}
+  /api/v1/{tenant}/fleet/members/{memberId}/vehicle:
+    post:
+      tags: [Fleet]
+      summary: Link or unlink a rider's vehicle
+      description: Needs logistics.fleet.manage. An empty vehicle_id unlinks. Both rows must belong to the tenant and a vehicle has one rider at a time.
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: tenant, in: path, required: true, schema: {type: string}}
+        - {name: memberId, in: path, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                vehicle_id: {type: string}
+      responses:
+        '200': {description: "{status: assigned | unassigned}"}
+        '404': {description: Rider or vehicle not found}
+        '409': {description: Vehicle linked to another rider}
   /api/v1/{tenant}/shifts:
     get:
       tags: [Shifts]

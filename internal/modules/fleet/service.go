@@ -17,7 +17,9 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/userroleassignment"
 	entvehicle "github.com/bengobox/logistics-service/internal/ent/vehicle"
 	"github.com/bengobox/logistics-service/internal/modules/rbac"
+	"github.com/bengobox/logistics-service/internal/platform/authapi"
 	"github.com/bengobox/logistics-service/internal/platform/events"
+	"github.com/bengobox/logistics-service/internal/platform/notify"
 )
 
 // InviteMemberRequest is the DTO for adding a rider to a fleet.
@@ -35,6 +37,10 @@ type Service struct {
 	log       *zap.Logger
 	publisher *events.Publisher
 	onChange  func(ctx context.Context, tenantID uuid.UUID)
+	// Internal rider onboarding (SetAccounts).
+	auth        *authapi.Client
+	mail        *notify.Client
+	riderAppURL string
 }
 
 // OnStatusChange registers a callback run after a rider's status may have changed (the task
