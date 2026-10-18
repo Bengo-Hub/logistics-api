@@ -20,9 +20,19 @@ import (
 type ZonesHandler struct {
 	svc         *zones.Service
 	geocoder    *zones.Geocoder
+	outletSync  OutletSyncer
 	resolveSlug func(ctx context.Context, slug string) (uuid.UUID, error)
 	log         *zap.Logger
 }
+
+// OutletSyncer pulls a tenant's outlets (and their map pins) from auth-api, the owner,
+// into logistics' mirror. tenant.OutletResync implements it.
+type OutletSyncer interface {
+	SyncTenant(ctx context.Context, tenantID uuid.UUID, slug string) (int, error)
+}
+
+// SetOutletSync enables the on-demand outlet refresh after a pin is saved in auth-api.
+func (h *ZonesHandler) SetOutletSync(s OutletSyncer) { h.outletSync = s }
 
 // NewZonesHandler creates a new zones handler.
 func NewZonesHandler(svc *zones.Service, log *zap.Logger) *ZonesHandler {
@@ -35,6 +45,15 @@ func (h *ZonesHandler) SetGeocoder(g *zones.Geocoder) { h.geocoder = g }
 // SetSlugResolver lets S2S callers address a tenant by slug as well as by UUID.
 func (h *ZonesHandler) SetSlugResolver(f func(ctx context.Context, slug string) (uuid.UUID, error)) {
 	h.resolveSlug = f
+}
+
+// outletParam is the outlet a request is scoped to: the explicit outlet_id parameter, else
+// the outlet the signed-in user switched to (X-Outlet-ID), else none (every outlet).
+func outletParam(r *http.Request) uuid.UUID {
+	if id, err := uuid.Parse(r.URL.Query().Get("outlet_id")); err == nil {
+		return id
+	}
+	return analyticsOutlet(r)
 }
 
 func (h *ZonesHandler) zoneError(w http.ResponseWriter, err error) {
@@ -54,6 +73,7 @@ func (h *ZonesHandler) zoneError(w http.ResponseWriter, err error) {
 // @Tags Zones
 // @Produce json
 // @Param tenant path string true "Tenant slug"
+// @Param outlet_id query string false "Only zones serving this outlet (zones with no outlet scope serve every outlet)"
 // @Success 200 {array} zones.ZoneView
 // @Router /{tenant}/zones [get]
 func (h *ZonesHandler) ListZones(w http.ResponseWriter, r *http.Request) {
@@ -62,7 +82,7 @@ func (h *ZonesHandler) ListZones(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	list, err := h.svc.ListZones(r.Context(), tenantID)
+	list, err := h.svc.ListZonesForOutlet(r.Context(), tenantID, outletParam(r))
 	if err != nil {
 		h.log.Error("list zones", zap.Error(err))
 		http.Error(w, "internal server error", http.StatusInternalServerError)
@@ -203,8 +223,7 @@ func (h *ZonesHandler) Coverage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "tenant not found", http.StatusNotFound)
 		return
 	}
-	outletID, _ := uuid.Parse(r.URL.Query().Get("outlet_id"))
-	c, err := h.svc.Coverage(r.Context(), tenantID, outletID)
+	c, err := h.svc.Coverage(r.Context(), tenantID, outletParam(r))
 	if err != nil {
 		h.log.Error("coverage", zap.Error(err))
 		http.Error(w, "internal server error", http.StatusInternalServerError)
@@ -247,9 +266,8 @@ func (h *ZonesHandler) Quote(w http.ResponseWriter, r *http.Request) {
 		respondJSON(w, http.StatusBadRequest, map[string]string{"error": "lat and lng are required"})
 		return
 	}
-	outletID, _ := uuid.Parse(q.Get("outlet_id"))
 	total, _ := strconv.ParseFloat(q.Get("order_total"), 64)
-	h.writeQuote(w, r, tenantID, zones.QuoteInput{Point: geo.Point{Lat: lat, Lng: lng}, OutletID: outletID, OrderTotal: total})
+	h.writeQuote(w, r, tenantID, zones.QuoteInput{Point: geo.Point{Lat: lat, Lng: lng}, OutletID: outletParam(r), OrderTotal: total})
 }
 
 // S2SQuote godoc
@@ -321,6 +339,70 @@ func (h *ZonesHandler) writeQuote(w http.ResponseWriter, r *http.Request, tenant
 		return
 	}
 	respondJSON(w, http.StatusOK, quote)
+}
+
+// SuggestFee godoc
+// @Summary Suggest the delivery fee of a new area
+// @Description Prices an area centred on a point from the dispatching outlet with the tenant's per-km rules (base fee, rate, minimum, rounding, distance source). The area form fills the fee from it.
+// @Tags Zones
+// @Produce json
+// @Param tenant path string true "Tenant slug"
+// @Param lat query number true "Area centre latitude"
+// @Param lng query number true "Area centre longitude"
+// @Param radius_m query number false "Area radius in metres (0 for a point)"
+// @Param outlet_id query string false "Dispatching outlet (nearest with a map location when omitted)"
+// @Success 200 {object} zones.FeeSuggestion
+// @Router /{tenant}/delivery-policy/suggest-fee [get]
+func (h *ZonesHandler) SuggestFee(w http.ResponseWriter, r *http.Request) {
+	tenantID := tenantIDFromClaims(r)
+	if tenantID == uuid.Nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	q := r.URL.Query()
+	lat, err1 := strconv.ParseFloat(q.Get("lat"), 64)
+	lng, err2 := strconv.ParseFloat(q.Get("lng"), 64)
+	if err1 != nil || err2 != nil || !geo.Valid(geo.Point{Lat: lat, Lng: lng}) {
+		respondJSON(w, http.StatusBadRequest, map[string]string{"error": "a valid lat and lng are required"})
+		return
+	}
+	radius, _ := strconv.ParseFloat(q.Get("radius_m"), 64)
+	if radius < 0 || radius > 500_000 {
+		respondJSON(w, http.StatusBadRequest, map[string]string{"error": "radius_m must be between 0 and 500000"})
+		return
+	}
+	s, err := h.svc.SuggestFee(r.Context(), tenantID, outletParam(r), geo.Point{Lat: lat, Lng: lng}, radius)
+	if err != nil {
+		h.log.Error("suggest fee", zap.Error(err))
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, s)
+}
+
+// RefreshOutlets godoc
+// @Summary Pull the tenant's outlets and map pins from auth-api now
+// @Description auth-api owns outlets and their pins. After a pin is saved there, this refreshes logistics' mirror at once instead of waiting for the outlet event, and drops the cached quotes.
+// @Tags Zones
+// @Produce json
+// @Param tenant path string true "Tenant slug"
+// @Success 200 {object} map[string]int
+// @Router /{tenant}/zones/outlets/refresh [post]
+func (h *ZonesHandler) RefreshOutlets(w http.ResponseWriter, r *http.Request) {
+	tenantID := tenantIDFromClaims(r)
+	if tenantID == uuid.Nil || h.outletSync == nil {
+		http.Error(w, "not available", http.StatusNotFound)
+		return
+	}
+	written, err := h.outletSync.SyncTenant(r.Context(), tenantID, chi.URLParam(r, "tenant"))
+	if err != nil {
+		h.log.Warn("refresh outlets", zap.Error(err))
+		http.Error(w, "could not reach the account service", http.StatusBadGateway)
+		return
+	}
+	// A pin saved with no other change still moves quotes, so always drop the cached view.
+	h.svc.Invalidate(r.Context(), tenantID)
+	respondJSON(w, http.StatusOK, map[string]int{"outlets_updated": written})
 }
 
 // GetPolicy godoc

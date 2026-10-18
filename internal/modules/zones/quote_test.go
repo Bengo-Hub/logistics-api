@@ -130,9 +130,11 @@ func TestQuoteOutsideCoverage(t *testing.T) {
 	if q.Serviceable || q.Reason != ReasonOutside || q.NearestArea == nil {
 		t.Fatalf("kisumu quote = %+v", q)
 	}
-	// 3 km past the Malaba edge is beyond the 2 km buffer.
+	// 3 km past the Malaba edge is beyond the 2 km buffer (buffer coverage ignores reach).
 	p := geo.Point{Lat: malaba.Lat + 6/111.195, Lng: malaba.Lng}
-	if q := computeQuote(QuoteInput{Point: p}, busiaSnapshot(t), straightOnly); q.Serviceable {
+	snap := busiaSnapshot(t)
+	snap.Policy.Coverage = CoverageBuffer
+	if q := computeQuote(QuoteInput{Point: p}, snap, straightOnly); q.Serviceable {
 		t.Fatalf("pin beyond buffer must be rejected: %+v", q)
 	}
 }
@@ -287,4 +289,138 @@ func jsonRoundTrip(t *testing.T, in map[string]any) map[string]any {
 		t.Fatal(err)
 	}
 	return out
+}
+
+// south returns the point d km due south of the outlet (a meridian, so the great-circle
+// distance is exactly d).
+func south(d float64) geo.Point {
+	return geo.Point{Lat: busiaOutlet.Point.Lat - d/111.195, Lng: busiaOutlet.Point.Lng}
+}
+
+func TestFurthestReachIsTheFarEdgeOfTheFurthestArea(t *testing.T) {
+	snap := busiaSnapshot(t)
+	var delivery []compiledZone
+	delivery = append(delivery, snap.Zones...)
+	km, far := furthestReach(busiaOutlet.Point, delivery)
+	want := geo.Distance(busiaOutlet.Point, malaba) + 3
+	if far.Name != "Malaba" || math.Abs(km-want) > 0.05 {
+		t.Fatalf("reach = %.3f via %s, want about %.3f via Malaba", km, far.Name, want)
+	}
+}
+
+func TestQuoteFurthestAreaServesPinsBetweenAreas(t *testing.T) {
+	// 10 km south of the outlet: no area there and further than the 2 km buffer from every
+	// one, but much closer than Malaba's far edge, so it is delivered by distance.
+	p := south(10)
+	q := computeQuote(QuoteInput{Point: p}, busiaSnapshot(t), straightOnly)
+	if !q.Serviceable || q.Method != MethodPerKm || q.Zone != nil {
+		t.Fatalf("pin inside the furthest reach must be delivered by distance, got %+v", q)
+	}
+	if q.Fee < 100 || math.Mod(q.Fee, 10) != 0 || q.Breakdown == nil {
+		t.Fatalf("distance fee must follow the policy, got %+v", q)
+	}
+	if q.FurthestArea == nil || q.FurthestArea.Name != "Malaba" || q.FurthestAreaKm < 25 {
+		t.Fatalf("quote should report the furthest area, got %+v", q.FurthestArea)
+	}
+	if !q.NeedsConfirmation {
+		t.Fatal("distance-priced deliveries are confirmed with the customer by default")
+	}
+}
+
+func TestQuoteBeyondFurthestAreaIsOutside(t *testing.T) {
+	snap := busiaSnapshot(t)
+	reach, _ := furthestReach(busiaOutlet.Point, snap.Zones)
+	buf := snap.Policy.BufferKm
+
+	if q := computeQuote(QuoteInput{Point: south(reach + buf - 0.05)}, snap, straightOnly); !q.Serviceable {
+		t.Fatalf("just inside reach plus buffer must be served: %+v", q)
+	}
+	q := computeQuote(QuoteInput{Point: south(reach + buf + 0.05)}, snap, straightOnly)
+	if q.Serviceable || q.Reason != ReasonOutside {
+		t.Fatalf("beyond the furthest area must be out of the delivery area: %+v", q)
+	}
+	if q.FurthestArea == nil || q.FurthestAreaKm <= 0 || q.OutletKm < reach {
+		t.Fatalf("the refusal must say how far deliveries go: %+v", q)
+	}
+}
+
+func TestQuoteBufferCoverageIgnoresReach(t *testing.T) {
+	snap := busiaSnapshot(t)
+	snap.Policy.Coverage = CoverageBuffer
+	if q := computeQuote(QuoteInput{Point: south(10)}, snap, straightOnly); q.Serviceable || q.Reason != ReasonOutside {
+		t.Fatalf("buffer coverage must keep refusing pins far from every area: %+v", q)
+	}
+}
+
+func TestQuoteConfirmationFlagFollowsPolicy(t *testing.T) {
+	snap := busiaSnapshot(t)
+	snap.Policy.ConfirmByEmail = false
+	if q := computeQuote(QuoteInput{Point: south(10)}, snap, straightOnly); !q.Serviceable || q.NeedsConfirmation {
+		t.Fatalf("confirmation switched off: %+v", q)
+	}
+	// An area-priced delivery never needs confirming, whatever the policy says.
+	snap.Policy.ConfirmByEmail = true
+	if q := computeQuote(QuoteInput{Point: alupe}, snap, straightOnly); q.NeedsConfirmation {
+		t.Fatalf("area fees are published prices: %+v", q)
+	}
+}
+
+func TestQuoteReachIsPerOutlet(t *testing.T) {
+	snap := busiaSnapshot(t)
+	other := OutletPoint{ID: uuid.New(), Name: "Other", Point: geo.Point{Lat: 0.30, Lng: 34.20}}
+	snap.Outlets = append(snap.Outlets, other)
+	// Every area is served only by the Busia outlet, so the other one has no reach at all.
+	for i := range snap.Zones {
+		snap.Zones[i].Settings.OutletIDs = []uuid.UUID{busiaOutlet.ID}
+	}
+	q := computeQuote(QuoteInput{Point: south(10), OutletID: other.ID}, snap, straightOnly)
+	if q.Serviceable || q.Reason != ReasonNoCoverage && q.Reason != ReasonOutside {
+		t.Fatalf("an outlet with no areas must not borrow another outlet's reach: %+v", q)
+	}
+}
+
+func TestPolicyCoverageDefaultsAndValidation(t *testing.T) {
+	p, err := ParsePolicy(`{"per_km_rate": 60}`)
+	if err != nil || p.Coverage != CoverageFurthestArea || !p.ConfirmByEmail {
+		t.Fatalf("older policies get the furthest-area rule and email confirmation: %+v %v", p, err)
+	}
+	p, err = ParsePolicy(`{"coverage": "buffer", "confirm_by_email": false}`)
+	if err != nil || p.Coverage != CoverageBuffer || p.ConfirmByEmail {
+		t.Fatalf("explicit values must stick: %+v %v", p, err)
+	}
+	if _, err := ParsePolicy(`{"coverage": "anywhere"}`); err == nil {
+		t.Fatal("unknown coverage rule must fail")
+	}
+}
+
+func TestSuggestFeeUsesTheTenantRulesFromTheOutlet(t *testing.T) {
+	snap := busiaSnapshot(t)
+	s := suggestFee(snap, uuid.Nil, alupe, 1500, straightOnly)
+	km := money.Round2(geo.Distance(busiaOutlet.Point, alupe) * 1.25)
+	want := math.Ceil(math.Max(50*km, 100)/10) * 10
+	if s.Reason != "" || s.Outlet == nil || s.Outlet.ID != busiaOutlet.ID || s.SuggestedFee != want || s.DistanceKm != km {
+		t.Fatalf("suggestion = %+v, want fee %v at %v km", s, want, km)
+	}
+	if s.NearKm >= s.DistanceKm || s.FarKm <= s.DistanceKm || s.NearFee > s.SuggestedFee || s.FarFee < s.SuggestedFee {
+		t.Fatalf("an area spans a price range around its centre: %+v", s)
+	}
+	if s.OutletInside {
+		t.Fatal("the outlet is not inside Alupe")
+	}
+	// A quote of the same centre by distance gives the same fee.
+	q := computeQuote(QuoteInput{Point: south(10)}, snap, straightOnly)
+	if got := suggestFee(snap, uuid.Nil, south(10), 500, straightOnly); got.SuggestedFee != q.Fee {
+		t.Fatalf("suggestion %v must match the distance quote %v", got.SuggestedFee, q.Fee)
+	}
+}
+
+func TestSuggestFeeOutletInsideAreaAndNoOutlet(t *testing.T) {
+	snap := busiaSnapshot(t)
+	if s := suggestFee(snap, busiaOutlet.ID, busiaOutlet.Point, 3000, straightOnly); !s.OutletInside || s.NearKm != 0 {
+		t.Fatalf("a town circle around the outlet contains it: %+v", s)
+	}
+	snap.Outlets = nil
+	if s := suggestFee(snap, uuid.Nil, alupe, 1500, straightOnly); s.Reason != ReasonNoOutlet || s.SuggestedFee != 0 {
+		t.Fatalf("no outlet pin means no suggestion: %+v", s)
+	}
 }

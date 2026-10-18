@@ -129,7 +129,9 @@ paths:
     get:
       tags: [Zones]
       summary: List delivery zones
-      description: All service areas of the tenant with their delivery settings.
+      description: All service areas of the tenant with their delivery settings, including drafts and admin notes. Requires logistics.zones.view. Scoped to the outlet in outlet_id, else the outlet in X-Outlet-ID; areas with no outlet scope serve every outlet.
+      security:
+        - bearerAuth: []
       parameters:
         - name: tenant
           in: path
@@ -137,6 +139,11 @@ paths:
           schema:
             type: string
           description: Tenant slug
+        - name: outlet_id
+          in: query
+          schema:
+            type: string
+          description: Only zones serving this outlet
       responses:
         '200':
           description: Zones
@@ -230,7 +237,7 @@ paths:
     get:
       tags: [Zones]
       summary: Delivery quote for a location
-      description: Public. Serviceable flag, fee, method, matched or nearest area, distance and ETA. The fee is authoritative.
+      description: Public. Serviceable flag, fee, method, matched or nearest area, distance and ETA. The fee is authoritative. A pin outside every area is still delivered (per-km price) while it is no further from the outlet than the furthest area's far edge plus buffer_km, unless the policy coverage is "buffer". outlet_id falls back to X-Outlet-ID, then the nearest outlet.
       parameters:
         - name: tenant
           in: path
@@ -263,11 +270,68 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quote'
+  /api/v1/{tenant}/zones/outlets/refresh:
+    post:
+      tags: [Zones]
+      summary: Pull the tenant's outlets and map pins from auth-api now
+      description: auth-api owns outlets and their pins. After a pin is saved there this refreshes logistics' mirror at once and drops cached quotes. Requires logistics.zones.manage.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: tenant
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Tenant slug
+      responses:
+        '200':
+          description: Number of outlets updated
+  /api/v1/{tenant}/delivery-policy/suggest-fee:
+    get:
+      tags: [Zones]
+      summary: Suggest the delivery fee of a new area
+      description: Prices an area centred on a point from the dispatching outlet with the tenant's per-km rules (base fee, rate, minimum, rounding, distance source). Returns the fee at the centre and at the near and far edges. Requires logistics.zones.manage.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: tenant
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Tenant slug
+        - name: lat
+          in: query
+          required: true
+          schema:
+            type: number
+        - name: lng
+          in: query
+          required: true
+          schema:
+            type: number
+        - name: radius_m
+          in: query
+          schema:
+            type: number
+        - name: outlet_id
+          in: query
+          schema:
+            type: string
+          description: Dispatching outlet, else X-Outlet-ID, else the nearest with a map location
+      responses:
+        '200':
+          description: Suggestion
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeeSuggestion'
   /api/v1/{tenant}/delivery-policy:
     get:
       tags: [Zones]
       summary: Delivery quote policy
-      description: Per-km fallback, geofence buffer, maximum radius, rounding and distance source. Requires logistics.zones.view.
+      description: Per-km fallback, coverage rule, geofence buffer, maximum radius, rounding, distance source and customer confirmation. Requires logistics.zones.view.
       security:
         - bearerAuth: []
       parameters:
@@ -752,6 +816,20 @@ components:
         starts_on: {type: string, format: date}
         expires_on: {type: string, format: date, description: Last day of cover (local date)}
         document: {type: string, description: Uploaded certificate reference}
+    FeeSuggestion:
+      type: object
+      properties:
+        outlet: {type: object, properties: {id: {type: string}, name: {type: string}}}
+        distance_km: {type: number, description: Distance from the outlet to the area centre}
+        distance_type: {type: string, enum: [road, estimated, straight]}
+        near_km: {type: number}
+        far_km: {type: number}
+        suggested_fee: {type: number, description: Per-km fee at the area centre}
+        near_fee: {type: number}
+        far_fee: {type: number}
+        outlet_inside: {type: boolean, description: The outlet sits inside the area, where delivery is normally free}
+        currency: {type: string}
+        reason: {type: string, description: no_outlet_location when no outlet has a map pin}
     ZoneSettings:
       type: object
       properties:
@@ -793,6 +871,10 @@ components:
         zone: {type: object, properties: {id: {type: string}, name: {type: string}}}
         nearest_area: {type: object, properties: {id: {type: string}, name: {type: string}}}
         nearest_area_km: {type: number}
+        furthest_area: {type: object, properties: {id: {type: string}, name: {type: string}}, description: The area reaching furthest from the outlet}
+        furthest_area_km: {type: number, description: Straight-line distance from the outlet to the furthest area's far edge}
+        outlet_km: {type: number, description: Straight-line distance from the outlet to the pin}
+        needs_confirmation: {type: boolean, description: Distance-priced delivery whose area, distance and fee are sent to the customer with the order confirmation}
         distance_km: {type: number}
         distance_type: {type: string, enum: [road, estimated, straight]}
         eta_minutes: {type: integer}

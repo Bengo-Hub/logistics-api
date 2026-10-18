@@ -156,9 +156,7 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 						return
 					}
 					// Public read-only endpoints — skip auth entirely for guest checkout
-					if r.Method == http.MethodGet && (strings.Contains(path, "/zones") ||
-						strings.Contains(path, "/routing/") ||
-						strings.Contains(path, "/track/")) {
+					if r.Method == http.MethodGet && isPublicGuestRead(path) {
 						next.ServeHTTP(w, r)
 						return
 					}
@@ -324,25 +322,35 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 				// Public, per-IP throttled: customer maps and checkout call these as guests.
 				publicGeo := limiter.Middleware(ratelimit.ValueKey("geo", ratelimit.ClientIP), 120, time.Minute)
 				tenant.Route("/zones", func(zoneR chi.Router) {
-					zoneR.Get("/", zh.ListZones)
+					// Coverage and quote are the only public reads; the list and one zone carry
+					// drafts and admin notes, so they need zones.view (see isPublicGuestRead).
 					zoneR.With(publicGeo).Get("/coverage", zh.Coverage)
 					zoneR.With(publicGeo).Get("/quote", zh.Quote)
-					zoneR.Get("/{zoneId}", zh.GetZone)
+					zoneR.Group(func(read chi.Router) {
+						if rbacSvc != nil {
+							read.Use(appmw.RequirePermission(rbacSvc, rbac.PermZoneView))
+						}
+						read.Get("/", zh.ListZones)
+						read.Get("/{zoneId}", zh.GetZone)
+					})
 					zoneR.Group(func(mut chi.Router) {
 						if rbacSvc != nil {
 							mut.Use(appmw.RequirePermission(rbacSvc, rbac.PermZoneManage))
 						}
 						mut.Post("/", zh.CreateZone)
+						mut.Post("/outlets/refresh", zh.RefreshOutlets)
 						mut.Patch("/{zoneId}", zh.UpdateZone)
 						mut.Delete("/{zoneId}", zh.DeleteZone)
 					})
 				})
 				tenant.Route("/delivery-policy", func(polR chi.Router) {
 					if rbacSvc != nil {
+						polR.With(appmw.RequirePermission(rbacSvc, rbac.PermZoneManage)).Get("/suggest-fee", zh.SuggestFee)
 						polR.With(appmw.RequirePermission(rbacSvc, rbac.PermZoneView)).Get("/", zh.GetPolicy)
 						polR.With(appmw.RequirePermission(rbacSvc, rbac.PermPricingManage)).Put("/", zh.SavePolicy)
 						polR.With(appmw.RequirePermission(rbacSvc, rbac.PermPricingManage)).Delete("/", zh.ResetPolicy)
 					} else {
+						polR.Get("/suggest-fee", zh.SuggestFee)
 						polR.Get("/", zh.GetPolicy)
 						polR.Put("/", zh.SavePolicy)
 						polR.Delete("/", zh.ResetPolicy)

@@ -1,9 +1,11 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
+	"github.com/Bengo-Hub/httpware"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
@@ -31,6 +33,28 @@ func analyticsPeriod(r *http.Request, def string) (string, time.Time) {
 	now := time.Now().In(reportLocation)
 	midnight := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, reportLocation)
 	return p, midnight.AddDate(0, 0, -(days - 1))
+}
+
+// analyticsOutlet is the outlet the dashboard is drilled into (X-Outlet-ID), or uuid.Nil for
+// every outlet of the tenant. An unreadable header means no drill-down.
+func analyticsOutlet(r *http.Request) uuid.UUID {
+	id, err := uuid.Parse(httpware.GetOutletID(r.Context()))
+	if err != nil {
+		return uuid.Nil
+	}
+	return id
+}
+
+// outletFilter adds "AND t.outlet_id = $n" to a tasks query when a drill-down is set. The
+// clause is only present then, so the planner never sees an optional-parameter OR and keeps
+// choosing the (tenant_id, outlet_id, created_at) index for a drill-down and
+// (tenant_id, created_at) otherwise. args are the query's arguments so far.
+func outletFilter(outlet uuid.UUID, args []any) (string, []any) {
+	if outlet == uuid.Nil {
+		return "", args
+	}
+	args = append(args, outlet)
+	return fmt.Sprintf(" AND t.outlet_id = $%d", len(args)), args
 }
 
 // SeriesPoint is one hour (today) or day of task outcomes, by when the task was created.
@@ -64,7 +88,9 @@ func (h *AnalyticsHandler) GetSeries(w http.ResponseWriter, r *http.Request) {
 	}
 	points := map[int64]SeriesPoint{}
 	if h.db != nil {
-		// One grouped scan served by the (tenant_id, created_at) index.
+		// One grouped scan served by the (tenant_id, created_at) index, or the
+		// (tenant_id, outlet_id, created_at) one when drilled into an outlet.
+		scope, args := outletFilter(analyticsOutlet(r), []any{tenantID, since, unit, reportLocation.String()})
 		rows, err := h.db.QueryContext(r.Context(), `
 			SELECT date_trunc($3, t.created_at AT TIME ZONE $4) AS bucket,
 			  count(*),
@@ -72,8 +98,8 @@ func (h *AnalyticsHandler) GetSeries(w http.ResponseWriter, r *http.Request) {
 			  count(*) FILTER (WHERE t.status = 'failed'),
 			  count(*) FILTER (WHERE t.status = 'cancelled')
 			FROM tasks t
-			WHERE t.tenant_id = $1 AND t.created_at >= $2
-			GROUP BY 1`, tenantID, since, unit, reportLocation.String())
+			WHERE t.tenant_id = $1 AND t.created_at >= $2`+scope+`
+			GROUP BY 1`, args...)
 		if err != nil {
 			h.log.Error("analytics: series", zap.Error(err))
 			http.Error(w, "internal error", http.StatusInternalServerError)
@@ -149,6 +175,7 @@ func (h *AnalyticsHandler) GetRiderStats(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	_, since := analyticsPeriod(r, "7d")
+	scope, args := outletFilter(analyticsOutlet(r), []any{tenantID, since})
 	// The rider credited with a job is the one whose assignment was not declined or taken back.
 	rows, err := h.db.QueryContext(r.Context(), `
 		SELECT a.fleet_member_id,
@@ -162,10 +189,10 @@ func (h *AnalyticsHandler) GetRiderStats(w http.ResponseWriter, r *http.Request)
 		FROM tasks t
 		JOIN task_assignments a ON a.task_id = t.id AND a.status NOT IN ('declined', 'unassigned')
 		LEFT JOIN proof_of_deliveries p ON p.task_id = t.id
-		WHERE t.tenant_id = $1 AND t.created_at >= $2
+		WHERE t.tenant_id = $1 AND t.created_at >= $2`+scope+`
 		GROUP BY 1
 		ORDER BY 3 DESC, 2 DESC
-		LIMIT 50`, tenantID, since)
+		LIMIT 50`, args...)
 	if err != nil {
 		h.log.Error("analytics: rider stats", zap.Error(err))
 		http.Error(w, "internal error", http.StatusInternalServerError)

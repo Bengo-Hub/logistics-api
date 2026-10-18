@@ -356,6 +356,7 @@ func New(ctx context.Context) (*App, error) {
 	geocoder.SetLimiter(ratelimit.NewLimiter(redisClient, log, "logistics"))
 	zonesHandler.SetGeocoder(geocoder)
 	zonesHandler.SetSlugResolver(identitySvc.ResolveTenantSlug)
+	zonesHandler.SetOutletSync(outletResync)
 
 	// RBAC
 	rbacRepo := rbacmod.NewEntRepository(entClient)

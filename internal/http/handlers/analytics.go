@@ -74,8 +74,13 @@ func (h *AnalyticsHandler) GetKPIs(w http.ResponseWriter, r *http.Request) {
 		Status string `json:"status"`
 		Count  int    `json:"count"`
 	}
-	if err := h.client.Task.Query().
-		Where(task.TenantID(tenantID), task.CreatedAtGTE(since)).
+	outlet := analyticsOutlet(r)
+	scope, scopeArgs := outletFilter(outlet, []any{tenantID, since})
+	counts := h.client.Task.Query().Where(task.TenantID(tenantID), task.CreatedAtGTE(since))
+	if outlet != uuid.Nil {
+		counts = counts.Where(task.OutletID(outlet))
+	}
+	if err := counts.
 		GroupBy(task.FieldStatus).
 		Aggregate(ent.Count()).
 		Scan(ctx, &byStatus); err != nil {
@@ -97,7 +102,7 @@ func (h *AnalyticsHandler) GetKPIs(w http.ResponseWriter, r *http.Request) {
 			    FILTER (WHERE p.captured_at - t.created_at BETWEEN interval '0' AND interval '24 hours')
 			FROM tasks t
 			JOIN proof_of_deliveries p ON p.task_id = t.id
-			WHERE t.tenant_id = $1 AND t.created_at >= $2`, tenantID, since).Scan(&slaCount, &onTime, &avg); err != nil {
+			WHERE t.tenant_id = $1 AND t.created_at >= $2`+scope, scopeArgs...).Scan(&slaCount, &onTime, &avg); err != nil {
 			h.log.Warn("analytics: delivery timing", zap.Error(err))
 		}
 		if slaCount > 0 {
@@ -120,7 +125,7 @@ func (h *AnalyticsHandler) GetKPIs(w http.ResponseWriter, r *http.Request) {
 			SELECT count(DISTINCT a.fleet_member_id)
 			FROM tasks t JOIN task_assignments a ON a.task_id = t.id
 			WHERE t.tenant_id = $1 AND t.created_at >= $2
-			  AND a.status NOT IN ('declined', 'unassigned')`, tenantID, since).Scan(&ridersWorking); err != nil {
+			  AND a.status NOT IN ('declined', 'unassigned')`+scope, scopeArgs...).Scan(&ridersWorking); err != nil {
 			h.log.Warn("analytics: riders working", zap.Error(err))
 		}
 	}
@@ -208,8 +213,10 @@ func (h *AnalyticsHandler) GetZoneStats(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	_, since := analyticsPeriod(r, "30d")
-	// One grouped scan over the tenant's tasks of the period, served by the
-	// (tenant_id, created_at) index; tasks without a zone report as "Unzoned".
+	scope, args := outletFilter(analyticsOutlet(r), []any{tenantID, since})
+	// One grouped scan over the tenant's tasks of the period (one outlet's when drilled
+	// in), served by the (tenant_id, created_at) or (tenant_id, outlet_id, created_at)
+	// index; tasks without a zone report as "Unzoned".
 	rows, err := h.db.QueryContext(r.Context(), `
 		SELECT
 		  COALESCE(t.metadata->>'zone_id', '') AS zone_id,
@@ -227,10 +234,10 @@ func (h *AnalyticsHandler) GetZoneStats(w http.ResponseWriter, r *http.Request) 
 		  count(*) FILTER (WHERE t.sla_due_at IS NOT NULL AND p.captured_at <= t.sla_due_at)
 		FROM tasks t
 		LEFT JOIN proof_of_deliveries p ON p.task_id = t.id
-		WHERE t.tenant_id = $1 AND t.created_at >= $2 AND t.task_type = 'delivery'
+		WHERE t.tenant_id = $1 AND t.created_at >= $2 AND t.task_type = 'delivery'`+scope+`
 		GROUP BY 1
 		ORDER BY 3 DESC
-		LIMIT 500`, tenantID, since)
+		LIMIT 500`, args...)
 	if err != nil {
 		h.log.Error("analytics: zone stats", zap.Error(err))
 		http.Error(w, "internal error", http.StatusInternalServerError)

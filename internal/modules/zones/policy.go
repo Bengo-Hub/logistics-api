@@ -16,6 +16,12 @@ const (
 
 	DistanceRoad     = "road"
 	DistanceStraight = "straight"
+
+	// CoverageFurthestArea accepts a pin outside every area when it is no further from the
+	// outlet than the furthest area reaches; CoverageBuffer only accepts pins within
+	// BufferKm of an area edge.
+	CoverageFurthestArea = "furthest_area"
+	CoverageBuffer       = "buffer"
 )
 
 // Policy is the tenant's customer delivery pricing and geofence configuration. Zones
@@ -23,8 +29,16 @@ const (
 type Policy struct {
 	// Fallback is per_km (charge by distance near the coverage) or none (zones only).
 	Fallback string `json:"fallback"`
-	// BufferKm accepts a pin outside every zone when it is within this distance of one.
+	// Coverage decides which pins outside every zone are still served (at the per-km price):
+	// furthest_area serves anything up to the furthest area's far edge from the outlet, buffer
+	// only serves pins close to an area edge. Both add BufferKm of slack.
+	Coverage string `json:"coverage"`
+	// BufferKm accepts a pin outside every zone when it is within this distance of one, and
+	// is the slack added to the furthest area's reach.
 	BufferKm float64 `json:"buffer_km"`
+	// ConfirmByEmail sends the customer the area, distance and fee of a distance-priced
+	// delivery with their order confirmation, so they can confirm it.
+	ConfirmByEmail bool `json:"confirm_by_email"`
 	// MaxRadiusKm optionally caps any delivery at this straight-line distance from the outlet.
 	MaxRadiusKm *float64 `json:"max_radius_km,omitempty"`
 	// RequireZones rejects every pin when the tenant has no active delivery zone. When
@@ -51,7 +65,9 @@ type Policy struct {
 func DefaultPolicy() Policy {
 	return Policy{
 		Fallback:           FallbackPerKm,
+		Coverage:           CoverageFurthestArea,
 		BufferKm:           2,
+		ConfirmByEmail:     true,
 		RequireZones:       true,
 		BaseFee:            0,
 		PerKmRate:          50,
@@ -86,6 +102,12 @@ func (p *Policy) Validate() error {
 	}
 	if p.Fallback != FallbackPerKm && p.Fallback != FallbackNone {
 		return fmt.Errorf("zones: fallback must be per_km or none")
+	}
+	if p.Coverage == "" {
+		p.Coverage = CoverageFurthestArea
+	}
+	if p.Coverage != CoverageFurthestArea && p.Coverage != CoverageBuffer {
+		return fmt.Errorf("zones: coverage must be furthest_area or buffer")
 	}
 	if p.DistanceSource == "" {
 		p.DistanceSource = DistanceRoad

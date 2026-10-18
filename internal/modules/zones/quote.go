@@ -49,24 +49,33 @@ type ZoneRef struct {
 // Quote is the answer every consumer receives. Fee is authoritative: callers must not
 // recompute it.
 type Quote struct {
-	Serviceable   bool         `json:"serviceable"`
-	Reason        string       `json:"reason,omitempty"`
-	Method        string       `json:"method,omitempty"`
-	Fee           float64      `json:"fee"`
-	Free          bool         `json:"free"`
-	Currency      string       `json:"currency"`
-	Zone          *ZoneRef     `json:"zone,omitempty"`
-	NearestArea   *ZoneRef     `json:"nearest_area,omitempty"`
-	NearestAreaKm float64      `json:"nearest_area_km,omitempty"`
-	DistanceKm    float64      `json:"distance_km"`
-	DistanceType  string       `json:"distance_type,omitempty"`
-	EtaMinutes    int          `json:"eta_minutes,omitempty"`
-	MinOrder      float64      `json:"min_order"`
-	BelowMinOrder bool         `json:"below_min_order,omitempty"`
-	Outlet        *OutletPoint `json:"outlet,omitempty"`
-	Breakdown     *Breakdown   `json:"breakdown,omitempty"`
-	PolicyVersion string       `json:"policy_version"`
-	CacheSeconds  int          `json:"cache_seconds"`
+	Serviceable   bool     `json:"serviceable"`
+	Reason        string   `json:"reason,omitempty"`
+	Method        string   `json:"method,omitempty"`
+	Fee           float64  `json:"fee"`
+	Free          bool     `json:"free"`
+	Currency      string   `json:"currency"`
+	Zone          *ZoneRef `json:"zone,omitempty"`
+	NearestArea   *ZoneRef `json:"nearest_area,omitempty"`
+	NearestAreaKm float64  `json:"nearest_area_km,omitempty"`
+	// FurthestArea is the area reaching furthest from the outlet and FurthestAreaKm how far
+	// its far edge is (straight line). Returned for pins outside every area so callers can
+	// say how far deliveries go. OutletKm is the straight-line distance of the pin.
+	FurthestArea   *ZoneRef `json:"furthest_area,omitempty"`
+	FurthestAreaKm float64  `json:"furthest_area_km,omitempty"`
+	OutletKm       float64  `json:"outlet_km,omitempty"`
+	// NeedsConfirmation marks a distance-priced delivery whose area, distance and fee the
+	// customer is sent to confirm with the order confirmation (tenant policy).
+	NeedsConfirmation bool         `json:"needs_confirmation,omitempty"`
+	DistanceKm        float64      `json:"distance_km"`
+	DistanceType      string       `json:"distance_type,omitempty"`
+	EtaMinutes        int          `json:"eta_minutes,omitempty"`
+	MinOrder          float64      `json:"min_order"`
+	BelowMinOrder     bool         `json:"below_min_order,omitempty"`
+	Outlet            *OutletPoint `json:"outlet,omitempty"`
+	Breakdown         *Breakdown   `json:"breakdown,omitempty"`
+	PolicyVersion     string       `json:"policy_version"`
+	CacheSeconds      int          `json:"cache_seconds"`
 }
 
 // Breakdown explains a per-km fee so admins and customers can see how it was built.
@@ -192,6 +201,17 @@ func computeQuote(in QuoteInput, snap snapshot, distance DistanceFunc) Quote {
 		q.NearestAreaKm = money.Round2(nearestKm)
 	}
 
+	// The furthest area from this outlet tells how far deliveries go: a pin between the
+	// outlet and that edge is closer than somewhere the tenant already serves.
+	var reachKm float64
+	if outlet != nil && len(delivery) > 0 {
+		var far *compiledZone
+		reachKm, far = furthestReach(outlet.Point, delivery)
+		q.FurthestArea = &ZoneRef{ID: far.ID, Name: far.Name}
+		q.FurthestAreaKm = money.Round2(reachKm)
+		q.OutletKm = money.Round2(geo.Distance(outlet.Point, in.Point))
+	}
+
 	if pol.Fallback != FallbackPerKm {
 		q.Reason = ReasonOutside
 		return q
@@ -201,7 +221,7 @@ func computeQuote(in QuoteInput, snap snapshot, distance DistanceFunc) Quote {
 			q.Reason = ReasonNoCoverage
 			return q
 		}
-	} else if nearestKm > pol.BufferKm {
+	} else if nearestKm > pol.BufferKm && !withinReach(pol, outlet, in.Point, reachKm) {
 		q.Reason = ReasonOutside
 		return q
 	}
@@ -210,17 +230,51 @@ func computeQuote(in QuoteInput, snap snapshot, distance DistanceFunc) Quote {
 		return q
 	}
 
-	// 3. Per-km fallback near the coverage.
+	// 3. Per-km price for a pin outside the areas but inside the coverage.
 	km, kind := measure(outlet.Point, in.Point, pol, distance)
 	raw := pol.BaseFee + pol.PerKmRate*km
 	q.Serviceable = true
 	q.Method = MethodPerKm
 	q.Fee = perKmFee(pol, km)
 	q.DistanceKm, q.DistanceType = km, kind
+	q.OutletKm = money.Round2(geo.Distance(outlet.Point, in.Point))
 	q.EtaMinutes = estimateEta(km, pol)
+	q.NeedsConfirmation = pol.ConfirmByEmail
 	q.Breakdown = &Breakdown{BaseFee: pol.BaseFee, PerKmRate: pol.PerKmRate, Raw: money.Round2(raw), MinFee: pol.MinFee, Rounding: pol.Rounding}
 	applyMinOrder(&q, in.OrderTotal)
 	return q
+}
+
+// furthestReach is how far from the outlet the delivery areas extend: the largest
+// straight-line distance from the outlet to any boundary point of an area, and the area
+// that reaches that far. The distance to a point is convex, so the maximum over a
+// polygon is always at one of its vertices (a circle is stored as a 48-point polygon).
+// zs must not be empty.
+func furthestReach(from geo.Point, zs []compiledZone) (float64, *compiledZone) {
+	var best *compiledZone
+	bestKm := -1.0
+	for i := range zs {
+		for _, c := range zs[i].Ring {
+			if len(c) < 2 {
+				continue
+			}
+			if d := geo.Distance(from, geo.Point{Lat: c[1], Lng: c[0]}); d > bestKm {
+				bestKm, best = d, &zs[i]
+			}
+		}
+	}
+	return bestKm, best
+}
+
+// withinReach reports whether a pin outside every area is still served under the
+// policy's coverage rule: closer to the outlet than the furthest area's far edge (plus the
+// buffer slack). The buffer-only rule never serves on reach, and without an outlet pin
+// there is nothing to measure from.
+func withinReach(pol Policy, outlet *OutletPoint, p geo.Point, reachKm float64) bool {
+	if pol.Coverage != CoverageFurthestArea || outlet == nil || reachKm <= 0 {
+		return false
+	}
+	return geo.Distance(outlet.Point, p) <= reachKm+pol.BufferKm
 }
 
 // perKmFee is the policy's distance price: base + rate x km, at least the minimum,

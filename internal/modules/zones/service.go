@@ -24,7 +24,7 @@ import (
 // Errors the HTTP layer maps to status codes.
 var (
 	ErrNotFound  = errors.New("zones: not found")
-	ErrDuplicate = errors.New("zones: a zone with this name already exists")
+	ErrDuplicate = errors.New("zones: a zone with this name already exists (names are unique per business; add the branch name when another outlet serves the same place at its own fee)")
 )
 
 // ZoneInput creates a zone or fully replaces an existing one.
@@ -164,6 +164,23 @@ func (s *Service) ListZones(ctx context.Context, tenantID uuid.UUID) ([]ZoneView
 		}
 		return out, nil
 	})
+}
+
+// ListZonesForOutlet returns the tenant's zones that serve one outlet: zones with no outlet
+// scope (every outlet) plus those that name it. A nil outlet returns every zone. It filters
+// the cached list, so it adds no query.
+func (s *Service) ListZonesForOutlet(ctx context.Context, tenantID, outletID uuid.UUID) ([]ZoneView, error) {
+	all, err := s.ListZones(ctx, tenantID)
+	if err != nil || outletID == uuid.Nil {
+		return all, err
+	}
+	out := make([]ZoneView, 0, len(all))
+	for _, z := range all {
+		if (compiledZone{Settings: z.Settings}).servesOutlet(outletID) {
+			out = append(out, z)
+		}
+	}
+	return out, nil
 }
 
 // UpdateZone applies a patch. Shape, centre, radius and boundary are re-validated
@@ -443,6 +460,7 @@ type Coverage struct {
 	Currency string         `json:"currency"`
 	Policy   struct {
 		Fallback  string  `json:"fallback"`
+		Coverage  string  `json:"coverage"`
 		BufferKm  float64 `json:"buffer_km"`
 		PerKmRate float64 `json:"per_km_rate"`
 	} `json:"policy"`
@@ -456,7 +474,8 @@ func (s *Service) Coverage(ctx context.Context, tenantID uuid.UUID, outletID uui
 		return Coverage{}, err
 	}
 	c := Coverage{Outlets: snap.Outlets, Currency: snap.Policy.Currency, Version: snap.Version, Zones: []CoverageZone{}}
-	c.Policy.Fallback, c.Policy.BufferKm, c.Policy.PerKmRate = snap.Policy.Fallback, snap.Policy.BufferKm, snap.Policy.PerKmRate
+	c.Policy.Fallback, c.Policy.Coverage = snap.Policy.Fallback, snap.Policy.Coverage
+	c.Policy.BufferKm, c.Policy.PerKmRate = snap.Policy.BufferKm, snap.Policy.PerKmRate
 	var bounds *geo.BBox
 	minFee := -1.0
 	for _, z := range snap.Zones {

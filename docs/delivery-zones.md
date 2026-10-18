@@ -29,8 +29,10 @@ Other metadata keys are preserved untouched.
 
 | Field | Default | Meaning |
 |---|---|---|
-| `fallback` | `per_km` | `per_km` charges by distance near the coverage, `none` accepts zones only |
-| `buffer_km` | 2 | A pin outside every zone is accepted when it is this close to one |
+| `fallback` | `per_km` | `per_km` charges by distance outside the areas, `none` accepts zones only |
+| `coverage` | `furthest_area` | Which pins outside every area are still served at the per-km price. `furthest_area` serves anything no further from the outlet than the furthest area's far edge; `buffer` only serves pins within `buffer_km` of an area edge |
+| `buffer_km` | 2 | `buffer` coverage: a pin outside every area is accepted when it is this close to one. `furthest_area` coverage: slack added to the furthest area's reach |
+| `confirm_by_email` | true | A distance-priced delivery is flagged `needs_confirmation`, and the order confirmation email states its area, distance and fee for the customer to check |
 | `max_radius_km` | none | Optional hard cap on straight-line distance from the outlet |
 | `require_zones` | true | When false, a tenant with no zones is quoted per km within `max_radius_km` |
 | `base_fee`, `per_km_rate`, `min_fee` | 0, 50, 100 | Per-km price: `max(min_fee, base_fee + per_km_rate x km)` |
@@ -50,8 +52,10 @@ Rider pay without a rider pricing rule uses the same per-km price, so a tenant c
 2. Pick the outlet: the requested one, else the nearest active outlet with a map pin.
 3. Reject drop-offs inside an active exclusion zone (`excluded_area`), or beyond `max_radius_km` (`beyond_max_radius`).
 4. If any active delivery zone serving that outlet contains the point, take the highest priority, then the smallest zone. The fee is the zone fee, or 0 for a free zone.
-5. Otherwise, with `fallback = per_km` and the point within `buffer_km` of a zone edge, charge the per-km price on the road distance from the outlet.
-6. Otherwise the point is not serviceable (`outside_delivery_area`, or `no_delivery_coverage` when the tenant has no zones). The nearest area and its distance are returned for messaging.
+5. Otherwise, with `fallback = per_km`, the point is still served when it is within `buffer_km` of a zone edge, or, under `coverage = furthest_area`, when its straight-line distance from the outlet is no more than the furthest area's reach plus `buffer_km`. The fee is the per-km price on the road distance from the outlet (`method = per_km`), and `needs_confirmation` is set when `confirm_by_email` is on.
+6. Otherwise the point is not serviceable (`outside_delivery_area`, or `no_delivery_coverage` when the tenant has no zones). The nearest area and its distance are returned for messaging, together with `furthest_area`, `furthest_area_km` (how far deliveries go) and `outlet_km` (how far this pin is).
+
+**Furthest reach.** Reach is the largest straight-line distance from the outlet to any boundary point of an active delivery area that serves that outlet. A circle is stored as a 48-point polygon and distance to a point is convex, so the maximum is always at a vertex. This is why a village between the outlet and a named area (Sega, between Busia and Ugunja) is delivered by distance even though no area covers it, while a place beyond the furthest area stays out of the delivery area. Reach is per outlet: an outlet with no areas has none.
 
 Zones, outlets and the policy are loaded once per tenant into a cached snapshot (Redis, 5 minutes) with precomputed bounding boxes and areas, so a quote is a bounding-box filter plus a ray cast. Every zone, policy and outlet change drops the snapshot.
 
@@ -59,12 +63,14 @@ Zones, outlets and the policy are loaded once per tenant into a cached snapshot 
 
 | Method and path | Auth | Purpose |
 |---|---|---|
-| `GET /api/v1/{tenant}/zones` | public read | All zones with settings |
+| `GET /api/v1/{tenant}/zones` | `logistics.zones.view` | All zones with settings, drafts and notes included; `outlet_id` (else `X-Outlet-ID`) keeps only zones serving that outlet |
 | `POST /api/v1/{tenant}/zones` | `logistics.zones.manage` | Create (circle or polygon) |
 | `PATCH /api/v1/{tenant}/zones/{id}` | `logistics.zones.manage` | Update; settings replace as a whole |
 | `DELETE /api/v1/{tenant}/zones/{id}` | `logistics.zones.manage` | Delete |
 | `GET /api/v1/{tenant}/zones/coverage` | public, 120/min per IP | Active zones, outlets, bounds and centre for customer maps |
 | `GET /api/v1/{tenant}/zones/quote?lat&lng&outlet_id&order_total` | public, 120/min per IP | Quote for a pin (UI preview) |
+| `POST /api/v1/{tenant}/zones/outlets/refresh` | `logistics.zones.manage` | Pull the tenant's outlets and map pins from auth-api now (after a pin is saved there) and drop cached quotes |
+| `GET /api/v1/{tenant}/delivery-policy/suggest-fee?lat&lng&radius_m&outlet_id` | `logistics.zones.manage` | The fee the tenant's per-km rules give for a new area, from the outlet (else `X-Outlet-ID`, else the nearest outlet with a pin), at the centre and at the near and far edge |
 | `GET /api/v1/{tenant}/delivery-policy` | `logistics.zones.view` | Effective policy and its source |
 | `PUT /api/v1/{tenant}/delivery-policy` | `logistics.pricing.manage` | Save the tenant policy |
 | `GET /api/v1/{tenant}/routing/geocode/search?q` | public, 60/min per IP | Tenant areas first, then geocoder results biased to the coverage |
@@ -74,6 +80,12 @@ Zones, outlets and the policy are loaded once per tenant into a cached snapshot 
 | `GET /api/v1/s2s/zones/{tenant}/coverage` | `X-API-Key` | Coverage for server-side listings |
 
 Rider pricing rules (`/earnings/pricing-rules`) now require `logistics.pricing.manage` to change.
+
+**Public reads.** Only `zones/coverage`, `zones/quote`, `routing/*` and `track/*` skip authentication (`router/public_reads.go`, tested). The zone list, one zone and `analytics/zones` used to be public too, because the old rule matched any path containing `/zones`; they carry drafts, admin notes and delivery performance and now need a sign-in.
+
+**Outlet scope.** Zones, coverage, quotes and fee suggestions follow the outlet in `outlet_id` or, for signed-in callers, `X-Outlet-ID` (the header switcher). Zone names are unique per tenant, so a second outlet serving the same place at its own fee needs its own name (for example "Alupe (Kakamega branch)"). The analytics endpoints (`kpis`, `series`, `riders`, `zones`) take the same header and add `AND outlet_id = $n` only when a drill-down is set, which keeps the `(tenant_id, outlet_id, created_at)` index usable.
+
+**Outlet pins.** auth-api owns outlets and their map pins. logistics-ui's Delivery areas, Outlets tab saves a pin to auth-api (`PUT /tenants/{slug}/outlets/{id}`, tenant admins only) and then calls `zones/outlets/refresh`, so a new pin prices quotes immediately instead of after the outlet event or the 6 hourly resync.
 
 The geocoder proxy calls a Nominatim-compatible service (`GEOCODER_URL`, default the public OpenStreetMap instance) with a proper `GEOCODER_USER_AGENT`. Results are cached in Redis (search 1 hour, reverse 24 hours at about 11 m precision) and outbound calls are limited to one per second across all pods. Browsers never call a geocoder directly.
 
