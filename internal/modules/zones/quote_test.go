@@ -291,71 +291,101 @@ func jsonRoundTrip(t *testing.T, in map[string]any) map[string]any {
 	return out
 }
 
-// south returns the point d km due south of the outlet (a meridian, so the great-circle
-// distance is exactly d).
+// south returns the point d km due south of the outlet, away from every fixture area.
 func south(d float64) geo.Point {
 	return geo.Point{Lat: busiaOutlet.Point.Lat - d/111.195, Lng: busiaOutlet.Point.Lng}
 }
 
-func TestFurthestReachIsTheFarEdgeOfTheFurthestArea(t *testing.T) {
+// alongMalaba is the point a fraction of the way from the outlet to Malaba's far edge,
+// moved sideKm north (a sideways deviation from the north-east route).
+func alongMalaba(t *testing.T, frac, sideKm float64) geo.Point {
+	t.Helper()
 	snap := busiaSnapshot(t)
-	var delivery []compiledZone
-	delivery = append(delivery, snap.Zones...)
-	km, far := furthestReach(busiaOutlet.Point, delivery)
-	want := geo.Distance(busiaOutlet.Point, malaba) + 3
-	if far.Name != "Malaba" || math.Abs(km-want) > 0.05 {
-		t.Fatalf("reach = %.3f via %s, want about %.3f via Malaba", km, far.Name, want)
+	r := routeTo(busiaOutlet.Point, &snap.Zones[2])
+	return geo.Point{
+		Lat: busiaOutlet.Point.Lat + (r.Far.Lat-busiaOutlet.Point.Lat)*frac + sideKm/111.195,
+		Lng: busiaOutlet.Point.Lng + (r.Far.Lng-busiaOutlet.Point.Lng)*frac,
 	}
 }
 
-func TestQuoteFurthestAreaServesPinsBetweenAreas(t *testing.T) {
-	// 10 km south of the outlet: no area there and further than the 2 km buffer from every
-	// one, but much closer than Malaba's far edge, so it is delivered by distance.
-	p := south(10)
+func TestRouteToIsTheFarEdgeOfTheArea(t *testing.T) {
+	snap := busiaSnapshot(t)
+	r := routeTo(busiaOutlet.Point, &snap.Zones[2])
+	want := geo.Distance(busiaOutlet.Point, malaba) + 3
+	if r.Zone.Name != "Malaba" || math.Abs(r.ReachKm-want) > 0.05 {
+		t.Fatalf("reach = %.3f, want about %.3f", r.ReachKm, want)
+	}
+}
+
+func TestQuoteServesPinsOnTheWayToAnArea(t *testing.T) {
+	// 40% of the way to Malaba and 2 km to the side: the same road and its surroundings,
+	// outside every area and further than the buffer from each, so delivered by distance.
+	p := alongMalaba(t, 0.4, 2)
 	q := computeQuote(QuoteInput{Point: p}, busiaSnapshot(t), straightOnly)
 	if !q.Serviceable || q.Method != MethodPerKm || q.Zone != nil {
-		t.Fatalf("pin inside the furthest reach must be delivered by distance, got %+v", q)
+		t.Fatalf("a pin on the route to Malaba must be delivered by distance, got %+v", q)
 	}
 	if q.Fee < 100 || math.Mod(q.Fee, 10) != 0 || q.Breakdown == nil {
 		t.Fatalf("distance fee must follow the policy, got %+v", q)
 	}
-	if q.FurthestArea == nil || q.FurthestArea.Name != "Malaba" || q.FurthestAreaKm < 25 {
-		t.Fatalf("quote should report the furthest area, got %+v", q.FurthestArea)
+	if q.RouteArea == nil || q.RouteArea.Name != "Malaba" || q.RouteReachKm < 25 || q.RouteOffKm > 2.5 || q.Direction != "north-east" {
+		t.Fatalf("the quote should name the route it is on: %+v", q)
 	}
 	if !q.NeedsConfirmation {
 		t.Fatal("distance-priced deliveries are confirmed with the customer by default")
 	}
 }
 
-func TestQuoteBeyondFurthestAreaIsOutside(t *testing.T) {
+func TestQuoteRefusesTheOppositeDirectionAtTheSameDistance(t *testing.T) {
 	snap := busiaSnapshot(t)
-	reach, _ := furthestReach(busiaOutlet.Point, snap.Zones)
-	buf := snap.Policy.BufferKm
-
-	if q := computeQuote(QuoteInput{Point: south(reach + buf - 0.05)}, snap, straightOnly); !q.Serviceable {
-		t.Fatalf("just inside reach plus buffer must be served: %+v", q)
-	}
-	q := computeQuote(QuoteInput{Point: south(reach + buf + 0.05)}, snap, straightOnly)
+	// Malaba's far edge is about 28 km out to the north-east. A pin 12 km due south is much
+	// nearer the outlet than that, but there is no delivery route that way.
+	q := computeQuote(QuoteInput{Point: south(12)}, snap, straightOnly)
 	if q.Serviceable || q.Reason != ReasonOutside {
-		t.Fatalf("beyond the furthest area must be out of the delivery area: %+v", q)
+		t.Fatalf("the opposite direction must be out of the delivery area: %+v", q)
 	}
-	if q.FurthestArea == nil || q.FurthestAreaKm <= 0 || q.OutletKm < reach {
-		t.Fatalf("the refusal must say how far deliveries go: %+v", q)
+	if q.Direction != "south" || q.RouteOffKm < 10 || q.OutletKm < 11.9 || q.RouteArea == nil {
+		t.Fatalf("the refusal must say which way and how far off the routes it is: %+v", q)
 	}
 }
 
-func TestQuoteBufferCoverageIgnoresReach(t *testing.T) {
+func TestQuoteCorridorWidthAndRouteEnd(t *testing.T) {
+	snap := busiaSnapshot(t)
+	corridor := snap.Policy.CorridorKm
+	if q := computeQuote(QuoteInput{Point: alongMalaba(t, 0.5, corridor*3)}, snap, straightOnly); q.Serviceable {
+		t.Fatalf("a pin well beside the route must be refused: %+v", q)
+	}
+	// Past the far edge the pin is measured to the route's end: a little beyond is on the
+	// way, a long way beyond is not.
+	r := routeTo(busiaOutlet.Point, &snap.Zones[2])
+	beyond := func(km float64) geo.Point {
+		f := (r.ReachKm + km) / r.ReachKm
+		return geo.Point{
+			Lat: busiaOutlet.Point.Lat + (r.Far.Lat-busiaOutlet.Point.Lat)*f,
+			Lng: busiaOutlet.Point.Lng + (r.Far.Lng-busiaOutlet.Point.Lng)*f,
+		}
+	}
+	if q := computeQuote(QuoteInput{Point: beyond(corridor - 1)}, snap, straightOnly); !q.Serviceable {
+		t.Fatalf("just past the furthest edge must still be served: %+v", q)
+	}
+	if q := computeQuote(QuoteInput{Point: beyond(corridor + 3)}, snap, straightOnly); q.Serviceable {
+		t.Fatalf("well past the furthest edge must be refused: %+v", q)
+	}
+}
+
+func TestQuoteBufferCoverageIgnoresRoutes(t *testing.T) {
 	snap := busiaSnapshot(t)
 	snap.Policy.Coverage = CoverageBuffer
-	if q := computeQuote(QuoteInput{Point: south(10)}, snap, straightOnly); q.Serviceable || q.Reason != ReasonOutside {
+	if q := computeQuote(QuoteInput{Point: alongMalaba(t, 0.4, 2)}, snap, straightOnly); q.Serviceable || q.Reason != ReasonOutside {
 		t.Fatalf("buffer coverage must keep refusing pins far from every area: %+v", q)
 	}
 }
 
 func TestQuoteConfirmationFlagFollowsPolicy(t *testing.T) {
 	snap := busiaSnapshot(t)
+	p := alongMalaba(t, 0.4, 2)
 	snap.Policy.ConfirmByEmail = false
-	if q := computeQuote(QuoteInput{Point: south(10)}, snap, straightOnly); !q.Serviceable || q.NeedsConfirmation {
+	if q := computeQuote(QuoteInput{Point: p}, snap, straightOnly); !q.Serviceable || q.NeedsConfirmation {
 		t.Fatalf("confirmation switched off: %+v", q)
 	}
 	// An area-priced delivery never needs confirming, whatever the policy says.
@@ -365,31 +395,33 @@ func TestQuoteConfirmationFlagFollowsPolicy(t *testing.T) {
 	}
 }
 
-func TestQuoteReachIsPerOutlet(t *testing.T) {
+func TestQuoteRoutesArePerOutlet(t *testing.T) {
 	snap := busiaSnapshot(t)
 	other := OutletPoint{ID: uuid.New(), Name: "Other", Point: geo.Point{Lat: 0.30, Lng: 34.20}}
 	snap.Outlets = append(snap.Outlets, other)
-	// Every area is served only by the Busia outlet, so the other one has no reach at all.
+	// Every area is served only by the Busia outlet, so the other one has no routes at all.
 	for i := range snap.Zones {
 		snap.Zones[i].Settings.OutletIDs = []uuid.UUID{busiaOutlet.ID}
 	}
-	q := computeQuote(QuoteInput{Point: south(10), OutletID: other.ID}, snap, straightOnly)
+	q := computeQuote(QuoteInput{Point: alongMalaba(t, 0.4, 2), OutletID: other.ID}, snap, straightOnly)
 	if q.Serviceable || q.Reason != ReasonNoCoverage && q.Reason != ReasonOutside {
-		t.Fatalf("an outlet with no areas must not borrow another outlet's reach: %+v", q)
+		t.Fatalf("an outlet with no areas must not borrow another outlet's routes: %+v", q)
 	}
 }
 
 func TestPolicyCoverageDefaultsAndValidation(t *testing.T) {
 	p, err := ParsePolicy(`{"per_km_rate": 60}`)
-	if err != nil || p.Coverage != CoverageFurthestArea || !p.ConfirmByEmail {
-		t.Fatalf("older policies get the furthest-area rule and email confirmation: %+v %v", p, err)
+	if err != nil || p.Coverage != CoverageRoute || p.CorridorKm != 5 || !p.ConfirmByEmail {
+		t.Fatalf("older policies get the route rule, a 5 km corridor and email confirmation: %+v %v", p, err)
 	}
-	p, err = ParsePolicy(`{"coverage": "buffer", "confirm_by_email": false}`)
-	if err != nil || p.Coverage != CoverageBuffer || p.ConfirmByEmail {
+	p, err = ParsePolicy(`{"coverage": "buffer", "confirm_by_email": false, "corridor_km": 8}`)
+	if err != nil || p.Coverage != CoverageBuffer || p.ConfirmByEmail || p.CorridorKm != 8 {
 		t.Fatalf("explicit values must stick: %+v %v", p, err)
 	}
-	if _, err := ParsePolicy(`{"coverage": "anywhere"}`); err == nil {
-		t.Fatal("unknown coverage rule must fail")
+	for _, bad := range []string{`{"coverage": "anywhere"}`, `{"corridor_km": -1}`, `{"corridor_km": 500}`} {
+		if _, err := ParsePolicy(bad); err == nil {
+			t.Fatalf("%s must fail", bad)
+		}
 	}
 }
 
@@ -408,8 +440,8 @@ func TestSuggestFeeUsesTheTenantRulesFromTheOutlet(t *testing.T) {
 		t.Fatal("the outlet is not inside Alupe")
 	}
 	// A quote of the same centre by distance gives the same fee.
-	q := computeQuote(QuoteInput{Point: south(10)}, snap, straightOnly)
-	if got := suggestFee(snap, uuid.Nil, south(10), 500, straightOnly); got.SuggestedFee != q.Fee {
+	q := computeQuote(QuoteInput{Point: alongMalaba(t, 0.4, 2)}, snap, straightOnly)
+	if got := suggestFee(snap, uuid.Nil, alongMalaba(t, 0.4, 2), 500, straightOnly); got.SuggestedFee != q.Fee {
 		t.Fatalf("suggestion %v must match the distance quote %v", got.SuggestedFee, q.Fee)
 	}
 }
@@ -422,5 +454,59 @@ func TestSuggestFeeOutletInsideAreaAndNoOutlet(t *testing.T) {
 	snap.Outlets = nil
 	if s := suggestFee(snap, uuid.Nil, alupe, 1500, straightOnly); s.Reason != ReasonNoOutlet || s.SuggestedFee != 0 {
 		t.Fatalf("no outlet pin means no suggestion: %+v", s)
+	}
+}
+
+func TestDistanceFeeIsHeldToTheAreaFeesOnTheSameRoute(t *testing.T) {
+	snap := busiaSnapshot(t)
+	// Make the per-km rate steep so the raw distance price overshoots Malaba's KES 1,050.
+	snap.Policy.PerKmRate = 200
+	r := routeTo(busiaOutlet.Point, &snap.Zones[2])
+
+	// Just past Malaba's far edge, on its route: never more than Malaba's own fee.
+	f := (r.ReachKm + 2) / r.ReachKm
+	past := geo.Point{
+		Lat: busiaOutlet.Point.Lat + (r.Far.Lat-busiaOutlet.Point.Lat)*f,
+		Lng: busiaOutlet.Point.Lng + (r.Far.Lng-busiaOutlet.Point.Lng)*f,
+	}
+	q := computeQuote(QuoteInput{Point: past}, snap, straightOnly)
+	if !q.Serviceable || q.Fee != 1050 || q.Breakdown.Adjusted != "capped" || q.Breakdown.AdjustedBy != "Malaba" {
+		t.Fatalf("a pin past the furthest area must not cost more than that area: %+v %+v", q, q.Breakdown)
+	}
+
+	// Midway to Malaba the same steep rate still stops at Malaba's fee, never beyond it.
+	if q := computeQuote(QuoteInput{Point: alongMalaba(t, 0.9, 1)}, snap, straightOnly); q.Fee > 1050 {
+		t.Fatalf("fee %v passes the furthest area's fee", q.Fee)
+	}
+
+	// Cheap rate: a pin beyond Alupe's far edge on the way is raised to Alupe's fee, because
+	// further out must not cost less than a nearer area on the route. Alupe is KES 100 and the
+	// cheap distance price here is the 100 minimum, so lower the minimum to expose it.
+	cheap := busiaSnapshot(t)
+	cheap.Policy.PerKmRate, cheap.Policy.MinFee, cheap.Policy.Rounding = 1, 0, 0
+	cheap.Zones[1].Settings.Fee = 400 // Alupe
+	p := geo.Point{Lat: alupe.Lat + 4/111.195, Lng: alupe.Lng}
+	if q := computeQuote(QuoteInput{Point: p}, cheap, straightOnly); !q.Serviceable || q.Fee < 400 {
+		t.Fatalf("further out than Alupe must cost at least Alupe's fee: %+v", q)
+	}
+}
+
+func TestHoldToRouteIgnoresFreeAreasAndKeepsTheCapOverTheFloor(t *testing.T) {
+	mk := func(name string, reach, fee float64, free bool) route {
+		return route{Zone: &compiledZone{Name: name, Settings: ZoneSettings{Fee: fee, Free: free}}, ReachKm: reach}
+	}
+	// A free town on the route sets no bound.
+	if fee, how, _ := holdToRoute(80, []route{mk("Town", 3, 0, true)}, 10); how != "" || fee != 80 {
+		t.Fatalf("free areas bound nothing: %v %s", fee, how)
+	}
+	// A nearer area dearer than the furthest one must not lift the price over the cap.
+	if fee, how, _ := holdToRoute(50, []route{mk("Near", 5, 300, false), mk("Far", 20, 200, false)}, 12); how != "" || fee != 50 {
+		t.Fatalf("a floor above the cap must be ignored: %v %s", fee, how)
+	}
+	if fee, how, by := holdToRoute(500, []route{mk("Near", 5, 100, false), mk("Far", 20, 300, false)}, 12); fee != 300 || how != "capped" || by != "Far" {
+		t.Fatalf("cap: %v %s %s", fee, how, by)
+	}
+	if fee, how, by := holdToRoute(50, []route{mk("Near", 5, 100, false), mk("Far", 20, 300, false)}, 12); fee != 100 || how != "raised" || by != "Near" {
+		t.Fatalf("floor: %v %s %s", fee, how, by)
 	}
 }

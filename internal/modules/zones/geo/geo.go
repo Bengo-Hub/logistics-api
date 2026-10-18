@@ -196,3 +196,24 @@ func Valid(p Point) bool {
 func rad(d float64) float64    { return d * math.Pi / 180 }
 func deg(r float64) float64    { return r * 180 / math.Pi }
 func round6(v float64) float64 { return math.Round(v*1e6) / 1e6 }
+
+// DistanceToSegmentKm is the shortest distance in kilometres from p to the straight
+// segment a to b, in a local plane around p (accurate for the tens of km a delivery
+// route spans). A point beyond either end measures to that end.
+func DistanceToSegmentKm(p, a, b Point) float64 {
+	kx, ky := kmPerDegree(p.Lat)
+	return segmentDistance((a.Lng-p.Lng)*kx, (a.Lat-p.Lat)*ky, (b.Lng-p.Lng)*kx, (b.Lat-p.Lat)*ky)
+}
+
+// Bearing is the initial compass bearing in degrees (0 north, 90 east) from a to b.
+func Bearing(a, b Point) float64 {
+	y := math.Sin(rad(b.Lng-a.Lng)) * math.Cos(rad(b.Lat))
+	x := math.Cos(rad(a.Lat))*math.Sin(rad(b.Lat)) - math.Sin(rad(a.Lat))*math.Cos(rad(b.Lat))*math.Cos(rad(b.Lng-a.Lng))
+	return math.Mod(deg(math.Atan2(y, x))+360, 360)
+}
+
+// Compass names a bearing as one of eight points: north, north-east, east and so on.
+func Compass(bearing float64) string {
+	names := [...]string{"north", "north-east", "east", "south-east", "south", "south-west", "west", "north-west"}
+	return names[int(math.Mod(math.Round(bearing/45), 8))]
+}

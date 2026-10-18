@@ -58,12 +58,16 @@ type Quote struct {
 	Zone          *ZoneRef `json:"zone,omitempty"`
 	NearestArea   *ZoneRef `json:"nearest_area,omitempty"`
 	NearestAreaKm float64  `json:"nearest_area_km,omitempty"`
-	// FurthestArea is the area reaching furthest from the outlet and FurthestAreaKm how far
-	// its far edge is (straight line). Returned for pins outside every area so callers can
-	// say how far deliveries go. OutletKm is the straight-line distance of the pin.
-	FurthestArea   *ZoneRef `json:"furthest_area,omitempty"`
-	FurthestAreaKm float64  `json:"furthest_area_km,omitempty"`
-	OutletKm       float64  `json:"outlet_km,omitempty"`
+	// For a pin outside every area: RouteArea is the delivery area whose route from the
+	// outlet passes closest to the pin, RouteReachKm how far that route goes (outlet to the
+	// area's far edge, straight line), RouteOffKm how far the pin is from that route, and
+	// Direction the compass direction of the pin from the outlet. OutletKm is the pin's
+	// straight-line distance from the outlet.
+	RouteArea    *ZoneRef `json:"route_area,omitempty"`
+	RouteReachKm float64  `json:"route_reach_km,omitempty"`
+	RouteOffKm   float64  `json:"route_off_km,omitempty"`
+	Direction    string   `json:"direction,omitempty"`
+	OutletKm     float64  `json:"outlet_km,omitempty"`
 	// NeedsConfirmation marks a distance-priced delivery whose area, distance and fee the
 	// customer is sent to confirm with the order confirmation (tenant policy).
 	NeedsConfirmation bool         `json:"needs_confirmation,omitempty"`
@@ -85,6 +89,12 @@ type Breakdown struct {
 	Raw       float64 `json:"raw"`
 	MinFee    float64 `json:"min_fee"`
 	Rounding  float64 `json:"rounding"`
+	// Adjusted says the distance price was held to the fees of the areas on the same route:
+	// "capped" at the furthest one's fee or "raised" to the nearest passed one's. AdjustedTo
+	// is the resulting fee and AdjustedBy the area whose fee set it.
+	Adjusted   string  `json:"adjusted,omitempty"`
+	AdjustedTo float64 `json:"adjusted_to,omitempty"`
+	AdjustedBy string  `json:"adjusted_by,omitempty"`
 }
 
 // DistanceFunc returns the travel distance in km between two points and whether it is
@@ -201,15 +211,18 @@ func computeQuote(in QuoteInput, snap snapshot, distance DistanceFunc) Quote {
 		q.NearestAreaKm = money.Round2(nearestKm)
 	}
 
-	// The furthest area from this outlet tells how far deliveries go: a pin between the
-	// outlet and that edge is closer than somewhere the tenant already serves.
-	var reachKm float64
+	// Each delivery area is a route from the outlet to its far edge. A pin close to one of
+	// those routes (a small deviation, same road or surroundings) is on the way to somewhere
+	// the tenant already serves; a pin in the opposite direction is not, however near.
+	var offRouteKm float64
 	if outlet != nil && len(delivery) > 0 {
-		var far *compiledZone
-		reachKm, far = furthestReach(outlet.Point, delivery)
-		q.FurthestArea = &ZoneRef{ID: far.ID, Name: far.Name}
-		q.FurthestAreaKm = money.Round2(reachKm)
+		r, off := nearestRoute(outlet.Point, in.Point, delivery)
+		offRouteKm = off
+		q.RouteArea = &ZoneRef{ID: r.Zone.ID, Name: r.Zone.Name}
+		q.RouteReachKm = money.Round2(r.ReachKm)
+		q.RouteOffKm = money.Round2(off)
 		q.OutletKm = money.Round2(geo.Distance(outlet.Point, in.Point))
+		q.Direction = geo.Compass(geo.Bearing(outlet.Point, in.Point))
 	}
 
 	if pol.Fallback != FallbackPerKm {
@@ -221,7 +234,7 @@ func computeQuote(in QuoteInput, snap snapshot, distance DistanceFunc) Quote {
 			q.Reason = ReasonNoCoverage
 			return q
 		}
-	} else if nearestKm > pol.BufferKm && !withinReach(pol, outlet, in.Point, reachKm) {
+	} else if nearestKm > pol.BufferKm && !onRoute(pol, outlet, offRouteKm) {
 		q.Reason = ReasonOutside
 		return q
 	}
@@ -241,40 +254,113 @@ func computeQuote(in QuoteInput, snap snapshot, distance DistanceFunc) Quote {
 	q.EtaMinutes = estimateEta(km, pol)
 	q.NeedsConfirmation = pol.ConfirmByEmail
 	q.Breakdown = &Breakdown{BaseFee: pol.BaseFee, PerKmRate: pol.PerKmRate, Raw: money.Round2(raw), MinFee: pol.MinFee, Rounding: pol.Rounding}
+	// Hold the price to the published fees of the areas on the same route.
+	if pol.Coverage == CoverageRoute {
+		fee, how, by := holdToRoute(q.Fee, routesNear(outlet.Point, in.Point, delivery, pol.CorridorKm), geo.Distance(outlet.Point, in.Point))
+		if how != "" {
+			q.Fee = fee
+			q.Breakdown.Adjusted, q.Breakdown.AdjustedTo, q.Breakdown.AdjustedBy = how, fee, by
+		}
+	}
 	applyMinOrder(&q, in.OrderTotal)
 	return q
 }
 
-// furthestReach is how far from the outlet the delivery areas extend: the largest
-// straight-line distance from the outlet to any boundary point of an area, and the area
-// that reaches that far. The distance to a point is convex, so the maximum over a
-// polygon is always at one of its vertices (a circle is stored as a 48-point polygon).
-// zs must not be empty.
-func furthestReach(from geo.Point, zs []compiledZone) (float64, *compiledZone) {
-	var best *compiledZone
-	bestKm := -1.0
+// routesNear lists the routes whose corridor the pin falls in: the delivery areas on the
+// way to (or just short of, or just past) the pin.
+func routesNear(from, p geo.Point, zs []compiledZone, corridorKm float64) []route {
+	var out []route
 	for i := range zs {
-		for _, c := range zs[i].Ring {
-			if len(c) < 2 {
-				continue
-			}
-			if d := geo.Distance(from, geo.Point{Lat: c[1], Lng: c[0]}); d > bestKm {
-				bestKm, best = d, &zs[i]
-			}
+		r := routeTo(from, &zs[i])
+		if r.ReachKm >= 0 && geo.DistanceToSegmentKm(p, from, r.Far) <= corridorKm {
+			out = append(out, r)
 		}
 	}
-	return bestKm, best
+	return out
 }
 
-// withinReach reports whether a pin outside every area is still served under the
-// policy's coverage rule: closer to the outlet than the furthest area's far edge (plus the
-// buffer slack). The buffer-only rule never serves on reach, and without an outlet pin
-// there is nothing to measure from.
-func withinReach(pol Policy, outlet *OutletPoint, p geo.Point, reachKm float64) bool {
-	if pol.Coverage != CoverageFurthestArea || outlet == nil || reachKm <= 0 {
+// holdToRoute keeps a distance price consistent with the published area fees on the same
+// route. It never exceeds the fee of the furthest area on the route (a pin past it costs no
+// more than that area), and never undercuts the fee of the furthest area already passed on
+// the way to the pin (further out costs at least as much as a nearer area). Free areas set
+// no bound, and the cap wins over the floor. Returns the fee, "capped" or "raised" ("" when
+// unchanged), and the area whose fee set it.
+func holdToRoute(fee float64, routes []route, pinKm float64) (float64, string, string) {
+	var furthest, passed *route
+	for i := range routes {
+		z := routes[i].Zone
+		if z.Settings.Free || z.Settings.Fee <= 0 {
+			continue
+		}
+		if furthest == nil || routes[i].ReachKm > furthest.ReachKm {
+			furthest = &routes[i]
+		}
+		if routes[i].ReachKm <= pinKm && (passed == nil || routes[i].ReachKm > passed.ReachKm) {
+			passed = &routes[i]
+		}
+	}
+	if furthest != nil && fee > furthest.Zone.Settings.Fee {
+		return furthest.Zone.Settings.Fee, "capped", furthest.Zone.Name
+	}
+	// An odd tariff where a nearer area costs more than the furthest one must not push the
+	// price above the furthest area's fee.
+	if passed != nil && fee < passed.Zone.Settings.Fee && (furthest == nil || passed.Zone.Settings.Fee <= furthest.Zone.Settings.Fee) {
+		return passed.Zone.Settings.Fee, "raised", passed.Zone.Name
+	}
+	return fee, "", ""
+}
+
+// route is the straight line from the outlet to the far edge of one delivery area.
+type route struct {
+	Zone    *compiledZone
+	Far     geo.Point // the boundary point furthest from the outlet
+	ReachKm float64   // outlet to Far
+}
+
+// routeTo is the route to a zone: the far point is the boundary vertex furthest from the
+// outlet. Distance to a point is convex, so the maximum over a polygon is at a vertex (a
+// circle is stored as a 48-point polygon).
+func routeTo(from geo.Point, z *compiledZone) route {
+	r := route{Zone: z, ReachKm: -1}
+	for _, c := range z.Ring {
+		if len(c) < 2 {
+			continue
+		}
+		p := geo.Point{Lat: c[1], Lng: c[0]}
+		if d := geo.Distance(from, p); d > r.ReachKm {
+			r.ReachKm, r.Far = d, p
+		}
+	}
+	return r
+}
+
+// nearestRoute finds the delivery route that passes closest to a pin and how far (km) the
+// pin is from it. A pin beyond a route's end is measured to that end, so past the furthest
+// area it quickly leaves every corridor, and a pin in the opposite direction is far from
+// every route whatever its distance from the outlet. zs must not be empty.
+func nearestRoute(from, p geo.Point, zs []compiledZone) (route, float64) {
+	var best route
+	bestOff := math.Inf(1)
+	for i := range zs {
+		r := routeTo(from, &zs[i])
+		if r.ReachKm < 0 {
+			continue
+		}
+		if off := geo.DistanceToSegmentKm(p, from, r.Far); off < bestOff {
+			best, bestOff = r, off
+		}
+	}
+	return best, bestOff
+}
+
+// onRoute reports whether a pin outside every area is still served under the policy's
+// coverage rule: within CorridorKm of the route to some area. The buffer-only rule never
+// serves on routes, and without an outlet pin there is nothing to measure from.
+func onRoute(pol Policy, outlet *OutletPoint, offRouteKm float64) bool {
+	if pol.Coverage != CoverageRoute || outlet == nil {
 		return false
 	}
-	return geo.Distance(outlet.Point, p) <= reachKm+pol.BufferKm
+	return offRouteKm <= pol.CorridorKm
 }
 
 // perKmFee is the policy's distance price: base + rate x km, at least the minimum,

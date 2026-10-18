@@ -237,7 +237,7 @@ paths:
     get:
       tags: [Zones]
       summary: Delivery quote for a location
-      description: Public. Serviceable flag, fee, method, matched or nearest area, distance and ETA. The fee is authoritative. A pin outside every area is still delivered (per-km price) while it is no further from the outlet than the furthest area's far edge plus buffer_km, unless the policy coverage is "buffer". outlet_id falls back to X-Outlet-ID, then the nearest outlet.
+      description: Public. Serviceable flag, fee, method, matched or nearest area, distance and ETA. The fee is authoritative. A pin outside every area is still delivered (per-km price) while it lies within corridor_km of the straight route from the outlet to some area's far edge (same direction, small deviation), unless the policy coverage is "buffer". A pin the same distance out in the opposite direction is refused. outlet_id falls back to X-Outlet-ID, then the nearest outlet.
       parameters:
         - name: tenant
           in: path
@@ -871,8 +871,11 @@ components:
         zone: {type: object, properties: {id: {type: string}, name: {type: string}}}
         nearest_area: {type: object, properties: {id: {type: string}, name: {type: string}}}
         nearest_area_km: {type: number}
-        furthest_area: {type: object, properties: {id: {type: string}, name: {type: string}}, description: The area reaching furthest from the outlet}
-        furthest_area_km: {type: number, description: Straight-line distance from the outlet to the furthest area's far edge}
+        breakdown: {type: object, description: "Per-km price parts; adjusted is capped or raised when the price was held to the area fees on the same route (adjusted_to, adjusted_by)"}
+        route_area: {type: object, properties: {id: {type: string}, name: {type: string}}, description: The delivery area whose route from the outlet passes closest to the pin}
+        route_reach_km: {type: number, description: Straight-line distance from the outlet to that area's far edge}
+        route_off_km: {type: number, description: How far the pin is from that route}
+        direction: {type: string, description: Compass direction of the pin from the outlet (north, north-east, ...)}
         outlet_km: {type: number, description: Straight-line distance from the outlet to the pin}
         needs_confirmation: {type: boolean, description: Distance-priced delivery whose area, distance and fee are sent to the customer with the order confirmation}
         distance_km: {type: number}

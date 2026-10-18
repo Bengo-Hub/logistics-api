@@ -107,3 +107,26 @@ func TestBBox(t *testing.T) {
 		t.Fatal("Valid wrong")
 	}
 }
+
+func TestSegmentDistanceBearingAndCompass(t *testing.T) {
+	a, b := Point{Lat: 0.45, Lng: 34.12}, Point{Lat: 0.63, Lng: 34.12} // due north, about 20 km
+	beside := Point{Lat: 0.54, Lng: 34.12 + 3/111.195}                 // 3 km east of the middle
+	if d := DistanceToSegmentKm(beside, a, b); math.Abs(d-3) > 0.05 {
+		t.Fatalf("beside the route = %.3f km, want about 3", d)
+	}
+	past := Point{Lat: 0.63 + 4/111.195, Lng: 34.12} // 4 km beyond the far end
+	if d := DistanceToSegmentKm(past, a, b); math.Abs(d-4) > 0.05 {
+		t.Fatalf("beyond the end = %.3f km, want about 4", d)
+	}
+	if br := Bearing(a, b); br > 0.5 && br < 359.5 {
+		t.Fatalf("north bearing = %.2f", br)
+	}
+	for _, c := range []struct {
+		deg  float64
+		name string
+	}{{0, "north"}, {44, "north-east"}, {90, "east"}, {181, "south"}, {270, "west"}, {359, "north"}} {
+		if got := Compass(c.deg); got != c.name {
+			t.Errorf("Compass(%v) = %s, want %s", c.deg, got, c.name)
+		}
+	}
+}

@@ -17,11 +17,11 @@ const (
 	DistanceRoad     = "road"
 	DistanceStraight = "straight"
 
-	// CoverageFurthestArea accepts a pin outside every area when it is no further from the
-	// outlet than the furthest area reaches; CoverageBuffer only accepts pins within
-	// BufferKm of an area edge.
-	CoverageFurthestArea = "furthest_area"
-	CoverageBuffer       = "buffer"
+	// CoverageRoute accepts a pin outside every area when it lies within CorridorKm of the
+	// straight route from the outlet to some area's far edge (the same road or its
+	// surroundings); CoverageBuffer only accepts pins within BufferKm of an area edge.
+	CoverageRoute  = "route"
+	CoverageBuffer = "buffer"
 )
 
 // Policy is the tenant's customer delivery pricing and geofence configuration. Zones
@@ -30,11 +30,13 @@ type Policy struct {
 	// Fallback is per_km (charge by distance near the coverage) or none (zones only).
 	Fallback string `json:"fallback"`
 	// Coverage decides which pins outside every zone are still served (at the per-km price):
-	// furthest_area serves anything up to the furthest area's far edge from the outlet, buffer
-	// only serves pins close to an area edge. Both add BufferKm of slack.
+	// route serves pins along the way to an area (within CorridorKm of the straight route from
+	// the outlet to that area's far edge), so direction counts: a pin the same distance out in
+	// the opposite direction is not served. buffer only serves pins close to an area edge.
 	Coverage string `json:"coverage"`
-	// BufferKm accepts a pin outside every zone when it is within this distance of one, and
-	// is the slack added to the furthest area's reach.
+	// CorridorKm is how far to either side of a route (and past its end) a pin may sit.
+	CorridorKm float64 `json:"corridor_km"`
+	// BufferKm accepts a pin outside every zone when it is within this distance of one.
 	BufferKm float64 `json:"buffer_km"`
 	// ConfirmByEmail sends the customer the area, distance and fee of a distance-priced
 	// delivery with their order confirmation, so they can confirm it.
@@ -65,7 +67,8 @@ type Policy struct {
 func DefaultPolicy() Policy {
 	return Policy{
 		Fallback:           FallbackPerKm,
-		Coverage:           CoverageFurthestArea,
+		Coverage:           CoverageRoute,
+		CorridorKm:         5,
 		BufferKm:           2,
 		ConfirmByEmail:     true,
 		RequireZones:       true,
@@ -104,10 +107,13 @@ func (p *Policy) Validate() error {
 		return fmt.Errorf("zones: fallback must be per_km or none")
 	}
 	if p.Coverage == "" {
-		p.Coverage = CoverageFurthestArea
+		p.Coverage = CoverageRoute
 	}
-	if p.Coverage != CoverageFurthestArea && p.Coverage != CoverageBuffer {
-		return fmt.Errorf("zones: coverage must be furthest_area or buffer")
+	if p.Coverage != CoverageRoute && p.Coverage != CoverageBuffer {
+		return fmt.Errorf("zones: coverage must be route or buffer")
+	}
+	if p.CorridorKm < 0 || p.CorridorKm > 100 {
+		return fmt.Errorf("zones: corridor_km must be between 0 and 100")
 	}
 	if p.DistanceSource == "" {
 		p.DistanceSource = DistanceRoad
