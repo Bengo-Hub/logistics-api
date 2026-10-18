@@ -256,7 +256,7 @@ func computeQuote(in QuoteInput, snap snapshot, distance DistanceFunc) Quote {
 	q.Breakdown = &Breakdown{BaseFee: pol.BaseFee, PerKmRate: pol.PerKmRate, Raw: money.Round2(raw), MinFee: pol.MinFee, Rounding: pol.Rounding}
 	// Hold the price to the published fees of the areas on the same route.
 	if pol.Coverage == CoverageRoute {
-		fee, how, by := holdToRoute(q.Fee, routesNear(outlet.Point, in.Point, delivery, pol.CorridorKm), geo.Distance(outlet.Point, in.Point))
+		fee, how, by := holdToRoute(pol, q.Fee, routesNear(outlet.Point, in.Point, delivery, pol.CorridorKm), geo.Distance(outlet.Point, in.Point), km)
 		if how != "" {
 			q.Fee = fee
 			q.Breakdown.Adjusted, q.Breakdown.AdjustedTo, q.Breakdown.AdjustedBy = how, fee, by
@@ -280,34 +280,57 @@ func routesNear(from, p geo.Point, zs []compiledZone, corridorKm float64) []rout
 }
 
 // holdToRoute keeps a distance price consistent with the published area fees on the same
-// route. It never exceeds the fee of the furthest area on the route (a pin past it costs no
-// more than that area), and never undercuts the fee of the furthest area already passed on
-// the way to the pin (further out costs at least as much as a nearer area). Free areas set
-// no bound, and the cap wins over the floor. Returns the fee, "capped" or "raised" ("" when
+// route, so a place between two areas is priced between their fees and one past the last
+// area continues from its fee:
+//
+//   - the pin is before the far edge of some area on the route (it lies between areas): the
+//     price never exceeds the fee of the nearest such area ahead, and never undercuts the fee
+//     of the furthest area already passed. The ceiling wins if a tariff is not increasing.
+//   - the pin is past the far edge of every area on the route: the price is the fee of the
+//     furthest area plus the per-km rate for the distance beyond its edge (rounded up), so the
+//     distance rule starts from that area's fee instead of from zero.
+//
+// Free areas set no bound. pinKm is the pin's straight distance from the outlet and roadKm
+// the distance the price is measured on, which gives the road to straight ratio applied to
+// the distance beyond the edge. Returns the fee, "capped", "raised" or "extended" ("" when
 // unchanged), and the area whose fee set it.
-func holdToRoute(fee float64, routes []route, pinKm float64) (float64, string, string) {
-	var furthest, passed *route
+func holdToRoute(pol Policy, fee float64, routes []route, pinKm, roadKm float64) (float64, string, string) {
+	var passed, ahead *route
 	for i := range routes {
 		z := routes[i].Zone
 		if z.Settings.Free || z.Settings.Fee <= 0 {
 			continue
 		}
-		if furthest == nil || routes[i].ReachKm > furthest.ReachKm {
-			furthest = &routes[i]
+		if routes[i].ReachKm <= pinKm {
+			if passed == nil || routes[i].ReachKm > passed.ReachKm {
+				passed = &routes[i]
+			}
+		} else if ahead == nil || routes[i].ReachKm < ahead.ReachKm {
+			ahead = &routes[i]
 		}
-		if routes[i].ReachKm <= pinKm && (passed == nil || routes[i].ReachKm > passed.ReachKm) {
-			passed = &routes[i]
+	}
+	if ahead != nil {
+		ceiling := ahead.Zone.Settings.Fee
+		if fee > ceiling {
+			return ceiling, "capped", ahead.Zone.Name
 		}
+		if passed != nil && fee < passed.Zone.Settings.Fee && passed.Zone.Settings.Fee <= ceiling {
+			return passed.Zone.Settings.Fee, "raised", passed.Zone.Name
+		}
+		return fee, "", ""
 	}
-	if furthest != nil && fee > furthest.Zone.Settings.Fee {
-		return furthest.Zone.Settings.Fee, "capped", furthest.Zone.Name
+	if passed == nil {
+		return fee, "", ""
 	}
-	// An odd tariff where a nearer area costs more than the furthest one must not push the
-	// price above the furthest area's fee.
-	if passed != nil && fee < passed.Zone.Settings.Fee && (furthest == nil || passed.Zone.Settings.Fee <= furthest.Zone.Settings.Fee) {
-		return passed.Zone.Settings.Fee, "raised", passed.Zone.Name
+	ratio := 1.0
+	if pinKm > 0 && roadKm > pinKm {
+		ratio = roadKm / pinKm
 	}
-	return fee, "", ""
+	extra := pol.PerKmRate * math.Max(0, pinKm-passed.ReachKm) * ratio
+	if pol.Rounding > 0 {
+		extra = math.Ceil(extra/pol.Rounding-1e-9) * pol.Rounding
+	}
+	return money.Round2(passed.Zone.Settings.Fee + extra), "extended", passed.Zone.Name
 }
 
 // route is the straight line from the outlet to the far edge of one delivery area.

@@ -457,56 +457,59 @@ func TestSuggestFeeOutletInsideAreaAndNoOutlet(t *testing.T) {
 	}
 }
 
-func TestDistanceFeeIsHeldToTheAreaFeesOnTheSameRoute(t *testing.T) {
+func TestDistanceFeeBetweenAreasStaysUnderTheNextAreaAhead(t *testing.T) {
 	snap := busiaSnapshot(t)
-	// Make the per-km rate steep so the raw distance price overshoots Malaba's KES 1,050.
-	snap.Policy.PerKmRate = 200
-	r := routeTo(busiaOutlet.Point, &snap.Zones[2])
+	snap.Policy.PerKmRate = 200 // steep: the raw distance price overshoots Malaba's KES 1,050
+	q := computeQuote(QuoteInput{Point: alongMalaba(t, 0.7, 1)}, snap, straightOnly)
+	if !q.Serviceable || q.Fee > 1050 || q.Breakdown.Adjusted != "capped" || q.Breakdown.AdjustedBy != "Malaba" {
+		t.Fatalf("a place short of Malaba's edge must not cost more than Malaba: %+v %+v", q, q.Breakdown)
+	}
+}
 
-	// Just past Malaba's far edge, on its route: never more than Malaba's own fee.
+func TestDistanceFeePastTheFurthestAreaContinuesFromItsFee(t *testing.T) {
+	snap := busiaSnapshot(t)
+	r := routeTo(busiaOutlet.Point, &snap.Zones[2])
 	f := (r.ReachKm + 2) / r.ReachKm
 	past := geo.Point{
 		Lat: busiaOutlet.Point.Lat + (r.Far.Lat-busiaOutlet.Point.Lat)*f,
 		Lng: busiaOutlet.Point.Lng + (r.Far.Lng-busiaOutlet.Point.Lng)*f,
 	}
 	q := computeQuote(QuoteInput{Point: past}, snap, straightOnly)
-	if !q.Serviceable || q.Fee != 1050 || q.Breakdown.Adjusted != "capped" || q.Breakdown.AdjustedBy != "Malaba" {
-		t.Fatalf("a pin past the furthest area must not cost more than that area: %+v %+v", q, q.Breakdown)
+	if !q.Serviceable || q.Breakdown.Adjusted != "extended" || q.Breakdown.AdjustedBy != "Malaba" {
+		t.Fatalf("past the furthest area the fee starts from that area's: %+v %+v", q, q.Breakdown)
 	}
-
-	// Midway to Malaba the same steep rate still stops at Malaba's fee, never beyond it.
-	if q := computeQuote(QuoteInput{Point: alongMalaba(t, 0.9, 1)}, snap, straightOnly); q.Fee > 1050 {
-		t.Fatalf("fee %v passes the furthest area's fee", q.Fee)
-	}
-
-	// Cheap rate: a pin beyond Alupe's far edge on the way is raised to Alupe's fee, because
-	// further out must not cost less than a nearer area on the route. Alupe is KES 100 and the
-	// cheap distance price here is the 100 minimum, so lower the minimum to expose it.
-	cheap := busiaSnapshot(t)
-	cheap.Policy.PerKmRate, cheap.Policy.MinFee, cheap.Policy.Rounding = 1, 0, 0
-	cheap.Zones[1].Settings.Fee = 400 // Alupe
-	p := geo.Point{Lat: alupe.Lat + 4/111.195, Lng: alupe.Lng}
-	if q := computeQuote(QuoteInput{Point: p}, cheap, straightOnly); !q.Serviceable || q.Fee < 400 {
-		t.Fatalf("further out than Alupe must cost at least Alupe's fee: %+v", q)
+	// Malaba is KES 1,050; 2 km beyond its edge is 2 x 1.25 road km at KES 50, rounded up to 10.
+	if q.Fee < 1050+100 || q.Fee > 1050+140 || math.Mod(q.Fee, 10) != 0 {
+		t.Fatalf("fee = %v, want Malaba's 1050 plus about 125 for the extra distance", q.Fee)
 	}
 }
 
-func TestHoldToRouteIgnoresFreeAreasAndKeepsTheCapOverTheFloor(t *testing.T) {
+func TestHoldToRoute(t *testing.T) {
+	pol := DefaultPolicy()
 	mk := func(name string, reach, fee float64, free bool) route {
 		return route{Zone: &compiledZone{Name: name, Settings: ZoneSettings{Fee: fee, Free: free}}, ReachKm: reach}
 	}
 	// A free town on the route sets no bound.
-	if fee, how, _ := holdToRoute(80, []route{mk("Town", 3, 0, true)}, 10); how != "" || fee != 80 {
+	if fee, how, _ := holdToRoute(pol, 80, []route{mk("Town", 3, 0, true)}, 10, 10); how != "" || fee != 80 {
 		t.Fatalf("free areas bound nothing: %v %s", fee, how)
 	}
-	// A nearer area dearer than the furthest one must not lift the price over the cap.
-	if fee, how, _ := holdToRoute(50, []route{mk("Near", 5, 300, false), mk("Far", 20, 200, false)}, 12); how != "" || fee != 50 {
-		t.Fatalf("a floor above the cap must be ignored: %v %s", fee, how)
+	// Between Matayos (300, edge 8 km) and Bumala (500, edge 14 km): at least Matayos, at most Bumala.
+	between := []route{mk("Matayos", 8, 300, false), mk("Bumala", 14, 500, false), mk("Ugunja", 30, 800, false)}
+	if fee, how, by := holdToRoute(pol, 815, between, 11, 12); fee != 500 || how != "capped" || by != "Bumala" {
+		t.Fatalf("a place between Matayos and Bumala must not pass Bumala's fee, not Ugunja's: %v %s %s", fee, how, by)
 	}
-	if fee, how, by := holdToRoute(500, []route{mk("Near", 5, 100, false), mk("Far", 20, 300, false)}, 12); fee != 300 || how != "capped" || by != "Far" {
-		t.Fatalf("cap: %v %s %s", fee, how, by)
+	if fee, how, by := holdToRoute(pol, 100, between, 11, 12); fee != 300 || how != "raised" || by != "Matayos" {
+		t.Fatalf("further out than Matayos costs at least Matayos: %v %s %s", fee, how, by)
 	}
-	if fee, how, by := holdToRoute(50, []route{mk("Near", 5, 100, false), mk("Far", 20, 300, false)}, 12); fee != 100 || how != "raised" || by != "Near" {
-		t.Fatalf("floor: %v %s %s", fee, how, by)
+	if fee, how, _ := holdToRoute(pol, 400, between, 11, 12); how != "" || fee != 400 {
+		t.Fatalf("a price already between the two stays: %v %s", fee, how)
+	}
+	// A tariff that is not increasing never lifts the price over the area ahead.
+	if fee, how, _ := holdToRoute(pol, 50, []route{mk("Near", 5, 300, false), mk("Far", 20, 200, false)}, 12, 12); how != "" || fee != 50 {
+		t.Fatalf("a floor above the ceiling is ignored: %v %s", fee, how)
+	}
+	// Past Ugunja (800, edge 30 km), 4.5 km out: its fee plus KES 50 per road km beyond.
+	if fee, how, by := holdToRoute(pol, 700, between, 34.5, 34.5); fee != 800+230 || how != "extended" || by != "Ugunja" {
+		t.Fatalf("beyond the furthest area: %v %s %s", fee, how, by)
 	}
 }
