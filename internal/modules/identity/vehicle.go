@@ -86,6 +86,11 @@ func (s *Service) saveRiderVehicle(ctx context.Context, tx *ent.Tx, fm *ent.Flee
 	return nil
 }
 
+// InsurancePolicy returns the tenant's vehicle insurance rules (fleet.LoadInsurancePolicy).
+func (s *Service) InsurancePolicy(ctx context.Context, tenantID uuid.UUID) fleetmod.InsurancePolicy {
+	return fleetmod.LoadInsurancePolicy(ctx, s.client, tenantID)
+}
+
 // rekey moves a stub user onto its auth id in its own transaction (fleet.RekeyUser).
 func (s *Service) rekey(ctx context.Context, stub *ent.User, authID uuid.UUID, f fleetmod.RekeyFields) error {
 	tx, err := s.client.Tx(ctx)

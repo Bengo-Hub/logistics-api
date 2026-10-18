@@ -684,10 +684,18 @@ type CreateVehicleRequest struct {
 	Make         string `json:"make"`
 	Model        string `json:"model"`
 	LicensePlate string `json:"license_plate"`
+	// ChassisNo is kept in metadata (as on the insurance certificate).
+	ChassisNo string `json:"chassis_no,omitempty"`
+	// Insurance records the policy with the vehicle (required to carry jobs for a motorised
+	// vehicle when the tenant blocks uninsured vehicles).
+	Insurance *InsuranceInput `json:"insurance,omitempty"`
+	// MemberID links the new vehicle to this rider at once.
+	MemberID *uuid.UUID `json:"member_id,omitempty"`
 }
 
-// CreateVehicle adds a new vehicle to the fleet.
-func (s *Service) CreateVehicle(ctx context.Context, tenantID, fleetID uuid.UUID, req CreateVehicleRequest) (*ent.Vehicle, error) {
+// CreateVehicle adds a vehicle to the fleet with its insurance, and links it to a rider when
+// asked, in one transaction.
+func (s *Service) CreateVehicle(ctx context.Context, tenantID, fleetID uuid.UUID, req CreateVehicleRequest, actor string) (*ent.Vehicle, error) {
 	if fleetID == uuid.Nil {
 		fl, err := s.client.Fleet.Query().
 			Where(entfleet.TenantID(tenantID), entfleet.Status("active")).
@@ -698,15 +706,39 @@ func (s *Service) CreateVehicle(ctx context.Context, tenantID, fleetID uuid.UUID
 		fleetID = fl.ID
 	}
 
-	v, err := CreateVehicleRecord(ctx, s.client.Vehicle, tenantID, fleetID, req, nil)
+	tx, err := s.client.Tx(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("fleet: create vehicle: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+	v, err := createVehicleInTx(ctx, tx, tenantID, fleetID, req, nil, actor)
 	if err != nil {
 		return nil, err
+	}
+	if req.MemberID != nil {
+		m, err := tx.FleetMember.Query().
+			Where(fleetmember.ID(*req.MemberID), fleetmember.TenantID(tenantID)).
+			Only(ctx)
+		if err != nil {
+			if ent.IsNotFound(err) {
+				return nil, fmt.Errorf("fleet: member not found")
+			}
+			return nil, fmt.Errorf("fleet: create vehicle: %w", err)
+		}
+		if err := tx.FleetMember.UpdateOne(m).SetVehicleID(v.ID).Exec(ctx); err != nil {
+			return nil, fmt.Errorf("fleet: link vehicle: %w", err)
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("fleet: create vehicle: %w", err)
 	}
 
 	s.log.Info("vehicle created",
 		zap.String("vehicle_id", v.ID.String()),
 		zap.String("type", v.VehicleType),
 		zap.String("plate", v.LicensePlate),
+		zap.Bool("insured", req.Insurance != nil),
+		zap.Bool("linked", req.MemberID != nil),
 	)
 	return v, nil
 }

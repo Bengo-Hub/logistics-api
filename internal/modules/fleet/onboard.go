@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -185,6 +186,15 @@ func (s *Service) precheckOnboard(ctx context.Context, tenantID uuid.UUID, req O
 		if _, err := NormalizeVehicleType(req.Vehicle.VehicleType); err != nil {
 			return err
 		}
+		// A bad policy must be refused before the auth account is created.
+		if req.Vehicle.Insurance != nil {
+			if _, err := req.Vehicle.Insurance.validate(time.Now(), ""); err != nil {
+				return err
+			}
+		}
+		if req.Vehicle.MemberID != nil {
+			return fmt.Errorf("fleet: a new rider's vehicle is linked to them automatically")
+		}
 		plate := NormalizePlate(req.Vehicle.LicensePlate)
 		if plate == "" {
 			return fmt.Errorf("fleet: number plate is required")
@@ -230,7 +240,7 @@ func (s *Service) saveOnboarded(ctx context.Context, tenantID, fleetID, authID u
 		}
 		vehicleID = req.VehicleID
 	case req.Vehicle != nil:
-		v, err := CreateVehicleRecord(ctx, tx.Vehicle, tenantID, fleetID, *req.Vehicle, nil)
+		v, err := createVehicleInTx(ctx, tx, tenantID, fleetID, *req.Vehicle, nil, "admin")
 		if err != nil {
 			return nil, err
 		}

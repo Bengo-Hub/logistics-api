@@ -236,8 +236,9 @@ func (d *AutoDispatcher) DispatchTask(ctx context.Context, tenantID, taskID uuid
 		return nil // Can't dispatch without a pickup location
 	}
 
-	// 3. Get all active fleet members for this tenant
-	members, _, err := d.fleetSvc.ListMembers(ctx, tenantID, "active", "", 1000, 0)
+	// 3. Active riders whose vehicle may carry jobs (insurance and vehicle status, per the
+	// tenant's policy: fleet.DispatchablePredicate).
+	members, err := d.fleetSvc.ListDispatchable(ctx, tenantID, 1000)
 	if err != nil {
 		return fmt.Errorf("dispatch: list members: %w", err)
 	}
@@ -246,7 +247,7 @@ func (d *AutoDispatcher) DispatchTask(ctx context.Context, tenantID, taskID uuid
 		d.log.Warn("no active riders for auto-dispatch",
 			zap.String("task_id", taskID.String()),
 		)
-		d.notifyDispatchFailed(ctx, tenantID, taskID, "No active riders in the fleet to assign.")
+		d.notifyDispatchFailed(ctx, tenantID, taskID, "No active rider with a vehicle cleared for jobs (active, insured) to assign.")
 		return nil
 	}
 

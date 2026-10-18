@@ -500,6 +500,8 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 				tenant.Post("/riders/me/tasks/{taskId}/decline", lh.DeclineJob)
 				// Cash on delivery the rider holds until it is handed in at the outlet.
 				tenant.Get("/riders/me/cash", lh.GetMyCash)
+				// The rider renews the insurance of their linked vehicle (reactivates it).
+				tenant.Put("/riders/me/vehicle/insurance", lh.RecordMyVehicleInsurance)
 				tenant.Route("/cash/riders", func(cashR chi.Router) {
 					if rbacSvc != nil {
 						cashR.Use(appmw.RequirePermission(rbacSvc, rbac.PermTaskManage))
@@ -579,6 +581,7 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 						mut.Post("/members/batch", lh.BatchInviteMembers)
 						mut.Post("/vehicles", lh.CreateVehicle)
 						mut.Patch("/vehicles/{vehicleId}", lh.UpdateVehicle)
+						mut.Put("/vehicles/{vehicleId}/insurance", lh.RecordVehicleInsurance)
 						mut.Delete("/vehicles/{vehicleId}", lh.DeleteVehicle)
 					})
 				})

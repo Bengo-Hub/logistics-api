@@ -20,13 +20,13 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent"
 	"github.com/bengobox/logistics-service/internal/ent/fleet"
 	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
-	"github.com/bengobox/logistics-service/internal/ent/serviceconfig"
 	"github.com/bengobox/logistics-service/internal/ent/task"
 	"github.com/bengobox/logistics-service/internal/ent/taskassignment"
 	"github.com/bengobox/logistics-service/internal/ent/taskevent"
 	entuser "github.com/bengobox/logistics-service/internal/ent/user"
 	fleetmod "github.com/bengobox/logistics-service/internal/modules/fleet"
 	notifmod "github.com/bengobox/logistics-service/internal/modules/notifications"
+	"github.com/bengobox/logistics-service/internal/modules/settings"
 	"github.com/bengobox/logistics-service/internal/platform/events"
 )
 
@@ -214,22 +214,7 @@ func (s *Service) ProofRequired(ctx context.Context, tenantID uuid.UUID) bool {
 // boolSetting reads a boolean service setting: the tenant's own value, else the platform
 // default, else def.
 func (s *Service) boolSetting(ctx context.Context, tenantID uuid.UUID, key string, def bool) bool {
-	cfg, err := s.client.ServiceConfig.Query().
-		Where(serviceconfig.ConfigKey(key), serviceconfig.TenantID(tenantID)).
-		First(ctx)
-	if err != nil {
-		cfg, err = s.client.ServiceConfig.Query().
-			Where(serviceconfig.ConfigKey(key), serviceconfig.TenantIDIsNil()).
-			First(ctx)
-	}
-	if err != nil {
-		return def
-	}
-	v, perr := strconv.ParseBool(strings.TrimSpace(cfg.ConfigValue))
-	if perr != nil {
-		return def
-	}
-	return v
+	return settings.Bool(ctx, s.client, tenantID, key, def)
 }
 
 // ActiveAssignee returns the fleet member currently assigned to the task, if any.
@@ -755,6 +740,10 @@ func (s *Service) AssignTask(ctx context.Context, tenantID, taskID uuid.UUID, re
 
 	if member.Status != "active" {
 		return nil, ErrRiderNotActive
+	}
+	// The rider's vehicle must be active and insured under the tenant's policy.
+	if err := fleetmod.RiderBlock(ctx, s.client, tenantID, member); err != nil {
+		return nil, err
 	}
 
 	// Check for existing active assignment

@@ -265,6 +265,8 @@ func New(ctx context.Context) (*App, error) {
 	identitySvc.SetRiderApplications(fleetSvc.Apply)
 	fleetSvc.OnStatusChange(taskSvc.InvalidateFleetGate)
 	go fleetSvc.StartStaleRiderCleanup(ctx)
+	// Vehicle insurance: reminders before expiry, deactivation on expiry (one replica per hour).
+	go fleetSvc.StartInsuranceMonitor(ctx)
 
 	// Auto-dispatch: find nearest rider and assign tasks automatically
 	autoDispatcher := dispatch.NewAutoDispatcher(log, fleetSvc, taskSvc, redisClient)

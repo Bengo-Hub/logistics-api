@@ -8,9 +8,10 @@ import (
 	"time"
 
 	sharedcache "github.com/Bengo-Hub/cache"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	"github.com/bengobox/logistics-service/internal/ent/serviceconfig"
+	"github.com/bengobox/logistics-service/internal/modules/settings"
 )
 
 // Location history retention. Every rider sends a fix every 15 seconds while on a job, about
@@ -44,13 +45,11 @@ func parseRetentionDays(v string) int {
 }
 
 func (s *Service) retentionDays(ctx context.Context) int {
-	cfg, err := s.client.ServiceConfig.Query().
-		Where(serviceconfig.ConfigKey(retentionConfigKey), serviceconfig.TenantIDIsNil()).
-		First(ctx)
-	if err != nil {
+	raw, ok := settings.Value(ctx, s.client, uuid.Nil, retentionConfigKey)
+	if !ok {
 		return defaultRetentionDays
 	}
-	return parseRetentionDays(cfg.ConfigValue)
+	return parseRetentionDays(raw)
 }
 
 // StartRetentionJob prunes old location points once per UTC day fleet-wide (checked hourly, so a

@@ -37,6 +37,7 @@ func signVehicleMedia(v *ent.Vehicle) *ent.Vehicle {
 	}
 	v.ImageLicensePlate = mediaLink(v.ImageLicensePlate)
 	v.ImageSideView = mediaLink(v.ImageSideView)
+	v.InsuranceDocument = mediaLink(v.InsuranceDocument)
 	return v
 }
 

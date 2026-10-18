@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"time"
 
 	authclient "github.com/Bengo-Hub/shared-auth-client"
 	"github.com/bengobox/logistics-service/internal/ent"
@@ -110,7 +111,7 @@ func (h *IdentityHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(riderResponse(u))
+	json.NewEncoder(w).Encode(riderResponse(u, h.svc.InsurancePolicy(r.Context(), tenantID)))
 }
 
 func (h *IdentityHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
@@ -147,11 +148,11 @@ func (h *IdentityHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) 
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(riderResponse(u))
+	json.NewEncoder(w).Encode(riderResponse(u, h.svc.InsurancePolicy(r.Context(), tenantID)))
 }
 
 // riderResponse is the rider-app's profile payload, shared by GET /riders/me and the profile save.
-func riderResponse(u *ent.User) map[string]any {
+func riderResponse(u *ent.User, policy fleet.InsurancePolicy) map[string]any {
 	resp := map[string]any{"user": u}
 	if len(u.Edges.FleetMemberships) == 0 {
 		resp["status"] = "none"
@@ -165,8 +166,16 @@ func riderResponse(u *ent.User) map[string]any {
 	// payroll riders earn nothing per delivery; earning_rules riders see their earnings.
 	resp["pay_basis"] = emp.PayBasis
 	resp["rider"] = signFleetMemberMedia(fm)
-	if fm.Edges.Vehicle != nil {
-		resp["vehicle"] = fm.Edges.Vehicle
+	if v := fm.Edges.Vehicle; v != nil {
+		resp["vehicle"] = v
+		// The vehicle's insurance and, when the rider gets no jobs because of it, why (the same
+		// rule dispatch applies).
+		view := fleet.InsuranceStatusOf(v, policy, time.Now())
+		resp["vehicle_insurance"] = view
+		if fm.Status == "active" && view.Block != "" {
+			resp["job_block"] = view.Block
+			resp["job_block_message"] = fleet.BlockMessage(view.Block, v.LicensePlate)
+		}
 	}
 	return resp
 }

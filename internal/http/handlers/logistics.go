@@ -456,7 +456,9 @@ func (h *LogisticsHandler) ListMembers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondJSON(w, http.StatusOK, pagination.NewResponse(toFleetMemberResponses(members), total, p))
+	resps := toFleetMemberResponses(members)
+	withJobEligibility(resps, members, h.fleetSvc.InsurancePolicy(r.Context(), tenantID))
+	respondJSON(w, http.StatusOK, pagination.NewResponse(resps, total, p))
 }
 
 // GetMember handles GET /api/v1/{tenant}/fleet/members/{memberId}
@@ -479,7 +481,9 @@ func (h *LogisticsHandler) GetMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondJSON(w, http.StatusOK, toFleetMemberResponse(m))
+	resps := []*FleetMemberResponse{toFleetMemberResponse(m)}
+	withJobEligibility(resps, []*ent.FleetMember{m}, h.fleetSvc.InsurancePolicy(r.Context(), tenantID))
+	respondJSON(w, http.StatusOK, resps[0])
 }
 
 // InviteMember handles POST /api/v1/{tenant}/fleet/members
@@ -787,7 +791,7 @@ func (h *LogisticsHandler) ListVehicles(w http.ResponseWriter, r *http.Request) 
 	respondJSON(w, http.StatusOK, struct {
 		pagination.Response[*VehicleResponse]
 		Summary fleet.VehicleSummary `json:"summary"`
-	}{pagination.NewResponse(toVehicleResponses(vehicles), total, p), summary})
+	}{pagination.NewResponse(toVehicleResponses(vehicles, h.fleetSvc.InsurancePolicy(r.Context(), tenantID)), total, p), summary})
 }
 
 // CreateVehicle handles POST /api/v1/{tenant}/fleet/vehicles
@@ -804,13 +808,70 @@ func (h *LogisticsHandler) CreateVehicle(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	v, err := h.fleetSvc.CreateVehicle(r.Context(), tenantID, uuid.Nil, req)
+	if req.Insurance != nil {
+		req.Insurance.Document = mediaRef(req.Insurance.Document)
+	}
+	v, err := h.fleetSvc.CreateVehicle(r.Context(), tenantID, uuid.Nil, req, actorLabel(r, "admin"))
 	if err != nil {
 		http.Error(w, err.Error(), fleetErrorStatus(err))
 		return
 	}
 
-	respondJSON(w, http.StatusCreated, signVehicleMedia(v))
+	respondJSON(w, http.StatusCreated, toVehicleResponse(v, h.fleetSvc.InsurancePolicy(r.Context(), tenantID), time.Now()))
+}
+
+// RecordVehicleInsurance handles PUT /api/v1/{tenant}/fleet/vehicles/{vehicleId}/insurance: the
+// admin records or renews a vehicle's policy. A vehicle taken off jobs for an expired policy is
+// reactivated.
+func (h *LogisticsHandler) RecordVehicleInsurance(w http.ResponseWriter, r *http.Request) {
+	tenantID := tenantIDFromClaims(r)
+	if tenantID == uuid.Nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	vehicleID, err := uuid.Parse(chi.URLParam(r, "vehicleId"))
+	if err != nil {
+		http.Error(w, "invalid vehicle id", http.StatusBadRequest)
+		return
+	}
+	h.saveInsurance(w, r, tenantID, vehicleID, actorLabel(r, "admin"))
+}
+
+// RecordMyVehicleInsurance handles PUT /api/v1/{tenant}/riders/me/vehicle/insurance: the rider
+// renews the policy of the vehicle linked to them, from the rider app.
+func (h *LogisticsHandler) RecordMyVehicleInsurance(w http.ResponseWriter, r *http.Request) {
+	tenantID, member, ok := h.currentRider(w, r)
+	if !ok {
+		return
+	}
+	if member.VehicleID == nil {
+		http.Error(w, "You have no vehicle linked. Ask your manager to link one.", http.StatusNotFound)
+		return
+	}
+	h.saveInsurance(w, r, tenantID, *member.VehicleID, "rider")
+}
+
+func (h *LogisticsHandler) saveInsurance(w http.ResponseWriter, r *http.Request, tenantID, vehicleID uuid.UUID, actor string) {
+	var in fleet.InsuranceInput
+	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&in); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	in.Document = mediaRef(in.Document)
+	v, err := h.fleetSvc.RecordInsurance(r.Context(), tenantID, vehicleID, in, actor)
+	if err != nil {
+		http.Error(w, err.Error(), fleetErrorStatus(err))
+		return
+	}
+	respondJSON(w, http.StatusOK, toVehicleResponse(v, h.fleetSvc.InsurancePolicy(r.Context(), tenantID), time.Now()))
+}
+
+// actorLabel names who made a change for the record: the caller's email when the token has one.
+func actorLabel(r *http.Request, fallback string) string {
+	if c, ok := authclient.ClaimsFromContext(r.Context()); ok && c.Email != "" {
+		return c.Email
+	}
+	return fallback
 }
 
 // AssignVehicle handles POST /api/v1/{tenant}/fleet/members/{memberId}/vehicle
@@ -898,7 +959,7 @@ func (h *LogisticsHandler) UpdateVehicle(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	respondJSON(w, http.StatusOK, signVehicleMedia(v))
+	respondJSON(w, http.StatusOK, toVehicleResponse(v, h.fleetSvc.InsurancePolicy(r.Context(), tenantID), time.Now()))
 }
 
 // DeleteVehicle handles DELETE /api/v1/{tenant}/fleet/vehicles/{vehicleId}

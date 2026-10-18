@@ -11,6 +11,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/consts"
 	"github.com/bengobox/logistics-service/internal/ent"
 	"github.com/bengobox/logistics-service/internal/ent/serviceconfig"
+	"github.com/bengobox/logistics-service/internal/modules/settings"
 )
 
 // ServiceConfigHandler handles service-level configuration CRUD for logistics-api.
@@ -36,7 +37,10 @@ type logisticsSCResponse struct {
 	Description string     `json:"description,omitempty"`
 	IsSecret    bool       `json:"is_secret"`
 	IsOverride  bool       `json:"is_override"`
-	CreatedAt   string     `json:"created_at"`
+	// DefaultValue is the platform value under a tenant override, so the UI can show what
+	// "use the platform default" means.
+	DefaultValue string `json:"default_value,omitempty"`
+	CreatedAt    string `json:"created_at"`
 	UpdatedAt   string     `json:"updated_at"`
 }
 
@@ -180,7 +184,11 @@ func (h *ServiceConfigHandler) ListTenantSettings(w http.ResponseWriter, r *http
 	result := make([]logisticsSCResponse, 0, len(platformConfigs))
 	for _, pc := range platformConfigs {
 		if tc, ok := tenantByKey[pc.ConfigKey]; ok {
-			result = append(result, toLogisticsSCResponse(tc, true))
+			row := toLogisticsSCResponse(tc, true)
+			if !pc.IsSecret {
+				row.DefaultValue = pc.ConfigValue
+			}
+			result = append(result, row)
 			delete(tenantByKey, pc.ConfigKey)
 		} else {
 			result = append(result, toLogisticsSCResponse(pc, false))
@@ -235,6 +243,11 @@ func (h *ServiceConfigHandler) UpsertTenantSetting(w http.ResponseWriter, r *htt
 	configType := "string"
 	if platformDefault != nil {
 		configType = platformDefault.ConfigType
+	}
+	// A value the readers cannot parse would silently fall back to the default; refuse it.
+	if !settings.ValidValue(configType, req.ConfigValue) {
+		respondJSON(w, http.StatusBadRequest, map[string]string{"error": "config_value must be a " + configType})
+		return
 	}
 
 	existing, _ := h.client.ServiceConfig.Query().
@@ -363,7 +376,31 @@ func (h *ServiceConfigHandler) RegisterTenantRoutes(r chi.Router, manage func(ht
 		s.Get("/modules", h.GetTenantModules)
 		s.With(manage).Put("/modules", h.UpdateTenantModules)
 		s.With(manage).Put("/{key}", h.UpsertTenantSetting)
+		s.With(manage).Delete("/{key}", h.ResetTenantSetting)
 	})
+}
+
+// ResetTenantSetting removes the tenant's own value so the platform default applies again.
+// DELETE /api/v1/{tenant}/settings/{key}
+func (h *ServiceConfigHandler) ResetTenantSetting(w http.ResponseWriter, r *http.Request) {
+	tenantID := tenantIDFromClaims(r)
+	if tenantID == uuid.Nil {
+		respondJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+	key := chi.URLParam(r, "key")
+	if path, ok := dedicatedConfigKeys[key]; ok {
+		respondJSON(w, http.StatusBadRequest, map[string]string{"error": "this setting is saved through " + path})
+		return
+	}
+	if _, err := h.client.ServiceConfig.Delete().
+		Where(serviceconfig.ConfigKey(key), serviceconfig.TenantID(tenantID)).
+		Exec(r.Context()); err != nil {
+		h.logger.Error("failed to reset tenant config", zap.Error(err), zap.String("key", key))
+		respondJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to reset setting"})
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // dedicatedConfigKeys have their own validated endpoints; the generic setting write refuses

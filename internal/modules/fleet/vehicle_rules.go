@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -99,6 +100,37 @@ func CreateVehicleRecord(ctx context.Context, vc *ent.VehicleClient, tenantID, f
 	}
 	return v, nil
 }
+
+// createVehicleInTx is the one vehicle creation path with insurance: the policy is validated
+// before anything is written, then the vehicle and its policy are saved in tx. meta is extra
+// metadata (the rider-owned marker).
+func createVehicleInTx(ctx context.Context, tx *ent.Tx, tenantID, fleetID uuid.UUID, req CreateVehicleRequest, meta map[string]any, actor string) (*ent.Vehicle, error) {
+	var vi *validInsurance
+	if req.Insurance != nil {
+		valid, err := req.Insurance.validate(time.Now(), actor)
+		if err != nil {
+			return nil, err
+		}
+		vi = &valid
+	}
+	if chassis := strings.ToUpper(strings.TrimSpace(req.ChassisNo)); chassis != "" {
+		if meta == nil {
+			meta = map[string]any{}
+		}
+		meta[MetaChassisNo] = chassis
+	}
+	v, err := CreateVehicleRecord(ctx, tx.Vehicle, tenantID, fleetID, req, meta)
+	if err != nil {
+		return nil, err
+	}
+	if vi != nil {
+		return applyInsurance(ctx, tx.Vehicle, v, *vi)
+	}
+	return v, nil
+}
+
+// MetaChassisNo is the vehicle metadata key for the chassis (frame) number.
+const MetaChassisNo = "chassis_no"
 
 // requireFreeVehicle checks the vehicle belongs to the tenant and is not another rider's.
 // exceptMember is the rider being linked (their own link does not count).

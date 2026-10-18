@@ -261,6 +261,10 @@ func seedServiceConfigs(ctx context.Context, client *ent.Client) error {
 		// pricing and geofence live in logistics.delivery_quote_policy.
 		{"logistics.auto_assign_enabled", "true", "bool", "Auto-assign new delivery tasks to the nearest rider", false},
 		{"logistics.pod_required", "true", "bool", "Riders must submit proof of delivery to complete a job", false},
+		// Vehicle insurance (fleet/insurance.go). Tenants may override each or return to these.
+		{"logistics.block_uninsured_vehicles", "true", "bool", "Riders on a motorised vehicle with no insurance recorded get no jobs", false},
+		{"logistics.block_expired_insurance", "true", "bool", "A vehicle whose insurance expired is deactivated and its rider gets no jobs until it is renewed", false},
+		{"logistics.insurance_reminder_days", "7", "int", "Days before a vehicle's insurance expires that the rider and the business are reminded", false},
 	}
 
 	count := 0

@@ -4,12 +4,15 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 
 	"github.com/bengobox/logistics-service/internal/ent"
 	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
+	"github.com/bengobox/logistics-service/internal/ent/predicate"
 	entvehicle "github.com/bengobox/logistics-service/internal/ent/vehicle"
+	"github.com/bengobox/logistics-service/internal/shared/localtime"
 )
 
 // ListVehiclesParams filters the fleet's vehicle list. Assigned nil means both.
@@ -28,6 +31,11 @@ type VehicleSummary struct {
 	Inactive    int `json:"inactive"`
 	Assigned    int `json:"assigned"`
 	Unassigned  int `json:"unassigned"`
+	// Insurance: expired, expiring within the tenant's reminder days, and motorised vehicles
+	// with no policy recorded.
+	InsuranceExpired  int `json:"insurance_expired"`
+	InsuranceExpiring int `json:"insurance_expiring"`
+	InsuranceMissing  int `json:"insurance_missing"`
 }
 
 // ListVehicles returns one page of the tenant's vehicles with the rider each is linked to, and
@@ -106,5 +114,23 @@ func (s *Service) vehicleSummary(ctx context.Context, tenantID uuid.UUID) (Vehic
 		return VehicleSummary{}, fmt.Errorf("fleet: vehicle summary: %w", err)
 	}
 	sum.Assigned, sum.Unassigned = assigned, total-assigned
+
+	now := time.Now()
+	p := LoadInsurancePolicy(ctx, s.client, tenantID)
+	counts := []struct {
+		dst  *int
+		pred []predicate.Vehicle
+	}{
+		{&sum.InsuranceExpired, []predicate.Vehicle{entvehicle.InsuranceExpiryLTE(now)}},
+		{&sum.InsuranceExpiring, []predicate.Vehicle{entvehicle.InsuranceExpiryGT(now), entvehicle.InsuranceExpiryLTE(localtime.EndOfDay(now.AddDate(0, 0, p.ReminderDays)))}},
+		{&sum.InsuranceMissing, []predicate.Vehicle{entvehicle.InsuranceExpiryIsNil(), entvehicle.VehicleTypeNEQ("bicycle")}},
+	}
+	for _, c := range counts {
+		n, err := s.client.Vehicle.Query().Where(append(c.pred, entvehicle.TenantID(tenantID))...).Count(ctx)
+		if err != nil {
+			return VehicleSummary{}, fmt.Errorf("fleet: vehicle summary: %w", err)
+		}
+		*c.dst = n
+	}
 	return sum, nil
 }

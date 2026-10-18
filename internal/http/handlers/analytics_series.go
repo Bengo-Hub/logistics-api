@@ -2,27 +2,17 @@ package handlers
 
 import (
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
 	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
+	"github.com/bengobox/logistics-service/internal/shared/localtime"
 )
 
-// reportLocation is the time zone reports count days in (REPORTS_TIMEZONE, default
-// Africa/Nairobi). Pods run in UTC, so "today" used to start at 03:00 in Kenya.
-var reportLocation = func() *time.Location {
-	name := os.Getenv("REPORTS_TIMEZONE")
-	if name == "" {
-		name = "Africa/Nairobi"
-	}
-	if loc, err := time.LoadLocation(name); err == nil {
-		return loc
-	}
-	return time.FixedZone("EAT", 3*60*60)
-}()
+// reportLocation is the time zone reports count days in (localtime.Location).
+var reportLocation = localtime.Location
 
 // periodDays are the report periods in calendar days, today included.
 var periodDays = map[string]int{"today": 1, "7d": 7, "30d": 30, "90d": 90}

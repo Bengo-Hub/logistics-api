@@ -1305,6 +1305,11 @@ var (
 				Unique:  true,
 				Columns: []*schema.Column{VehiclesColumns[1], VehiclesColumns[5]},
 			},
+			{
+				Name:    "vehicle_insurance_expiry",
+				Unique:  false,
+				Columns: []*schema.Column{VehiclesColumns[11]},
+			},
 		},
 	}
 	// Tables holds all the tables in the schema.

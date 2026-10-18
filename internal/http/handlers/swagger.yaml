@@ -520,6 +520,54 @@ paths:
         - {name: limit, in: query, schema: {type: integer}}
       responses:
         '200': {description: "{data, total, page, limit, hasMore, summary: {active, maintenance, inactive, assigned, unassigned}}"}
+  /api/v1/{tenant}/fleet/vehicles/{vehicleId}/insurance:
+    put:
+      tags: [Fleet]
+      summary: Record or renew a vehicle's insurance
+      description: Needs logistics.fleet.manage. A vehicle deactivated for expired insurance is reactivated; the previous policy is kept in a short history. An already expired policy is refused.
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: tenant, in: path, required: true, schema: {type: string}}
+        - {name: vehicleId, in: path, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/InsuranceInput'}
+      responses:
+        '200': {description: "Vehicle with its insurance view (status valid | expiring | expired | missing | not_required, days_left, block)"}
+        '400': {description: Missing policy number or expiry, bad dates, or an expired policy}
+        '404': {description: Vehicle not found}
+  /api/v1/{tenant}/riders/me/vehicle/insurance:
+    put:
+      tags: [Riders]
+      summary: The rider renews their vehicle's insurance
+      description: The vehicle linked to the signed-in rider. Same rules as the admin route.
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: tenant, in: path, required: true, schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/InsuranceInput'}
+      responses:
+        '200': {description: Vehicle with its insurance view}
+        '404': {description: No vehicle linked to the rider}
+  /api/v1/{tenant}/settings/{key}:
+    delete:
+      tags: [Settings]
+      summary: Return a setting to the platform default
+      description: Needs logistics.config.manage. Removes the tenant's own value of the key.
+      security:
+        - bearerAuth: []
+      parameters:
+        - {name: tenant, in: path, required: true, schema: {type: string}}
+        - {name: key, in: path, required: true, schema: {type: string}, example: logistics.block_expired_insurance}
+      responses:
+        '204': {description: Tenant value removed}
   /api/v1/{tenant}/fleet/members/{memberId}/vehicle:
     post:
       tags: [Fleet]
@@ -693,6 +741,17 @@ components:
       in: header
       name: X-API-Key
   schemas:
+    InsuranceInput:
+      type: object
+      required: [policy_no, expires_on]
+      properties:
+        policy_no: {type: string, example: 030/071/1/000255/2026/03}
+        certificate_no: {type: string, example: D5337693}
+        insurer: {type: string}
+        cover: {type: string, example: COMP}
+        starts_on: {type: string, format: date}
+        expires_on: {type: string, format: date, description: Last day of cover (local date)}
+        document: {type: string, description: Uploaded certificate reference}
     ZoneSettings:
       type: object
       properties:

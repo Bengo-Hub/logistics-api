@@ -87,5 +87,7 @@ func (Vehicle) Edges() []ent.Edge {
 func (Vehicle) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("tenant_id", "license_plate").Unique(),
+		// The insurance monitor scans by expiry across tenants (reminders and expiries).
+		index.Fields("insurance_expiry"),
 	}
 }

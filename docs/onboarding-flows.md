@@ -196,8 +196,60 @@ shows the trips and per diem screen only to payroll riders.
 - Deleting a rider keeps company vehicles. Only a vehicle the rider registered on their own profile
   (`metadata.owner = rider`) goes with them.
 - `GET /fleet/vehicles?search=&status=&assigned=true|false&page=&limit=` lists every vehicle,
-  assigned or not, with `assigned_to`, plus a fleet-wide `summary` counted in SQL. The Vehicles page
+  assigned or not, with `assigned_to`, `chassis_no` and `insurance`, plus a fleet-wide `summary`
+  counted in SQL (status, assigned, and insurance expired, expiring and missing). The Vehicles page
   and the rider vehicle pickers use it.
+- Linking a rider to a vehicle (admin): on the rider's sheet or detail page, "Register this rider's
+  vehicle" creates the vehicle with its insurance and links it in one step
+  (`POST /fleet/vehicles` with `member_id`), or pick a free fleet vehicle and Link. From the Vehicles
+  page, "Assign to rider" on a vehicle card. The add-rider dialog does the same for a new internal rider.
+
+### Vehicle insurance (2026-10-18)
+Riders get no jobs on a vehicle that may not carry them. One rule, `fleet.VehicleBlock` (Go) and
+`fleet.DispatchablePredicate` (the same rule in SQL, so dispatch stays one indexed query):
+- a vehicle that is not `active` (maintenance, inactive, or deactivated for expired insurance) blocks;
+- a motorised vehicle (anything but a bicycle) with no insurance recorded blocks when the tenant
+  blocks uninsured vehicles;
+- a policy past its expiry blocks when the tenant blocks expired insurance;
+- a rider with no vehicle is not affected.
+
+It is applied by auto-dispatch, batch dispatch, manual assignment (`AssignTask`, `409` with the
+reason), rider self-claim (`403`) and the S2S rider list other services pick from. Rider list and
+detail responses carry `vehicle_insurance`, `dispatch_block` and `dispatch_block_message`;
+`GET /riders/me` carries `vehicle_insurance`, `job_block` and `job_block_message` for the rider app.
+
+Per-tenant policy (service_configs: tenant value, else platform default seeded by `cmd/seed`, else
+code default; `PUT /settings/{key}` sets the tenant's own value, `DELETE /settings/{key}` returns to
+the platform default; logistics-ui Settings, Vehicle insurance):
+
+| Key | Default | Meaning |
+|-----|---------|---------|
+| `logistics.block_expired_insurance` | true | Deactivate on expiry and give its rider no jobs until renewed |
+| `logistics.block_uninsured_vehicles` | true | No jobs for a motorised vehicle with no policy recorded |
+| `logistics.insurance_reminder_days` | 7 | Days before expiry the rider and the business are reminded (1 to 60) |
+
+Data: expiry is `vehicles.insurance_expiry` (end of the expiry day, local time, indexed by
+migration `20261018104000_vehicle_insurance_expiry_index`), the certificate is
+`vehicles.insurance_document`, and the policy details are `vehicles.metadata.insurance`
+(`policy_no`, `certificate_no`, `insurer`, `cover`, `starts_on`, who saved it and when, plus the
+notice markers `reminded_for` and `expired_notice_for`). The chassis number is
+`metadata.chassis_no`. The previous policy moves to `metadata.insurance_history` (last 5).
+
+Recording and renewing (`fleet.Service.RecordInsurance`): `PUT /fleet/vehicles/{id}/insurance`
+(admin, `logistics.fleet.manage`) or `PUT /riders/me/vehicle/insurance` (the rider's linked
+vehicle, rider app Profile). Policy number and expiry are required and an already expired policy is
+refused. A vehicle the monitor deactivated (`metadata.inactive_reason = insurance_expired`) is
+reactivated at once; a vehicle an admin set inactive by hand stays inactive. Insurance can also be
+recorded when a vehicle is created or a rider is onboarded with a new vehicle (validated before
+anything is written).
+
+Monitor (`fleet.Service.StartInsuranceMonitor`, hourly, one replica via `ClaimPeriod`): within the
+tenant's reminder days before expiry it publishes `logistics.fleet.vehicle_insurance_expiring` once
+per policy; after expiry it publishes `logistics.fleet.vehicle_insurance_expired` once and, when the
+tenant blocks expired insurance, sets the vehicle `inactive` with `inactive_reason`. Both scans use
+the expiry index in batches of 500. notifications-api sends each by email and WhatsApp to the rider
+on the vehicle and to the business contact (templates `logistics/vehicle_insurance_*`, WhatsApp
+`logistics_insurance_*_v1_btn`, pending Meta approval after the template sync).
 
 ### 7-Day Auto-Cleanup
 - Hourly background job checks for stale riders
@@ -245,8 +297,10 @@ shows the trips and per diem screen only to payroll riders.
 
 ### Vehicle Management
 - `GET /fleet/vehicles` — List vehicles (search, status, assigned filter) with fleet summary
-- `POST /fleet/vehicles` — Create vehicle
+- `POST /fleet/vehicles` — Create vehicle (optional `chassis_no`, `insurance`, `member_id` to link a rider)
 - `PATCH /fleet/vehicles/{id}` and `DELETE /fleet/vehicles/{id}` — Update or delete (delete refused while linked)
+- `PUT /fleet/vehicles/{id}/insurance` — Record or renew the policy (reactivates a vehicle deactivated for expiry)
+- `PUT /riders/me/vehicle/insurance` — The rider renews their linked vehicle's policy
 
 ### Rider Profile (Identity)
 - `GET /riders/me/profile` — Get own profile

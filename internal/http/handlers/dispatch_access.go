@@ -19,6 +19,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/task"
 	"github.com/bengobox/logistics-service/internal/ent/taskassignment"
 	"github.com/bengobox/logistics-service/internal/modules/dispatch"
+	"github.com/bengobox/logistics-service/internal/modules/fleet"
 	"github.com/bengobox/logistics-service/internal/modules/rbac"
 	"github.com/bengobox/logistics-service/internal/modules/tasks"
 )
@@ -106,6 +107,13 @@ func decodeReason(r *http.Request) string {
 }
 
 // writeTaskError maps lifecycle errors to HTTP statuses.
+// isRiderBlocked reports a job refused because the rider's vehicle may not carry jobs (inactive,
+// uninsured or insurance expired under the tenant's policy).
+func isRiderBlocked(err error) bool {
+	var blocked *fleet.ErrRiderBlocked
+	return errors.As(err, &blocked)
+}
+
 func writeTaskError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, tasks.ErrNotYourTask), errors.Is(err, tasks.ErrRiderMayNotSetStatus):
@@ -116,6 +124,8 @@ func writeTaskError(w http.ResponseWriter, err error) {
 		http.Error(w, strings.TrimPrefix(err.Error(), "tasks: "), http.StatusUnprocessableEntity)
 	case errors.Is(err, tasks.ErrTaskClosed), errors.Is(err, tasks.ErrAlreadyPickedUp):
 		http.Error(w, strings.TrimPrefix(err.Error(), "tasks: "), http.StatusConflict)
+	case isRiderBlocked(err):
+		http.Error(w, err.Error(), http.StatusConflict)
 	case err != nil && strings.Contains(err.Error(), "not found"):
 		http.Error(w, "task not found", http.StatusNotFound)
 	default:

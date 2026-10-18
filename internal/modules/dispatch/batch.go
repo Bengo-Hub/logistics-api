@@ -164,7 +164,8 @@ func (s *BatchScheduler) batchDispatch(ctx context.Context, tenantID uuid.UUID) 
 		refLng := group[0].lng
 
 		// Get active fleet members
-		members, _, err := s.dispatcher.fleetSvc.ListMembers(ctx, tenantID, "active", "", 1000, 0)
+		// Only riders whose vehicle may carry jobs (fleet.DispatchablePredicate).
+		members, err := s.dispatcher.fleetSvc.ListDispatchable(ctx, tenantID, 1000)
 		if err != nil || len(members) == 0 {
 			continue
 		}

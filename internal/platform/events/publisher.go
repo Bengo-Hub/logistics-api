@@ -91,6 +91,48 @@ func (d FleetMemberEventData) toMap() map[string]interface{} {
 	}
 }
 
+// Vehicle insurance events. notifications-api sends each one by email and WhatsApp to the rider on
+// the vehicle (when there is one) and to the tenant contact.
+const (
+	EventVehicleInsuranceExpiring = "fleet.vehicle_insurance_expiring"
+	EventVehicleInsuranceExpired  = "fleet.vehicle_insurance_expired"
+)
+
+// VehicleInsuranceEventData describes the vehicle, its policy and the rider on it.
+type VehicleInsuranceEventData struct {
+	VehicleID    string `json:"vehicle_id"`
+	LicensePlate string `json:"license_plate"`
+	VehicleType  string `json:"vehicle_type"`
+	PolicyNo     string `json:"policy_no,omitempty"`
+	Insurer      string `json:"insurer,omitempty"`
+	ExpiresOn    string `json:"expires_on"` // YYYY-MM-DD in the reports timezone
+	DaysLeft     int    `json:"days_left"`
+	// Blocked: the vehicle is (or on expiry will be) taken off jobs under the tenant's policy.
+	Blocked    bool   `json:"blocked"`
+	TenantSlug string `json:"tenant_slug"`
+	RiderName  string `json:"rider_name,omitempty"`
+	RiderEmail string `json:"rider_email,omitempty"`
+	RiderPhone string `json:"rider_phone,omitempty"`
+}
+
+// PublishVehicleInsurance publishes one of the EventVehicleInsurance* events.
+func (p *Publisher) PublishVehicleInsurance(ctx context.Context, tenantID uuid.UUID, eventType string, d VehicleInsuranceEventData) error {
+	return p.publish(ctx, tenantID, "logistics", eventType, map[string]interface{}{
+		"vehicle_id":    d.VehicleID,
+		"license_plate": d.LicensePlate,
+		"vehicle_type":  d.VehicleType,
+		"policy_no":     d.PolicyNo,
+		"insurer":       d.Insurer,
+		"expires_on":    d.ExpiresOn,
+		"days_left":     d.DaysLeft,
+		"blocked":       d.Blocked,
+		"tenant_slug":   d.TenantSlug,
+		"rider_name":    d.RiderName,
+		"rider_email":   d.RiderEmail,
+		"rider_phone":   d.RiderPhone,
+	})
+}
+
 // PublishFleetMemberInvited publishes a fleet.member_invited event.
 func (p *Publisher) PublishFleetMemberInvited(ctx context.Context, tenantID uuid.UUID, data FleetMemberEventData) error {
 	return p.publish(ctx, tenantID, "logistics", "fleet.member_invited", data.toMap())

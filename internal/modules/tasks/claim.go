@@ -13,6 +13,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/predicate"
 	"github.com/bengobox/logistics-service/internal/ent/task"
 	"github.com/bengobox/logistics-service/internal/ent/taskassignment"
+	fleetmod "github.com/bengobox/logistics-service/internal/modules/fleet"
 )
 
 // ConfigKeyRiderSelfClaim lets riders pick up unassigned delivery jobs themselves (a small
@@ -78,6 +79,10 @@ func (s *Service) ClaimTask(ctx context.Context, tenantID, taskID, memberID uuid
 	}
 	if member.Status != "active" {
 		return nil, ErrRiderNotActive
+	}
+	// The rider's vehicle must be active and insured under the tenant's policy.
+	if err := fleetmod.RiderBlock(ctx, s.client, tenantID, member); err != nil {
+		return nil, err
 	}
 
 	won, err := s.client.Task.Update().

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/bengobox/logistics-service/internal/ent"
+	"github.com/bengobox/logistics-service/internal/modules/fleet"
 	"github.com/google/uuid"
 )
 
@@ -36,6 +37,10 @@ type FleetMemberResponse struct {
 	CreatedAt            time.Time             `json:"created_at"`
 	UpdatedAt            time.Time             `json:"updated_at"`
 	Edges                *FleetMemberRespEdges `json:"edges,omitempty"`
+	// VehicleInsurance and DispatchBlock come from withJobEligibility (list and detail).
+	VehicleInsurance     *fleet.InsuranceView `json:"vehicle_insurance,omitempty"`
+	DispatchBlock        string               `json:"dispatch_block,omitempty"`
+	DispatchBlockMessage string               `json:"dispatch_block_message,omitempty"`
 }
 
 // FleetMemberRespEdges holds edge data for a fleet member response.
@@ -100,18 +105,28 @@ type VehicleAssignee struct {
 	Phone    string    `json:"phone,omitempty"`
 }
 
-// VehicleResponse is a vehicle with the rider it is linked to (nil when it is free).
+// VehicleResponse is a vehicle with the rider it is linked to (nil when it is free) and its
+// insurance status under the tenant's policy.
 type VehicleResponse struct {
 	*ent.Vehicle
-	AssignedTo *VehicleAssignee `json:"assigned_to,omitempty"`
+	AssignedTo *VehicleAssignee     `json:"assigned_to,omitempty"`
+	ChassisNo  string               `json:"chassis_no,omitempty"`
+	Insurance  *fleet.InsuranceView `json:"insurance,omitempty"`
 }
 
-// toVehicleResponses maps vehicles loaded with their members (and users) to response DTOs and
-// signs the private plate and side-view photos.
-func toVehicleResponses(vehicles []*ent.Vehicle) []*VehicleResponse {
+// toVehicleResponse signs the vehicle's private photos and documents and adds its insurance view.
+func toVehicleResponse(v *ent.Vehicle, p fleet.InsurancePolicy, now time.Time) *VehicleResponse {
+	r := &VehicleResponse{Vehicle: signVehicleMedia(v), Insurance: fleet.InsuranceStatusOf(v, p, now)}
+	r.ChassisNo, _ = v.Metadata[fleet.MetaChassisNo].(string)
+	return r
+}
+
+// toVehicleResponses maps vehicles loaded with their members (and users) to response DTOs.
+func toVehicleResponses(vehicles []*ent.Vehicle, p fleet.InsurancePolicy) []*VehicleResponse {
+	now := time.Now()
 	out := make([]*VehicleResponse, len(vehicles))
 	for i, v := range vehicles {
-		r := &VehicleResponse{Vehicle: signVehicleMedia(v)}
+		r := toVehicleResponse(v, p, now)
 		if len(v.Edges.Members) > 0 {
 			m := v.Edges.Members[0]
 			a := &VehicleAssignee{MemberID: m.ID}
@@ -132,4 +147,23 @@ func toFleetMemberResponses(members []*ent.FleetMember) []*FleetMemberResponse {
 		out[i] = toFleetMemberResponse(m)
 	}
 	return out
+}
+
+// withJobEligibility adds the vehicle's insurance view and why the rider gets no jobs, if so
+// (same rule as dispatch: fleet.VehicleBlock), to responses built from members.
+func withJobEligibility(resps []*FleetMemberResponse, members []*ent.FleetMember, p fleet.InsurancePolicy) {
+	now := time.Now()
+	for i, m := range members {
+		v := m.Edges.Vehicle
+		if v == nil {
+			continue
+		}
+		// toFleetMemberResponse already signed the vehicle's media, the document included.
+		view := fleet.InsuranceStatusOf(v, p, now)
+		resps[i].VehicleInsurance = view
+		if m.Status == "active" && view.Block != "" {
+			resps[i].DispatchBlock = view.Block
+			resps[i].DispatchBlockMessage = fleet.BlockMessage(view.Block, v.LicensePlate)
+		}
+	}
 }

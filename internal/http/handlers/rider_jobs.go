@@ -101,6 +101,9 @@ func (h *LogisticsHandler) ClaimJob(w http.ResponseWriter, r *http.Request) {
 	case errors.Is(err, tasks.ErrRiderNotActive):
 		http.Error(w, "Your rider account is not active yet.", http.StatusForbidden)
 		return
+	case isRiderBlocked(err):
+		http.Error(w, err.Error(), http.StatusForbidden)
+		return
 	case err != nil:
 		h.log.Error("claim job", zap.String("task_id", taskID.String()), zap.Error(err))
 		http.Error(w, "could not take this job", http.StatusInternalServerError)

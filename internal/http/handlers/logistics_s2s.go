@@ -37,7 +37,8 @@ func (h *LogisticsHandler) S2SListRiders(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "invalid tenant", http.StatusBadRequest)
 		return
 	}
-	members, _, err := h.fleetSvc.ListMembers(r.Context(), tenantID, "active", "", 200, 0)
+	// Only riders who may take jobs now (vehicle active and insured per the tenant's policy).
+	members, err := h.fleetSvc.ListDispatchable(r.Context(), tenantID, 200)
 	if err != nil {
 		h.log.Warn("s2s list riders", zap.Error(err))
 		http.Error(w, "failed to list riders", http.StatusInternalServerError)
@@ -121,7 +122,7 @@ func (h *LogisticsHandler) S2SAssignTask(w http.ResponseWriter, r *http.Request)
 	assignment, err := h.taskSvc.AssignTask(r.Context(), tenantID, taskID, req)
 	if err != nil {
 		h.log.Warn("s2s assign task", zap.Error(err))
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeTaskError(w, err)
 		return
 	}
 	respondJSON(w, http.StatusCreated, assignment)
