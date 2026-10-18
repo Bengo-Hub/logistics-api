@@ -26,8 +26,6 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent"
 	handlers "github.com/bengobox/logistics-service/internal/http/handlers"
 	router "github.com/bengobox/logistics-service/internal/http/router"
-	backupmod "github.com/bengobox/logistics-service/internal/modules/backup"
-	"github.com/bengobox/logistics-service/internal/modules/backup/destination"
 	"github.com/bengobox/logistics-service/internal/modules/consumers"
 	"github.com/bengobox/logistics-service/internal/modules/dispatch"
 	"github.com/bengobox/logistics-service/internal/modules/earnings"
@@ -386,23 +384,10 @@ func New(ctx context.Context) (*App, error) {
 	treasuryClient := earnings.NewTreasuryClient(cfg.Treasury.ServiceURL, cfg.Treasury.InternalServiceKey)
 	earningsHandler.SetTreasuryClient(treasuryClient)
 
-	// Pluggable backup destination (OneDrive/GDrive/S3/WebDAV/SFTP/SMB) — encrypted
-	// at rest with a SECRET_KEY-derived AES-256-GCM key. The handler owns the
-	// destination Store; its Uploader is attached to the backup service so every
-	// PVC backup is additionally mirrored best-effort.
-	backupDestHandler := handlers.NewBackupDestinationHandler(entClient, destination.NewSecretKeyCipher(), log)
+	// Tenant backups are made from the SSO client area (auth-api collects this service's
+	// /api/v1/s2s/tenant-export); the platform pg_dumpall covers disaster recovery.
 
-	// Tenant-scoped backups + daily 02:00 auto-backup scheduler + retention churn.
-	backupSvc := backupmod.NewService(sqlDB, entClient, cfg.Backup.Dir, log).
-		WithMirrorer(backupDestHandler.Uploader())
-	backupsHandler := handlers.NewBackupsHandler(log, backupSvc, cfg.Backup.RetentionDays)
-	backupmod.NewScheduler(backupSvc, backupmod.SchedulerConfig{
-		Enabled:       cfg.Backup.ScheduleEnabled,
-		Hour:          cfg.Backup.ScheduleHour,
-		RetentionDays: cfg.Backup.RetentionDays,
-	}, log).WithRedis(redisClient).Start(ctx)
-
-	chiRouter := router.New(log, healthHandler, authMiddleware, identitySvc, logisticsHandler, routingHandler, trackingHandler, zonesHandler, rbacHandler, redisClient, cfg, cfg.HTTP.AllowedOrigins, serviceConfigHandler, earningsHandler, sseHandler, rbacSvc, telemetryHandler, shipmentHandler, shiftHandler, analyticsHandler, backupsHandler, backupDestHandler, validator, fleetTrackingWSHandler, notificationsHandler,
+	chiRouter := router.New(log, healthHandler, authMiddleware, identitySvc, logisticsHandler, routingHandler, trackingHandler, zonesHandler, rbacHandler, redisClient, cfg, cfg.HTTP.AllowedOrigins, serviceConfigHandler, earningsHandler, sseHandler, rbacSvc, telemetryHandler, shipmentHandler, shiftHandler, analyticsHandler, validator, fleetTrackingWSHandler, notificationsHandler,
 		tenantexport.Handler(sqlDB, tenantexport.Options{Service: "logistics"}))
 
 	httpServer := &http.Server{

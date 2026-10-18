@@ -31,7 +31,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/modules/rbac"
 )
 
-func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authclient.AuthMiddleware, idSvc *identity.Service, lh *handlers.LogisticsHandler, rh *handlers.RoutingHandler, th *handlers.TrackingHandler, zh *handlers.ZonesHandler, rbacH *handlers.RBACHandler, rdb *redis.Client, cfg *config.Config, allowedOrigins []string, serviceConfigH *handlers.ServiceConfigHandler, earningsH *handlers.EarningsHandler, sseH *handlers.SSEHandler, rbacSvc *rbac.Service, telH *handlers.TelemetryHandler, shipmentH *handlers.ShipmentHandler, shiftH *handlers.ShiftHandler, analyticsH *handlers.AnalyticsHandler, backupsH *handlers.BackupsHandler, backupDestH *handlers.BackupDestinationHandler, validator *authclient.Validator, fleetWSH *handlers.FleetTrackingWSHandler, notifH *handlers.NotificationsHandler, tenantExport http.Handler) http.Handler {
+func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authclient.AuthMiddleware, idSvc *identity.Service, lh *handlers.LogisticsHandler, rh *handlers.RoutingHandler, th *handlers.TrackingHandler, zh *handlers.ZonesHandler, rbacH *handlers.RBACHandler, rdb *redis.Client, cfg *config.Config, allowedOrigins []string, serviceConfigH *handlers.ServiceConfigHandler, earningsH *handlers.EarningsHandler, sseH *handlers.SSEHandler, rbacSvc *rbac.Service, telH *handlers.TelemetryHandler, shipmentH *handlers.ShipmentHandler, shiftH *handlers.ShiftHandler, analyticsH *handlers.AnalyticsHandler, validator *authclient.Validator, fleetWSH *handlers.FleetTrackingWSHandler, notifH *handlers.NotificationsHandler, tenantExport http.Handler) http.Handler {
 	// Plan limits for routing and live tracking are monthly (*_per_month in the subscriptions
 	// catalog), so they count on the calendar-month window.
 	quota := ratelimit.NewMonthlyQuota(rdb)
@@ -104,10 +104,6 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 		if zh != nil {
 			admin.Get("/delivery-policy", zh.GetPlatformPolicy)
 			admin.Put("/delivery-policy", zh.SavePlatformPolicy)
-		}
-		// Platform-default backup destination (OneDrive/GDrive/S3/WebDAV/SFTP/SMB).
-		if backupDestH != nil {
-			backupDestH.RegisterPlatformRoutes(admin)
 		}
 	})
 
@@ -427,23 +423,6 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 					manageConfig = appmw.RequirePermission(rbacSvc, rbac.PermConfigManage)
 				}
 				serviceConfigH.RegisterTenantRoutes(tenant, manageConfig)
-			}
-
-			// Tenant-scoped backups (this tenant's data only) — config-manage gated.
-			if backupsH != nil {
-				tenant.Group(func(bg chi.Router) {
-					bg.Use(appmw.RequirePermission(rbacSvc, rbac.PermConfigManage))
-					backupsH.RegisterRoutes(bg)
-				})
-			}
-
-			// Per-tenant backup-destination override (mirrors backups off the PVC)
-			// — same config-manage permission gate as the tenant backups routes.
-			if backupDestH != nil {
-				tenant.Group(func(bg chi.Router) {
-					bg.Use(appmw.RequirePermission(rbacSvc, rbac.PermConfigManage))
-					backupDestH.RegisterRoutes(bg)
-				})
 			}
 
 			if earningsH != nil {

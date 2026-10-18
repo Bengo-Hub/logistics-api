@@ -18,9 +18,8 @@ RUN GOTOOLCHAIN=auto CGO_ENABLED=0 go build -o /out/logistics-prune-users ./cmd/
 RUN GOTOOLCHAIN=auto CGO_ENABLED=0 go build -o /out/logistics-seed-delivery-zones ./cmd/seed-delivery-zones
 
 FROM alpine:3.20
-# ca-certificates: TLS trust for HTTPS remotes (S3/OneDrive/GDrive/WebDAV).
-# rclone: powers pluggable backup-destination mirroring off the local PVC.
-RUN apk add --no-cache ca-certificates rclone
+# ca-certificates: TLS trust for HTTPS calls (object storage, maps, other services).
+RUN apk add --no-cache ca-certificates
 RUN addgroup -S app && adduser -S app -G app
 WORKDIR /app
 
