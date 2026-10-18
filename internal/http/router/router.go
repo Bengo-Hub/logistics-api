@@ -31,7 +31,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/modules/rbac"
 )
 
-func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authclient.AuthMiddleware, idSvc *identity.Service, lh *handlers.LogisticsHandler, rh *handlers.RoutingHandler, th *handlers.TrackingHandler, zh *handlers.ZonesHandler, rbacH *handlers.RBACHandler, rdb *redis.Client, cfg *config.Config, allowedOrigins []string, serviceConfigH *handlers.ServiceConfigHandler, earningsH *handlers.EarningsHandler, sseH *handlers.SSEHandler, rbacSvc *rbac.Service, telH *handlers.TelemetryHandler, shipmentH *handlers.ShipmentHandler, shiftH *handlers.ShiftHandler, analyticsH *handlers.AnalyticsHandler, backupsH *handlers.BackupsHandler, backupDestH *handlers.BackupDestinationHandler, validator *authclient.Validator, fleetWSH *handlers.FleetTrackingWSHandler, notifH *handlers.NotificationsHandler) http.Handler {
+func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authclient.AuthMiddleware, idSvc *identity.Service, lh *handlers.LogisticsHandler, rh *handlers.RoutingHandler, th *handlers.TrackingHandler, zh *handlers.ZonesHandler, rbacH *handlers.RBACHandler, rdb *redis.Client, cfg *config.Config, allowedOrigins []string, serviceConfigH *handlers.ServiceConfigHandler, earningsH *handlers.EarningsHandler, sseH *handlers.SSEHandler, rbacSvc *rbac.Service, telH *handlers.TelemetryHandler, shipmentH *handlers.ShipmentHandler, shiftH *handlers.ShiftHandler, analyticsH *handlers.AnalyticsHandler, backupsH *handlers.BackupsHandler, backupDestH *handlers.BackupDestinationHandler, validator *authclient.Validator, fleetWSH *handlers.FleetTrackingWSHandler, notifH *handlers.NotificationsHandler, tenantExport http.Handler) http.Handler {
 	// Plan limits for routing and live tracking are monthly (*_per_month in the subscriptions
 	// catalog), so they count on the calendar-month window.
 	quota := ratelimit.NewMonthlyQuota(rdb)
@@ -252,6 +252,11 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 		// requireServiceKey) rather than a nested Route/Mount — a nested Mount's "/*" catch-all
 		// collides with the sibling "/{tenant}" Mount so the group middleware runs but the leaf never
 		// matches (→ 404). The /api/v1 JWT/RBAC/subscription middleware is skipped for /s2s/ paths.
+		// Tenant export for auth-api's SSO tenant backups (httpware/tenantexport), same flat static
+		// route and service key as the dispatch routes below.
+		if tenantExport != nil && cfg != nil && cfg.Treasury.InternalServiceKey != "" {
+			api.With(requireServiceKey(cfg.Treasury.InternalServiceKey)).Get("/s2s/tenant-export", tenantExport.ServeHTTP)
+		}
 		if lh != nil && cfg != nil && cfg.Treasury.InternalServiceKey != "" {
 			s2sKey := requireServiceKey(cfg.Treasury.InternalServiceKey)
 			api.With(s2sKey).Post("/s2s/dispatch/{tenant}/tasks", lh.S2SCreateTask)
