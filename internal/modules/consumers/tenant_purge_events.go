@@ -11,8 +11,6 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/bengobox/logistics-service/internal/ent"
-	"github.com/bengobox/logistics-service/internal/ent/backup"
-	"github.com/bengobox/logistics-service/internal/ent/backupsetting"
 	"github.com/bengobox/logistics-service/internal/ent/billingevent"
 	"github.com/bengobox/logistics-service/internal/ent/carrierjob"
 	"github.com/bengobox/logistics-service/internal/ent/carrierpartner"
@@ -284,12 +282,6 @@ func (c *TenantPurgeConsumer) purgeTenant(ctx context.Context, tenantID uuid.UUI
 		return err
 	}
 	if counts["service_configs"], err = tx.ServiceConfig.Delete().Where(serviceconfig.TenantID(tenantID)).Exec(ctx); err != nil {
-		return err
-	}
-	if counts["backups"], err = tx.Backup.Delete().Where(backup.TenantID(tenantID)).Exec(ctx); err != nil {
-		return err
-	}
-	if counts["backup_settings"], err = tx.BackupSetting.Delete().Where(backupsetting.TenantID(tenantID)).Exec(ctx); err != nil {
 		return err
 	}
 	if counts["tenant_sync_events"], err = tx.TenantSyncEvent.Delete().Where(tenantsyncevent.TenantID(tenantID)).Exec(ctx); err != nil {
