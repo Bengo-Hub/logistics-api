@@ -388,7 +388,7 @@ func New(ctx context.Context) (*App, error) {
 	// /api/v1/s2s/tenant-export); the platform pg_dumpall covers disaster recovery.
 
 	chiRouter := router.New(log, healthHandler, authMiddleware, identitySvc, logisticsHandler, routingHandler, trackingHandler, zonesHandler, rbacHandler, redisClient, cfg, cfg.HTTP.AllowedOrigins, serviceConfigHandler, earningsHandler, sseHandler, rbacSvc, telemetryHandler, shipmentHandler, shiftHandler, analyticsHandler, validator, fleetTrackingWSHandler, notificationsHandler,
-		tenantexport.Handler(sqlDB, tenantexport.Options{Service: "logistics"}))
+		tenantexport.Handler(sqlDB, tenantexport.Options{Service: "logistics", InternalKey: cfg.Treasury.InternalServiceKey}))
 
 	httpServer := &http.Server{
 		Addr:              fmt.Sprintf("%s:%d", cfg.HTTP.Host, cfg.HTTP.Port),

@@ -2,7 +2,6 @@ package router
 
 import (
 	"context"
-	"crypto/subtle"
 	"errors"
 	ratelimit "github.com/Bengo-Hub/shared-ratelimit"
 	tenantmod "github.com/bengobox/logistics-service/internal/modules/tenant"
@@ -15,7 +14,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
-	"github.com/go-chi/cors"
 	"go.uber.org/zap"
 
 	"github.com/Bengo-Hub/httpware"
@@ -46,14 +44,7 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 	r.Use(httpware.Recover(log))
 	// Timeout cancels the request context at 30s, which killed every WebSocket and SSE stream.
 	r.Use(httpware.BypassForStreaming(chimw.Timeout(30 * time.Second)))
-	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   allowedOrigins,
-		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "Origin", "X-Request-ID", "X-Tenant-ID", "X-Tenant-Slug", "X-Outlet-ID"},
-		ExposedHeaders:   []string{"Link", "X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset", "Retry-After"},
-		AllowCredentials: true,
-		MaxAge:           300,
-	}))
+	r.Use(httpware.CORS(httpware.StandardCORS(allowedOrigins)))
 	// Per-IP abuse limit (logistics had none). After CORS so 429s carry CORS headers;
 	// WebSocket, SSE and health probes are exempt (ratelimit.SkipStreaming).
 	r.Use(limiter.Middleware(ratelimit.IPKey, 300, time.Minute))
@@ -584,20 +575,8 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 	return r
 }
 
-// requireServiceKey guards S2S routes by requiring the shared INTERNAL_SERVICE_KEY in the
-// X-API-Key header, compared in constant time to avoid leaking it via timing.
+// requireServiceKey guards S2S routes with the shared INTERNAL_SERVICE_KEY: one constant-time
+// check that answers 401 when the key is missing or wrong, and always when unset.
 func requireServiceKey(expected string) func(http.Handler) http.Handler {
-	expectedBytes := []byte(expected)
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			provided := r.Header.Get("X-API-Key")
-			if provided == "" || subtle.ConstantTimeCompare([]byte(provided), expectedBytes) != 1 {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusUnauthorized)
-				_, _ = w.Write([]byte(`{"error":"invalid or missing service key"}`))
-				return
-			}
-			next.ServeHTTP(w, r)
-		})
-	}
+	return httpware.RequireServiceKey(expected)
 }
