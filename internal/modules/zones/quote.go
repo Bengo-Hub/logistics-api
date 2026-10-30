@@ -24,6 +24,9 @@ const (
 	ReasonNoCoverage    = "no_delivery_coverage"
 	ReasonInvalidPoint  = "invalid_location"
 	ReasonBelowMinOrder = "below_min_order"
+	// ReasonAtOutlet: the pin is at the outlet itself (within the policy's pickup-only
+	// radius), so there is nothing to deliver; the customer collects.
+	ReasonAtOutlet = "at_outlet"
 )
 
 // OutletPoint is an outlet that can dispatch deliveries.
@@ -123,6 +126,12 @@ func computeQuote(in QuoteInput, snap snapshot, distance DistanceFunc) Quote {
 	if outlet != nil {
 		o := *outlet
 		q.Outlet = &o
+		// A pin at the outlet is a customer standing in it: no delivery, they collect.
+		if km := geo.Distance(outlet.Point, in.Point); pol.PickupOnlyRadiusM > 0 && km*1000 <= pol.PickupOnlyRadiusM {
+			q.Reason = ReasonAtOutlet
+			q.OutletKm = money.Round2(km)
+			return q
+		}
 	}
 
 	var delivery, exclusion []compiledZone

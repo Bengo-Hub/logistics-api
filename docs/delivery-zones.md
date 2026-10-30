@@ -35,6 +35,7 @@ Other metadata keys are preserved untouched.
 | `buffer_km` | 2 | `buffer` coverage, and always: a pin outside every area is accepted when it is this close to one |
 | `confirm_by_email` | true | A distance-priced delivery is flagged `needs_confirmation`, and the order confirmation email states its area, distance and fee for the customer to check |
 | `max_radius_km` | none | Optional hard cap on straight-line distance from the outlet |
+| `pickup_only_radius_m` | 200 | A pin this close to the outlet (straight line, metres) is the customer at the outlet: delivery is refused with `at_outlet` and the storefront offers pickup. 0 turns it off |
 | `require_zones` | true | When false, a tenant with no zones is quoted per km within `max_radius_km` |
 | `base_fee`, `per_km_rate`, `min_fee` | 0, 50, 100 | Per-km price: `max(min_fee, base_fee + per_km_rate x km)` |
 | `rounding` | 10 | Per-km fees round up to a multiple of this |
@@ -50,7 +51,7 @@ Rider pay without a rider pricing rule uses the same per-km price, so a tenant c
 `internal/modules/zones/quote.go` (`computeQuote`) is the only delivery pricing rule on the platform:
 
 1. Reject invalid coordinates.
-2. Pick the outlet: the requested one, else the nearest active outlet with a map pin.
+2. Pick the outlet: the requested one, else the nearest active outlet with a map pin. A pin within `pickup_only_radius_m` of that outlet is refused with `at_outlet` (and `outlet_km`), even inside a free area: there is nothing to deliver, the customer collects.
 3. Reject drop-offs inside an active exclusion zone (`excluded_area`), or beyond `max_radius_km` (`beyond_max_radius`).
 4. If any active delivery zone serving that outlet contains the point, take the highest priority, then the smallest zone. The fee is the zone fee, or 0 for a free zone.
 5. Otherwise, with `fallback = per_km`, the point is still served when it is within `buffer_km` of a zone edge, or, under `coverage = route`, when it is within `corridor_km` of the route to some area. The fee is the per-km price on the road distance from the outlet (`method = per_km`), and `needs_confirmation` is set when `confirm_by_email` is on.

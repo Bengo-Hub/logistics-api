@@ -513,3 +513,40 @@ func TestHoldToRoute(t *testing.T) {
 		t.Fatalf("beyond the furthest area: %v %s %s", fee, how, by)
 	}
 }
+
+// A pin at the outlet is a customer in the shop: delivery is refused so they collect, even inside
+// a free area. Just outside the pickup-only radius it is an ordinary delivery again.
+func TestQuoteAtOutletIsPickupOnly(t *testing.T) {
+	snap := busiaSnapshot(t)
+	q := computeQuote(QuoteInput{Point: busiaOutlet.Point, OutletID: busiaOutlet.ID}, snap, straightOnly)
+	if q.Serviceable || q.Reason != ReasonAtOutlet || q.Outlet == nil || q.Outlet.Name != busiaOutlet.Name || q.Fee != 0 {
+		t.Fatalf("pin on the outlet = %+v", q)
+	}
+	// About 150 m north, still at the outlet under the 200 m default.
+	near := geo.Point{Lat: busiaOutlet.Point.Lat + 0.00135, Lng: busiaOutlet.Point.Lng}
+	if q := computeQuote(QuoteInput{Point: near}, snap, straightOnly); q.Reason != ReasonAtOutlet || q.OutletKm <= 0 {
+		t.Fatalf("pin 150 m from the outlet = %+v", q)
+	}
+	// About 300 m north: a delivery in the free town circle.
+	out := geo.Point{Lat: busiaOutlet.Point.Lat + 0.0027, Lng: busiaOutlet.Point.Lng}
+	if q := computeQuote(QuoteInput{Point: out}, snap, straightOnly); !q.Serviceable || !q.Free || q.Zone == nil || q.Zone.Name != "Busia Town" {
+		t.Fatalf("pin 300 m from the outlet = %+v", q)
+	}
+	// Turned off: the outlet pin is quoted like any other point.
+	snap.Policy.PickupOnlyRadiusM = 0
+	if q := computeQuote(QuoteInput{Point: busiaOutlet.Point}, snap, straightOnly); !q.Serviceable || !q.Free {
+		t.Fatalf("rule off, pin on the outlet = %+v", q)
+	}
+}
+
+func TestPolicyPickupOnlyRadius(t *testing.T) {
+	if p, err := ParsePolicy(`{"per_km_rate": 60}`); err != nil || p.PickupOnlyRadiusM != 200 {
+		t.Fatalf("stored policy without the key keeps the default: %v %v", p.PickupOnlyRadiusM, err)
+	}
+	if p, err := ParsePolicy(`{"pickup_only_radius_m": 0}`); err != nil || p.PickupOnlyRadiusM != 0 {
+		t.Fatalf("0 turns the rule off: %v %v", p.PickupOnlyRadiusM, err)
+	}
+	if _, err := ParsePolicy(`{"pickup_only_radius_m": -1}`); err == nil {
+		t.Fatal("a negative radius must be rejected")
+	}
+}

@@ -43,6 +43,9 @@ type Policy struct {
 	ConfirmByEmail bool `json:"confirm_by_email"`
 	// MaxRadiusKm optionally caps any delivery at this straight-line distance from the outlet.
 	MaxRadiusKm *float64 `json:"max_radius_km,omitempty"`
+	// PickupOnlyRadiusM refuses a delivery whose pin is this close (straight line, metres) to
+	// the outlet: the customer is at the outlet and collects instead. 0 turns the rule off.
+	PickupOnlyRadiusM float64 `json:"pickup_only_radius_m"`
 	// RequireZones rejects every pin when the tenant has no active delivery zone. When
 	// false, a tenant without zones is served by the per-km rule alone (within MaxRadiusKm).
 	RequireZones bool `json:"require_zones"`
@@ -72,6 +75,7 @@ func DefaultPolicy() Policy {
 		BufferKm:           2,
 		ConfirmByEmail:     true,
 		RequireZones:       true,
+		PickupOnlyRadiusM:  200,
 		BaseFee:            0,
 		PerKmRate:          50,
 		MinFee:             100,
@@ -126,6 +130,9 @@ func (p *Policy) Validate() error {
 	}
 	if p.MaxRadiusKm != nil && (*p.MaxRadiusKm <= 0 || *p.MaxRadiusKm > 2000) {
 		return fmt.Errorf("zones: max_radius_km must be between 0 and 2000")
+	}
+	if p.PickupOnlyRadiusM < 0 || p.PickupOnlyRadiusM > 2000 {
+		return fmt.Errorf("zones: pickup_only_radius_m must be between 0 and 2000")
 	}
 	if p.BaseFee < 0 || p.PerKmRate < 0 || p.MinFee < 0 || p.Rounding < 0 {
 		return fmt.Errorf("zones: fees and rounding cannot be negative")
