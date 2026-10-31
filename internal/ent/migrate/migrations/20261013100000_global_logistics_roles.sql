@@ -1,7 +1,7 @@
 -- Logistics roles become platform reference data (one row per role code, no tenant_id); user role
--- assignments stay tenant-scoped. Applied at startup by cmd/migrate globalizeRoles() under the
--- migration advisory lock (this service applies schema by live diff, so this file records the
--- change). Backups: *_bk_global_20261013.
+-- assignments stay tenant-scoped. Applied in production on 2026-10-13 by a one-time cutover in
+-- cmd/migrate (removed 2026-10-31 once done; this service applies schema by live diff, so this file
+-- only records the change). Its backup tables were dropped on 2026-10-31.
 CREATE TABLE IF NOT EXISTS logistics_roles_bk_global_20261013 AS SELECT * FROM logistics_roles;
 CREATE TABLE IF NOT EXISTS role_permissions_bk_global_20261013 AS SELECT * FROM role_permissions;
 CREATE TABLE IF NOT EXISTS user_role_assignments_bk_global_20261013 AS SELECT * FROM user_role_assignments;
