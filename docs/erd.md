@@ -227,7 +227,7 @@ This section defines how Logistics Service entities relate to other services to 
 
 - Demo fleets (`urban_internal`, `third_party`) seeded for Urban Café pilot.
 - Default dispatch rules: nearest driver, batch route, and marketplace fallback.
-- Tenant delivery presets via `cmd/seed-delivery-zones` (urban-loft: Busia zones and policy).
+- Tenant delivery presets via `cmd/seed-delivery-zones` (urban-loft: Busia zones and policy; codevertex-demo: Kisumu zones scoped to two outlets).
 - RBAC permissions seeded for 11 modules (tasks, fleet, vehicles, zones, pricing, carriers, routing, telemetry, earnings, config, users) with 9 actions each (99 permissions total). The retired `geofences.*` module and its role grants are removed by the seed.
 - Rate limit configs for tenant, IP, user, and per-endpoint patterns.
 - Service configs for task timeouts, fleet sizes, geofence radii, telemetry intervals, and more.

@@ -102,6 +102,6 @@ The geocoder proxy calls a Nominatim-compatible service (`GEOCODER_URL`, default
 
 ## Seeding defaults
 
-`logistics-seed-delivery-zones -tenant <slug> [-dry-run] [-overwrite]` loads a tenant preset from `cmd/seed-delivery-zones`. It only creates missing zones and the policy; existing zones keep the values admins saved unless `-overwrite` is passed.
+`logistics-seed-delivery-zones -tenant <slug> [-dry-run] [-overwrite]` loads a tenant preset from `cmd/seed-delivery-zones`. It only creates missing zones and the policy; existing zones keep the values admins saved unless `-overwrite` is passed. Presets: `urban-loft` (Busia, 17 areas) and `codevertex-demo` (Kisumu, 18 areas serving the demo hotel and supermarket only; the kiosk stays pickup only).
 
 The `urban-loft` preset is a free 3 km "Busia Town" circle around the Busia outlet, 16 named areas with the published fees, and a policy of KES 50 per road km, minimum KES 100, rounded up to KES 10, with a 2 km buffer. Bugengi, Ochude and Redcross could not be placed from OpenStreetMap and are seeded as drafts until an admin sets their centres in logistics-ui.
