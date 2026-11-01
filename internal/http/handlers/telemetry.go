@@ -70,6 +70,14 @@ type TelemetrySummary struct {
 	CompletedTasks         int     `json:"completed_tasks"`
 	AvgDeliveryTimeMinutes float64 `json:"avg_delivery_time_minutes"`
 	ActiveStreams          int     `json:"active_streams"`
+	// Task counts for the dashboard, all aggregated in SQL. TotalTasks and FailedTasks are tasks
+	// created in the period; InProgressTasks and PendingTasks are live, whenever created.
+	TotalTasks      int `json:"total_tasks"`
+	FailedTasks     int `json:"failed_tasks"`
+	InProgressTasks int `json:"in_progress_tasks"`
+	PendingTasks    int `json:"pending_tasks"`
+	// SuccessRate is delivered / (delivered + failed) of the period's tasks, 0..1; null with none.
+	SuccessRate *float64 `json:"success_rate"`
 }
 
 // GetSummary handles GET /api/v1/{tenant}/telemetry?period=today
@@ -81,25 +89,8 @@ func (h *TelemetryHandler) GetSummary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	period := r.URL.Query().Get("period")
-	if period == "" {
-		period = "today"
-	}
-
-	var since time.Time
-	switch period {
-	case "today":
-		now := time.Now()
-		since = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-	case "7d":
-		since = time.Now().AddDate(0, 0, -7)
-	case "30d":
-		since = time.Now().AddDate(0, 0, -30)
-	default:
-		now := time.Now()
-		since = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-		period = "today"
-	}
+	// Calendar days in the business's time zone, the same periods as the analytics reports.
+	period, since := analyticsPeriod(r, "today")
 
 	ctx := r.Context()
 
@@ -136,13 +127,40 @@ func (h *TelemetryHandler) GetSummary(w http.ResponseWriter, r *http.Request) {
 		avgMins = avg.Float64
 	}
 
-	respondJSON(w, http.StatusOK, TelemetrySummary{
+	summary := TelemetrySummary{
 		Period:                 period,
 		ActiveRiders:           activeRiders,
 		CompletedTasks:         completedTasks,
 		AvgDeliveryTimeMinutes: avgMins,
 		ActiveStreams:          activeStreams,
-	})
+	}
+	// The period's tasks by status, folded the same way as the analytics KPIs, plus the live
+	// queue (in progress and waiting, whenever created). Each is one indexed query.
+	var byStatus []struct {
+		Status string `json:"status"`
+		Count  int    `json:"count"`
+	}
+	if err := h.client.Task.Query().
+		Where(task.TenantID(tenantID), task.CreatedAtGTE(since)).
+		GroupBy(task.FieldStatus).
+		Aggregate(ent.Count()).
+		Scan(ctx, &byStatus); err != nil {
+		h.log.Warn("telemetry task counts", zap.Error(err))
+	}
+	k := kpiFromCounts(byStatus)
+	summary.TotalTasks, summary.FailedTasks = k.total, k.failed
+	if finished := k.completed + k.failed; finished > 0 {
+		rate := float64(k.completed) / float64(finished)
+		summary.SuccessRate = &rate
+	}
+	summary.InProgressTasks, _ = h.client.Task.Query().
+		Where(task.TenantID(tenantID), task.StatusIn(tasks.InProgressStatuses...)).
+		Count(ctx)
+	summary.PendingTasks, _ = h.client.Task.Query().
+		Where(task.TenantID(tenantID), task.Status("pending")).
+		Count(ctx)
+
+	respondJSON(w, http.StatusOK, summary)
 }
 
 // IngestLocation handles POST /api/v1/{tenant}/telemetry/location
