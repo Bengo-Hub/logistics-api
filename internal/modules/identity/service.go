@@ -182,7 +182,6 @@ func extractRoles(claims map[string]any) []string {
 	return nil
 }
 
-
 // GetRiderProfile retrieves the user and their associated fleet/vehicle info.
 func (s *Service) GetRiderProfile(ctx context.Context, authServiceID, tenantID uuid.UUID) (*ent.User, error) {
 	return s.client.User.Query().
@@ -226,12 +225,11 @@ func (s *Service) UpdateRiderProfile(ctx context.Context, authServiceID, tenantI
 		return nil, fmt.Errorf("user not found: %w", err)
 	}
 
-	// 1. Update User Phone
-	err = tx.User.UpdateOne(u).
-		SetPhone(req.Phone).
-		Exec(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("update user phone: %w", err)
+	// 1. Update User Phone (a save without one keeps the number on file)
+	if phone := strings.TrimSpace(req.Phone); phone != "" {
+		if err = tx.User.UpdateOne(u).SetPhone(phone).Exec(ctx); err != nil {
+			return nil, fmt.Errorf("update user phone: %w", err)
+		}
 	}
 
 	// 2. Ensure FleetMember exists
@@ -242,6 +240,7 @@ func (s *Service) UpdateRiderProfile(ctx context.Context, authServiceID, tenantI
 		return nil, fmt.Errorf("rider record not found: %w", err)
 	}
 
+	review := false
 	if fleetmod.EmploymentOf(fm).IsStaff() {
 		// Staff riders were vetted by HR: no KYC review and no mandatory uploads once the ID
 		// number is on file. Save what they filled in and keep their status.
@@ -260,15 +259,27 @@ func (s *Service) UpdateRiderProfile(ctx context.Context, authServiceID, tenantI
 		}
 		err = upd.Exec(ctx)
 	} else {
-		// Freelance riders: KYC fields go to review.
-		err = tx.FleetMember.UpdateOne(fm).
-			SetIDNumber(req.IDNumber).
-			SetLicenseNo(req.LicenseNo).
-			SetIDPassportAttachment(req.IDPassportAttachment).
-			SetRiderPhoto(req.RiderPhoto).
-			SetStatus("pending_review").
-			SetKycSubmittedAt(time.Now()).
-			Exec(ctx)
+		// Freelance riders: only the KYC fields filled in are written, and the rider goes to
+		// review only when needsKYCReview says so (an approved rider changing their phone keeps
+		// working, a suspended rider stays suspended).
+		review = needsKYCReview(fm.Status, kycChanged(fm, req))
+		upd := tx.FleetMember.UpdateOne(fm)
+		if req.IDNumber != "" {
+			upd.SetIDNumber(req.IDNumber)
+		}
+		if req.LicenseNo != "" {
+			upd.SetLicenseNo(req.LicenseNo)
+		}
+		if req.IDPassportAttachment != "" {
+			upd.SetIDPassportAttachment(req.IDPassportAttachment)
+		}
+		if req.RiderPhoto != "" {
+			upd.SetRiderPhoto(req.RiderPhoto)
+		}
+		if review {
+			upd.SetStatus("pending_review").SetKycSubmittedAt(time.Now())
+		}
+		err = upd.Exec(ctx)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("update fleet member: %w", err)
@@ -286,7 +297,7 @@ func (s *Service) UpdateRiderProfile(ctx context.Context, authServiceID, tenantI
 	}
 
 	// Publish KYC submitted event to notify tenant admin (staff riders have no KYC review)
-	if s.publisher != nil && !fleetmod.EmploymentOf(fm).IsStaff() {
+	if s.publisher != nil && review {
 		// Resolve tenant slug from the fleet
 		tenantSlug := ""
 		if fl, flErr := s.client.Fleet.Get(ctx, fm.FleetID); flErr == nil {
@@ -302,6 +313,31 @@ func (s *Service) UpdateRiderProfile(ctx context.Context, authServiceID, tenantI
 	}
 
 	return s.GetRiderProfile(ctx, authServiceID, tenantID)
+}
+
+// kycChanged reports whether a profile save changes a KYC detail on file. Empty fields are not
+// changes: the form leaves out what the rider did not touch.
+func kycChanged(fm *ent.FleetMember, req UpdateRiderProfileRequest) bool {
+	changed := func(next, current string) bool { return next != "" && next != current }
+	return changed(req.IDNumber, fm.IDNumber) ||
+		changed(req.LicenseNo, fm.LicenseNo) ||
+		changed(req.IDPassportAttachment, fm.IDPassportAttachment) ||
+		changed(req.RiderPhoto, fm.RiderPhoto)
+}
+
+// needsKYCReview decides whether a freelance rider's profile save sends them to KYC review. A
+// suspended rider is never released by editing their profile; an active rider is reviewed again
+// only when a KYC detail changed; anyone not yet approved (invited, pending, rejected, already
+// in review) submits for review on every save.
+func needsKYCReview(status string, kycChanged bool) bool {
+	switch status {
+	case "suspended":
+		return false
+	case "active":
+		return kycChanged
+	default:
+		return true
+	}
 }
 
 // ResolveEnabledModules returns the enabled modules and use_case for a tenant.
