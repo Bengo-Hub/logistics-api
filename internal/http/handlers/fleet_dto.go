@@ -25,6 +25,7 @@ type FleetMemberResponse struct {
 	Status               string                `json:"status"`
 	DriverCode           string                `json:"driver_code,omitempty"`
 	IDPassportNumber     string                `json:"id_passport_number,omitempty"`
+	LicenseNo            string                `json:"license_no,omitempty"`
 	IDPassportAttachment string                `json:"id_passport_attachment,omitempty"`
 	RiderPhoto           string                `json:"rider_photo,omitempty"`
 	AverageRating        float64               `json:"average_rating"`
@@ -61,6 +62,7 @@ func toFleetMemberResponse(m *ent.FleetMember) *FleetMemberResponse {
 		Status:               m.Status,
 		DriverCode:           m.DriverCode,
 		IDPassportNumber:     m.IDNumber,
+		LicenseNo:            m.LicenseNo,
 		IDPassportAttachment: m.IDPassportAttachment,
 		RiderPhoto:           m.RiderPhoto,
 		AverageRating:        m.AverageRating,
