@@ -5,6 +5,7 @@
 //
 //	go run ./cmd/seed-delivery-zones -tenant urban-loft -dry-run
 //	go run ./cmd/seed-delivery-zones -tenant urban-loft
+//	go run ./cmd/seed-delivery-zones -tenant codevertex-demo
 package main
 
 import (
@@ -46,10 +47,23 @@ type area struct {
 type preset struct {
 	Policy zones.Policy
 	Areas  []area
+	// OutletIDs limits every area to these outlets (auth-api outlet ids). Empty serves all.
+	OutletIDs []uuid.UUID
 }
 
 // busiaTownCentre is Busia town centre as Google Maps gives it (00°27'48"N, 34°06'19"E).
 var busiaTownCentre = geo.Point{Lat: 0.463333, Lng: 34.105278}
+
+// kisumuCentral is Kisumu Central as OpenStreetMap places it.
+var kisumuCentral = geo.Point{Lat: -0.0991973, Lng: 34.7626797}
+
+// perKmPolicy is the Urban Loft quote policy: KES 50 per km, minimum 100, rounded to 10,
+// 2 km buffer around the areas.
+func perKmPolicy() zones.Policy {
+	p := zones.DefaultPolicy()
+	p.Fallback, p.BufferKm, p.BaseFee, p.PerKmRate, p.MinFee, p.Rounding = zones.FallbackPerKm, 2, 0, 50, 100, 10
+	return p
+}
 
 // presets holds tenant defaults. Coordinates come from OpenStreetMap; areas OSM could not
 // place reliably are seeded as drafts (not quoted) until an admin pins them in logistics-ui.
@@ -58,11 +72,7 @@ var busiaTownCentre = geo.Point{Lat: 0.463333, Lng: 34.105278}
 // OpenStreetMap.
 var presets = map[string]preset{
 	"urban-loft": {
-		Policy: func() zones.Policy {
-			p := zones.DefaultPolicy()
-			p.Fallback, p.BufferKm, p.BaseFee, p.PerKmRate, p.MinFee, p.Rounding = zones.FallbackPerKm, 2, 0, 50, 100, 10
-			return p
-		}(),
+		Policy: perKmPolicy(),
 		Areas: []area{
 			{Name: "Busia Town", Center: busiaTownCentre, RadiusM: 3000, Free: true, Priority: 10, Aliases: []string{"Busia", "Busia Township"}, Notes: "Free delivery within 3 km of Busia town centre (Google Maps centre, 0.463333, 34.105278)."},
 			{Name: "Bulanda", Center: geo.Point{Lat: 0.452626, Lng: 34.10268}, RadiusM: 1000, Fee: 150, Priority: 20},
@@ -81,6 +91,36 @@ var presets = map[string]preset{
 			{Name: "Malaba", Center: geo.Point{Lat: 0.63513, Lng: 34.281651}, RadiusM: 3000, Fee: 1050, Priority: 20, Notes: "Malaba town centre (GeoNames)."},
 			{Name: "Funyula", Center: geo.Point{Lat: 0.280512, Lng: 34.11968}, RadiusM: 3000, Fee: 1050, Priority: 20},
 			{Name: "Machakusi", Center: geo.Point{Lat: 0.609138, Lng: 34.23930}, RadiusM: 1500, Fee: 750, Priority: 20},
+		},
+	},
+	// The shared demo tenant delivers from Kisumu CBD. The areas serve its hospitality outlet
+	// (Demo Grand Hotel & Restaurant) and retail outlet (Demo City Supermarket) only, so the
+	// other demo outlets stay pickup only. Every centre comes from OpenStreetMap (2026-11-01).
+	"codevertex-demo": {
+		Policy: perKmPolicy(),
+		OutletIDs: []uuid.UUID{
+			uuid.MustParse("b36c7ad2-927c-5ef0-a48b-18a09fa8ea1d"),
+			uuid.MustParse("5017479f-3bf1-532c-ae0e-3d0c9044eedc"),
+		},
+		Areas: []area{
+			{Name: "Kisumu CBD", Center: kisumuCentral, RadiusM: 2000, Free: true, Priority: 10, Aliases: []string{"Kisumu Central", "Kisumu Town"}, Notes: "Free delivery within 2 km of Kisumu Central."},
+			{Name: "Milimani", Center: geo.Point{Lat: -0.1146589, Lng: 34.7524675}, RadiusM: 1000, Fee: 100, Priority: 20},
+			{Name: "Tom Mboya", Center: geo.Point{Lat: -0.0863349, Lng: 34.7678286}, RadiusM: 800, Fee: 100, Priority: 20, Aliases: []string{"Tom Mboya Estate"}},
+			{Name: "Polyview", Center: geo.Point{Lat: -0.1003253, Lng: 34.7708085}, RadiusM: 700, Fee: 100, Priority: 20},
+			{Name: "Kondele", Center: geo.Point{Lat: -0.0824366, Lng: 34.7738438}, RadiusM: 800, Fee: 150, Priority: 20},
+			{Name: "Manyatta", Center: geo.Point{Lat: -0.0969229, Lng: 34.7854506}, RadiusM: 1000, Fee: 150, Priority: 20},
+			{Name: "Migosi", Center: geo.Point{Lat: -0.0778484, Lng: 34.7805637}, RadiusM: 800, Fee: 150, Priority: 20},
+			{Name: "Lolwe", Center: geo.Point{Lat: -0.0726396, Lng: 34.780494}, RadiusM: 700, Fee: 150, Priority: 20},
+			{Name: "Nyalenda", Center: geo.Point{Lat: -0.1332336, Lng: 34.7454895}, RadiusM: 1000, Fee: 150, Priority: 20},
+			{Name: "Nyamasaria", Center: geo.Point{Lat: -0.1133456, Lng: 34.7887812}, RadiusM: 1200, Fee: 200, Priority: 20},
+			{Name: "Dunga", Center: geo.Point{Lat: -0.1417782, Lng: 34.7355688}, RadiusM: 1000, Fee: 200, Priority: 20, Aliases: []string{"Dunga Beach"}},
+			{Name: "Mamboleo", Center: geo.Point{Lat: -0.0606822, Lng: 34.7825431}, RadiusM: 1500, Fee: 250, Priority: 20},
+			{Name: "Riat", Center: geo.Point{Lat: -0.0471838, Lng: 34.7537472}, RadiusM: 1500, Fee: 250, Priority: 20, Aliases: []string{"Riat Hills"}},
+			{Name: "Kisumu Airport", Center: geo.Point{Lat: -0.0869947, Lng: 34.7383296}, RadiusM: 1000, Fee: 250, Priority: 20},
+			{Name: "Otonglo", Center: geo.Point{Lat: -0.0761189, Lng: 34.7078845}, RadiusM: 1500, Fee: 300, Priority: 20},
+			{Name: "Kisian", Center: geo.Point{Lat: -0.0730783, Lng: 34.6637665}, RadiusM: 1500, Fee: 350, Priority: 20},
+			{Name: "Maseno", Center: geo.Point{Lat: 0.001538, Lng: 34.6057556}, RadiusM: 2500, Fee: 600, Priority: 20},
+			{Name: "Ahero", Center: geo.Point{Lat: -0.1724612, Lng: 34.9190229}, RadiusM: 2500, Fee: 600, Priority: 20},
 		},
 	},
 }
@@ -139,7 +179,7 @@ func main() {
 			log.Fatalf("-only %q matches no area in the %s preset", *only, *slug)
 		}
 	}
-	if err := seedZones(ctx, client, svc, t.ID, areas, *dryRun, *overwrite); err != nil {
+	if err := seedZones(ctx, client, svc, t.ID, areas, p.OutletIDs, *dryRun, *overwrite); err != nil {
 		log.Fatal(err)
 	}
 	if *only == "" {
@@ -150,7 +190,7 @@ func main() {
 	log.Printf("done (dry_run=%v)", *dryRun)
 }
 
-func seedZones(ctx context.Context, client *ent.Client, svc *zones.Service, tenantID uuid.UUID, areas []area, dryRun, overwrite bool) error {
+func seedZones(ctx context.Context, client *ent.Client, svc *zones.Service, tenantID uuid.UUID, areas []area, outletIDs []uuid.UUID, dryRun, overwrite bool) error {
 	for _, a := range areas {
 		status := a.Status
 		if status == "" {
@@ -161,7 +201,7 @@ func seedZones(ctx context.Context, client *ent.Client, svc *zones.Service, tena
 			Name: a.Name, ZoneType: zones.TypeDelivery, Status: status, Color: colorFor(a),
 			Settings: zones.ZoneSettings{
 				Shape: zones.ShapeCircle, Center: &center, RadiusM: a.RadiusM, Fee: a.Fee, Free: a.Free,
-				Currency: "KES", Priority: a.Priority, Aliases: a.Aliases, Notes: a.Notes,
+				Currency: "KES", Priority: a.Priority, OutletIDs: outletIDs, Aliases: a.Aliases, Notes: a.Notes,
 			},
 			Metadata: map[string]any{"source": "seed-delivery-zones"},
 		}
