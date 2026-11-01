@@ -560,6 +560,7 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 						mut.Post("/members/{memberId}/reject", lh.RejectMember)
 						mut.Post("/members/{memberId}/vehicle", lh.AssignVehicle)
 						mut.Put("/members/{memberId}/employment", lh.SetMemberEmployment)
+						mut.Patch("/members/{memberId}", lh.UpdateMemberDetails)
 						mut.Delete("/members/{memberId}", lh.DeleteMember)
 						mut.Post("/members/batch", lh.BatchInviteMembers)
 						mut.Post("/vehicles", lh.CreateVehicle)

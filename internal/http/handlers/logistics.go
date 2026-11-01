@@ -640,6 +640,40 @@ func (h *LogisticsHandler) SetMemberEmployment(w http.ResponseWriter, r *http.Re
 	respondJSON(w, http.StatusOK, signFleetMemberMedia(m))
 }
 
+// UpdateMemberDetails handles PATCH /api/v1/{tenant}/fleet/members/{memberId}: a fleet manager
+// corrects a rider's phone, ID number or licence number.
+func (h *LogisticsHandler) UpdateMemberDetails(w http.ResponseWriter, r *http.Request) {
+	tenantID := tenantIDFromClaims(r)
+	if tenantID == uuid.Nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	memberID, err := uuid.Parse(chi.URLParam(r, "memberId"))
+	if err != nil {
+		http.Error(w, "invalid member id", http.StatusBadRequest)
+		return
+	}
+	var in fleet.MemberDetails
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	m, err := h.fleetSvc.UpdateMemberDetails(r.Context(), tenantID, memberID, in)
+	switch {
+	case ent.IsNotFound(err):
+		http.Error(w, "member not found", http.StatusNotFound)
+		return
+	case errors.Is(err, fleet.ErrInvalidMemberDetails):
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	case err != nil:
+		h.log.Error("update rider details", zap.Error(err))
+		http.Error(w, "could not save the rider's details", http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, signFleetMemberMedia(m))
+}
+
 // SuspendMember handles POST /api/v1/{tenant}/fleet/members/{memberId}/suspend
 func (h *LogisticsHandler) SuspendMember(w http.ResponseWriter, r *http.Request) {
 	tenantID := tenantIDFromClaims(r)
