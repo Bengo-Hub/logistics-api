@@ -122,7 +122,7 @@ func computeQuote(in QuoteInput, snap snapshot, distance DistanceFunc) Quote {
 		return q
 	}
 
-	outlet := pickOutlet(in, snap.Outlets)
+	outlet := pickOutlet(in, snap.Outlets, snap.Zones)
 	if outlet != nil {
 		o := *outlet
 		q.Outlet = &o
@@ -405,7 +405,10 @@ func perKmFee(pol Policy, km float64) float64 {
 	return money.Round2(fee)
 }
 
-func pickOutlet(in QuoteInput, outlets []OutletPoint) *OutletPoint {
+// pickOutlet returns the requested outlet; without one, the nearest outlet that delivers at all
+// (an active delivery area serves it), else the nearest outlet. A pickup-only shop next door must
+// not make a pin inside a delivering outlet's free area look unserved.
+func pickOutlet(in QuoteInput, outlets []OutletPoint, zones []compiledZone) *OutletPoint {
 	if in.OutletID != uuid.Nil {
 		for i := range outlets {
 			if outlets[i].ID == in.OutletID {
@@ -413,14 +416,31 @@ func pickOutlet(in QuoteInput, outlets []OutletPoint) *OutletPoint {
 			}
 		}
 	}
-	var best *OutletPoint
-	bestKm := math.Inf(1)
-	for i := range outlets {
-		if d := geo.Distance(outlets[i].Point, in.Point); d < bestKm {
-			bestKm, best = d, &outlets[i]
+	delivers := func(o OutletPoint) bool {
+		for _, z := range zones {
+			if z.Status == StatusActive && z.Type == TypeDelivery && z.servesOutlet(o.ID) {
+				return true
+			}
 		}
+		return false
 	}
-	return best
+	nearest := func(eligible func(OutletPoint) bool) *OutletPoint {
+		var best *OutletPoint
+		bestKm := math.Inf(1)
+		for i := range outlets {
+			if !eligible(outlets[i]) {
+				continue
+			}
+			if d := geo.Distance(outlets[i].Point, in.Point); d < bestKm {
+				bestKm, best = d, &outlets[i]
+			}
+		}
+		return best
+	}
+	if best := nearest(delivers); best != nil {
+		return best
+	}
+	return nearest(func(OutletPoint) bool { return true })
 }
 
 func measure(from, to geo.Point, pol Policy, distance DistanceFunc) (float64, string) {

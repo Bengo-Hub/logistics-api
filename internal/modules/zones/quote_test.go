@@ -176,6 +176,30 @@ func TestQuoteOutletScoping(t *testing.T) {
 	}
 }
 
+func TestQuoteWithoutOutletUsesNearestDeliveringOutlet(t *testing.T) {
+	// A pickup-only kiosk sits nearer the pin than the hotel whose free area covers it.
+	hotel := OutletPoint{ID: uuid.New(), Name: "Hotel", Point: geo.Point{Lat: -0.1033885, Lng: 34.7525542}}
+	kiosk := OutletPoint{ID: uuid.New(), Name: "Kiosk", Point: geo.Point{Lat: -0.0951611, Lng: 34.7576062}}
+	cbd := circleZone(t, "Kisumu CBD", geo.Point{Lat: -0.0991973, Lng: 34.7626797}, 2000, 0, true, 10)
+	cbd.Settings.OutletIDs = []uuid.UUID{hotel.ID}
+	snap := snapshot{Zones: []compiledZone{cbd}, Outlets: []OutletPoint{hotel, kiosk}, Policy: DefaultPolicy()}
+	pin := geo.Point{Lat: -0.0960, Lng: 34.7660}
+
+	q := computeQuote(QuoteInput{Point: pin}, snap, straightOnly)
+	if !q.Serviceable || q.Outlet == nil || q.Outlet.ID != hotel.ID || !q.Free {
+		t.Fatalf("no-outlet quote must use the delivering hotel: %+v", q)
+	}
+	q = computeQuote(QuoteInput{Point: pin, OutletID: kiosk.ID}, snap, straightOnly)
+	if q.Serviceable {
+		t.Fatalf("the kiosk itself has no delivery areas: %+v", q)
+	}
+	// No outlet delivers: the nearest outlet answers, as before.
+	snap.Zones = nil
+	if q = computeQuote(QuoteInput{Point: pin}, snap, straightOnly); q.Outlet == nil || q.Outlet.ID != kiosk.ID {
+		t.Fatalf("without delivery areas the nearest outlet answers: %+v", q)
+	}
+}
+
 func TestQuoteInactiveAndInvalid(t *testing.T) {
 	snap := busiaSnapshot(t)
 	snap.Zones[1].Status = StatusDraft

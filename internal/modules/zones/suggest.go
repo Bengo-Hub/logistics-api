@@ -50,7 +50,8 @@ func (s *Service) SuggestFee(ctx context.Context, tenantID, outletID uuid.UUID, 
 func suggestFee(snap snapshot, outletID uuid.UUID, center geo.Point, radiusM float64, distance DistanceFunc) FeeSuggestion {
 	pol := snap.Policy
 	out := FeeSuggestion{Currency: pol.Currency}
-	outlet := pickOutlet(QuoteInput{Point: center, OutletID: outletID}, snap.Outlets)
+	// A new area is priced from the nearest outlet, delivering yet or not.
+	outlet := pickOutlet(QuoteInput{Point: center, OutletID: outletID}, snap.Outlets, nil)
 	if outlet == nil || !geo.Valid(center) {
 		out.Reason = ReasonNoOutlet
 		return out
