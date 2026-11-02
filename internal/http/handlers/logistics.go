@@ -292,6 +292,12 @@ func (h *LogisticsHandler) SubmitPoD(w http.ResponseWriter, r *http.Request) {
 	// The photo is a private upload (customer doorsteps); keep the plain URL and sign on read.
 	req.PhotoURL = mediaRef(req.PhotoURL)
 	req.SignatureURL = mediaRef(req.SignatureURL)
+	// Who entered the code: the rider holding the job, or a dispatcher doing it for them. The
+	// server checks the code either way.
+	req.Actor = h.actor(r, "dispatcher")
+	if member := h.riderOnly(r, tenantID); member != nil {
+		req.Actor = tasks.Actor{ID: member.ID, Type: "rider"}
+	}
 
 	pod, err := h.taskSvc.SubmitPoD(r.Context(), tenantID, taskID, req)
 	if err != nil {

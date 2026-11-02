@@ -481,6 +481,8 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 				tenant.Post("/riders/me/tasks/{taskId}/per-diem", lh.RaiseMyPerDiem)
 				// Hand a job back before pickup; it goes to the next rider.
 				tenant.Post("/riders/me/tasks/{taskId}/decline", lh.DeclineJob)
+				// The customer cannot find the delivery code: ask the dispatcher to confirm.
+				tenant.Post("/riders/me/tasks/{taskId}/confirmation-help", lh.RequestConfirmationHelp)
 				// Cash on delivery the rider holds until it is handed in at the outlet.
 				tenant.Get("/riders/me/cash", lh.GetMyCash)
 				// The rider renews the insurance of their linked vehicle (reactivates it).
@@ -527,6 +529,10 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 							// "Nearest rider" is auto-dispatch: a tier 2 feature.
 							disp.With(appmw.RequireFeature(consts.FeatureAutoDispatch, cfg.Subscriptions.ServiceURL+"/upgrade")).Post("/{taskId}/dispatch", lh.DispatchTask)
 							disp.Post("/{taskId}/rate", lh.RateRider)
+							// Mark delivered without the customer's code (admins; reason required).
+							if rbacSvc != nil {
+								disp.With(appmw.RequirePermission(rbacSvc, rbac.PermTaskOverride)).Post("/{taskId}/override-delivered", lh.OverrideDelivered)
+							}
 						})
 					})
 				})

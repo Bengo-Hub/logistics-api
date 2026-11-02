@@ -41,10 +41,12 @@ import (
 // PATCHing to "en_route_pickup" from "accepted" got a 400 and could never advance past
 // acceptance. Both vocabularies are accepted so neither existing nor new callers break.
 var validTransitions = map[string][]string{
-	"pending":          {"assigned", "cancelled"},
-	"assigned":         {"accepted", "cancelled"},
-	"accepted":         {"en_route", "en_route_pickup", "cancelled"},
-	"en_route":         {"delivered", "failed"},
+	"pending":  {"assigned", "cancelled"},
+	"assigned": {"accepted", "cancelled"},
+	// accepted no longer jumps straight to the legacy "en_route": that skipped the outlet steps,
+	// so ordering saw the order leave the counter before the rider had collected it.
+	"accepted":         {"en_route_pickup", "cancelled"},
+	"en_route":         {"arrived_dropoff", "delivered", "cancelled", "failed"},
 	"en_route_pickup":  {"arrived_pickup", "cancelled", "failed"},
 	"arrived_pickup":   {"picked_up", "cancelled", "failed"},
 	"picked_up":        {"en_route_dropoff", "cancelled", "failed"},
@@ -135,6 +137,9 @@ type SubmitPoDRequest struct {
 	Latitude            *float64       `json:"latitude,omitempty"`
 	Longitude           *float64       `json:"longitude,omitempty"`
 	Metadata            map[string]any `json:"metadata,omitempty"`
+	// Actor is who submits the proof: the rider holding the job, or a dispatcher entering the
+	// customer's code on the rider's behalf. Set by the handler, never read from the body.
+	Actor Actor `json:"-"`
 }
 
 // podAllowedFrom lists the statuses a task can be delivered from: the rider must have collected
@@ -846,224 +851,6 @@ func (s *Service) publishAssigned(ctx context.Context, tenantID, taskID uuid.UUI
 		RiderUserID:       member.UserID.String(),
 		PickupName:        pickup,
 	})
-}
-
-// SubmitPoD records proof of delivery and marks task as delivered.
-func (s *Service) SubmitPoD(ctx context.Context, tenantID, taskID uuid.UUID, req SubmitPoDRequest) (*ent.ProofOfDelivery, error) {
-	// Verify task belongs to tenant
-	t, err := s.client.Task.Query().
-		Where(task.ID(taskID), task.TenantID(tenantID)).
-		Only(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, fmt.Errorf("tasks: not found")
-		}
-		return nil, fmt.Errorf("tasks: get for pod: %w", err)
-	}
-
-	if !podAllowedFrom[t.Status] {
-		return nil, fmt.Errorf("tasks: the order has not been picked up yet (status %s)", t.Status)
-	}
-
-	// Validate COD: the customer pays the rider in cash or by M-Pesa to the business, and the
-	// full amount must be taken. An M-Pesa collection needs its confirmation code so the
-	// business can match it on its statement.
-	codAmount := taskCODAmount(t)
-	method := strings.ToLower(strings.TrimSpace(req.CollectionMethod))
-	reference := strings.ToUpper(strings.Join(strings.Fields(req.CollectionReference), ""))
-	if codAmount > 0 {
-		if req.AmountCollected < codAmount {
-			return nil, fmt.Errorf("tasks: amount collected (%.2f) is less than the %.2f due", req.AmountCollected, codAmount)
-		}
-		if method == "" {
-			method = "cash"
-		}
-		if method != "cash" && method != "mpesa" {
-			return nil, fmt.Errorf("tasks: collection method must be cash or mpesa")
-		}
-		if method == "mpesa" && len(reference) != 10 {
-			return nil, fmt.Errorf("tasks: enter the 10-character M-Pesa code for this payment")
-		}
-	}
-
-	// Validate proof-of-delivery confirmation code. ordering-backend stores a
-	// 6-digit code in the task metadata under "pod_code"; the customer relays
-	// it to the rider on delivery. When present and non-empty it MUST match the
-	// confirmation_code supplied by the rider. Tasks without a pod_code (legacy
-	// or non-delivery tasks) remain fully backward-compatible.
-	podCode, _ := t.Metadata["pod_code"].(string)
-	if podCode != "" {
-		if req.ConfirmationCode == "" {
-			return nil, fmt.Errorf("tasks: delivery confirmation code required")
-		}
-		if req.ConfirmationCode != podCode {
-			return nil, fmt.Errorf("tasks: incorrect delivery confirmation code")
-		}
-	} else if strings.TrimSpace(req.RecipientName) == "" && req.PhotoURL == "" && req.SignatureURL == "" {
-		// No customer code (till and transfer deliveries): some proof is still needed.
-		return nil, fmt.Errorf("tasks: enter who received the order")
-	}
-
-	meta := req.Metadata
-	if meta == nil {
-		meta = map[string]any{}
-	}
-	if reference != "" {
-		meta["collection_reference"] = reference
-	}
-	if req.RecipientName != "" {
-		meta["recipient_name"] = req.RecipientName
-	}
-	if req.Notes != "" {
-		meta["notes"] = req.Notes
-	}
-	if req.Latitude != nil && req.Longitude != nil {
-		meta["latitude"] = *req.Latitude
-		meta["longitude"] = *req.Longitude
-	}
-
-	// Resolve the fleet member from the task's active assignment rather than
-	// trusting the client-supplied req.FleetMemberID (the rider-app PoD payload
-	// does not send it, so it arrives as uuid.Nil). The assignment-derived id
-	// always wins when present; req.FleetMemberID is only a fallback.
-	memberID := req.FleetMemberID
-	if activeAssignments, aerr := s.client.TaskAssignment.Query().
-		Where(
-			taskassignment.TaskID(taskID),
-			taskassignment.StatusIn("assigned", "accepted"),
-		).
-		All(ctx); aerr == nil && len(activeAssignments) > 0 {
-		memberID = activeAssignments[0].FleetMemberID
-	}
-
-	builder := s.client.ProofOfDelivery.Create().
-		SetTenantID(tenantID).
-		SetTaskID(taskID).
-		SetFleetMemberID(memberID).
-		SetCapturedAt(time.Now()).
-		SetAmountCollected(req.AmountCollected).
-		SetMetadata(meta)
-
-	if req.SignatureURL != "" {
-		builder.SetSignatureURL(req.SignatureURL)
-	}
-	if photo, inline := podPhotoURL(req.PhotoURL); photo != "" {
-		builder.SetPhotoURL(photo)
-	} else if inline {
-		// Older rider-app builds sent the photo itself as a base64 data URL (100 KB+ per
-		// delivery in the row). The app now uploads it first; an inline photo is dropped
-		// rather than blocking the delivery at the door.
-		meta["photo_dropped"] = "inline photo not stored; upload it to /media/upload first"
-	}
-	if req.OTPCode != "" {
-		builder.SetOtpCode(req.OTPCode)
-	}
-	if method != "" {
-		builder.SetCollectionMethod(method)
-	}
-
-	pod, err := builder.Save(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("tasks: create pod: %w", err)
-	}
-
-	// Transition task to delivered. Guarded to only move the task forward (never
-	// resurrect an already-terminal task) rather than allow-listing specific
-	// pre-delivery statuses -- that allow-list previously named only "en_route" and
-	// "accepted", so a real rider on the granular per-leg flow (e.g. "arrived_dropoff")
-	// got a ProofOfDelivery record and a logistics.task.completed event published, but
-	// the task row itself silently never flipped to "delivered" and stayed stuck on
-	// the rider's active-deliveries list forever.
-	taskUpdate := s.client.Task.UpdateOneID(taskID).SetStatus("delivered")
-	if codAmount > 0 && req.AmountCollected >= codAmount {
-		taskUpdate.SetCashCollected(true)
-	}
-	if t.Status != "delivered" && t.Status != "completed" && t.Status != "cancelled" && t.Status != "failed" {
-		_, _ = taskUpdate.Save(ctx)
-	}
-
-	// Mark assignment as completed
-	assignments, _ := s.client.TaskAssignment.Query().
-		Where(
-			taskassignment.TaskID(taskID),
-			taskassignment.FleetMemberID(memberID),
-			taskassignment.StatusIn("assigned", "accepted"),
-		).
-		All(ctx)
-	now := time.Now()
-	for _, a := range assignments {
-		_, _ = s.client.TaskAssignment.UpdateOne(a).
-			SetStatus("completed").
-			SetCompletedAt(now).
-			Save(ctx)
-	}
-
-	s.recordEvent(ctx, taskID, "delivered", Actor{ID: memberID, Type: "rider"}, map[string]any{"previous_status": t.Status})
-
-	s.log.Info("proof of delivery submitted",
-		zap.String("task_id", taskID.String()),
-		zap.String("pod_id", pod.ID.String()),
-	)
-
-	// Publish task completed event
-	if s.publisher != nil {
-		_ = s.publisher.PublishTaskCompleted(ctx, tenantID, events.TaskEventData{
-			TaskID:              taskID.String(),
-			TrackingCode:        t.TrackingCode,
-			ExternalReference:   t.ExternalReference,
-			Status:              "delivered",
-			FleetMemberID:       memberID.String(),
-			SourceService:       t.SourceService,
-			CashOnDelivery:      codAmount,
-			CashCollected:       codAmount > 0 && req.AmountCollected >= codAmount,
-			AmountCollected:     req.AmountCollected,
-			OrderNumber:         metadataString(t.Metadata, "order_number"),
-			CollectionMethod:    method,
-			CollectionReference: reference,
-		})
-	}
-
-	// Record rider earning asynchronously, attributed to the resolved member.
-	if s.earningsSvc != nil {
-		// Prefer the task's actual delivery fee (set by ordering-backend in the
-		// task metadata) as the rider earning. Fall back to the distance-based
-		// PricingRule path for legacy tasks that carry no delivery_fee.
-		var deliveryFee float64
-		if t.Metadata != nil {
-			if raw, ok := t.Metadata["delivery_fee"]; ok {
-				deliveryFee = metadataNumber(raw)
-			}
-		}
-		earnMemberID := memberID
-		go func() {
-			earnCtx := context.Background()
-			// Staff riders are salaried on erp-api payroll: no per-task earning unless the
-			// member's employment terms say otherwise.
-			if m, merr := s.client.FleetMember.Get(earnCtx, earnMemberID); merr == nil {
-				emp := fleetmod.EmploymentOf(m)
-				if emp.IsStaff() && s.perDiem != nil {
-					// erp-api decides whether the trip earns per diem (distance, policy).
-					s.perDiem(earnCtx, tenantID, taskID, earnMemberID)
-				}
-				if !emp.EarnsPerTask() {
-					return
-				}
-			}
-			if deliveryFee > 0 {
-				if earnErr := s.earningsSvc.RecordEarningWithAmount(earnCtx, tenantID, taskID, earnMemberID, deliveryFee); earnErr != nil {
-					s.log.Warn("failed to record delivery earning", zap.Error(earnErr))
-				}
-				return
-			}
-			// Trip distance recorded at intake (road distance when routing was up).
-			distanceKm := metadataNumber(t.Metadata["distance_km"])
-			if earnErr := s.earningsSvc.RecordEarning(earnCtx, tenantID, taskID, earnMemberID, distanceKm); earnErr != nil {
-				s.log.Warn("failed to record delivery earning", zap.Error(earnErr))
-			}
-		}()
-	}
-
-	return pod, nil
 }
 
 // CreateTaskFromOrder creates a delivery task from an ordering event, including

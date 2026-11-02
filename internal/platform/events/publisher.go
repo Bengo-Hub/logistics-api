@@ -197,6 +197,17 @@ type TaskEventData struct {
 	// "reason" (ordering's cancelled handler) and "failure_reason" (ordering's failed handler and
 	// the notifications delivery_failed template).
 	Reason string `json:"reason,omitempty"`
+	// Delivery details on task.completed. DeliveredVia is "code" (the customer's code was checked
+	// by the server), "recipient" (no customer code; the recipient was named) or "override" (an
+	// admin marked it delivered without the code, with OverrideReason). ConfirmedBy is "rider" or
+	// "dispatcher" (who entered the code or recorded the override).
+	DeliveredVia  string `json:"delivered_via,omitempty"`
+	ConfirmedBy   string `json:"confirmed_by,omitempty"`
+	RecipientName string `json:"recipient_name,omitempty"`
+	// ProofPhoto says a doorstep photo was kept (the photo itself is private; read it with GET
+	// /{tenant}/tasks/{id}/pod).
+	ProofPhoto     bool   `json:"proof_photo,omitempty"`
+	OverrideReason string `json:"override_reason,omitempty"`
 }
 
 func (d TaskEventData) toMap() map[string]interface{} {
@@ -252,6 +263,23 @@ func (d TaskEventData) toMap() map[string]interface{} {
 	if d.Reason != "" {
 		m["reason"] = d.Reason
 		m["failure_reason"] = d.Reason
+	}
+	if d.DeliveredVia != "" {
+		m["delivered_via"] = d.DeliveredVia
+		m["code_verified"] = d.DeliveredVia == "code"
+		m["delivery_override"] = d.DeliveredVia == "override"
+	}
+	if d.ConfirmedBy != "" {
+		m["confirmed_by"] = d.ConfirmedBy
+	}
+	if d.RecipientName != "" {
+		m["recipient_name"] = d.RecipientName
+	}
+	if d.ProofPhoto {
+		m["proof_photo"] = true
+	}
+	if d.OverrideReason != "" {
+		m["override_reason"] = d.OverrideReason
 	}
 	return m
 }

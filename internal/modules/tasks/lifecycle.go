@@ -32,6 +32,11 @@ var (
 	ErrReasonRequired = errors.New("tasks: please give a reason")
 	// ErrRiderMayNotSetStatus means a rider tried a status only a dispatcher may set.
 	ErrRiderMayNotSetStatus = errors.New("tasks: riders cannot set this status; decline the job or report a failed delivery instead")
+	// ErrUseAssignment means a status change tried to set who holds the job.
+	ErrUseAssignment = errors.New("tasks: use assign, reassign or unassign to change who holds a delivery")
+	// ErrDeclineBeforePickup means a rider reported a failed delivery for an order still at the
+	// outlet; they hand the job back instead so another rider can take it.
+	ErrDeclineBeforePickup = errors.New("tasks: the order has not been collected yet; hand the job back instead of reporting a failed delivery")
 	// ErrProofRequired means the tenant requires proof of delivery, so a rider completes a job
 	// by submitting it rather than by setting the status.
 	ErrProofRequired = errors.New("tasks: proof of delivery is required; complete the job from the delivery screen")
@@ -90,6 +95,14 @@ func statusChangeError(from, to string, byRider bool, reason string) error {
 	}
 	if byRider && !riderStatusAllowed(to) {
 		return ErrRiderMayNotSetStatus
+	}
+	if to == "pending" || to == "assigned" {
+		// Who holds a job changes only through assign, reassign, unassign or decline, which
+		// also write the assignment. A bare status change left an "assigned" task with no rider.
+		return ErrUseAssignment
+	}
+	if byRider && to == "failed" && !IsPostPickup(from) {
+		return ErrDeclineBeforePickup
 	}
 	if (to == "failed" || to == "cancelled") && strings.TrimSpace(reason) == "" {
 		return ErrReasonRequired

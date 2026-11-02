@@ -18,6 +18,10 @@ var InProgressStatuses = []string{
 // job can be handed to another rider without anything to bring back.
 var PrePickupStatuses = []string{"assigned", "accepted", "en_route_pickup", "arrived_pickup"}
 
+// PostPickupStatuses are the in-progress statuses after the rider collected the order. Proof of
+// delivery and a rider's failed delivery report are only possible from these.
+var PostPickupStatuses = []string{"picked_up", "en_route", "en_route_dropoff", "arrived_dropoff"}
+
 // DeliveredStatuses count as a successful delivery in reports and earnings.
 var DeliveredStatuses = []string{"delivered", "completed"}
 
@@ -38,6 +42,9 @@ func IsTerminal(status string) bool { return inList(TerminalStatuses, status) }
 
 // IsPrePickup reports whether the order is still at the outlet.
 func IsPrePickup(status string) bool { return inList(PrePickupStatuses, status) }
+
+// IsPostPickup reports whether the rider has collected the order and not yet closed the job.
+func IsPostPickup(status string) bool { return inList(PostPickupStatuses, status) }
 
 // IsInProgress reports whether a rider is working the task.
 func IsInProgress(status string) bool { return inList(InProgressStatuses, status) }

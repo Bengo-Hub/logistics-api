@@ -16,3 +16,23 @@ func TestTaskEventCarriesReasonForEveryConsumer(t *testing.T) {
 		t.Fatal("empty reason must be omitted")
 	}
 }
+
+func TestTaskCompletedCarriesDeliveryDetails(t *testing.T) {
+	m := TaskEventData{
+		TaskID: "t1", Status: "delivered", CashOnDelivery: 1200, CashCollected: true, AmountCollected: 1200,
+		CollectionMethod: "mpesa", CollectionReference: "SGH7K2L9QP",
+		DeliveredVia: "override", ConfirmedBy: "dispatcher", RecipientName: "Amina", OverrideReason: "customer lost the code",
+	}.toMap()
+	// ordering-backend handleTaskCompleted and pos-api applyLogisticsStatus read these keys.
+	if m["cash_collected"] != true || m["amount_collected"] != 1200.0 || m["collection_method"] != "mpesa" || m["collection_reference"] != "SGH7K2L9QP" {
+		t.Fatalf("COD keys = %v", m)
+	}
+	if m["delivered_via"] != "override" || m["delivery_override"] != true || m["code_verified"] != false ||
+		m["override_reason"] != "customer lost the code" || m["recipient_name"] != "Amina" || m["confirmed_by"] != "dispatcher" {
+		t.Fatalf("delivery keys = %v", m)
+	}
+	code := TaskEventData{TaskID: "t2", Status: "delivered", DeliveredVia: "code", ConfirmedBy: "rider"}.toMap()
+	if code["code_verified"] != true || code["delivery_override"] != false {
+		t.Fatalf("code delivery keys = %v", code)
+	}
+}

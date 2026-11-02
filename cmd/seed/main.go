@@ -185,6 +185,32 @@ func seedPermissions(ctx context.Context, client *ent.Client) error {
 		}
 	}
 
+	// Single permissions outside the module x action grid.
+	extra := []struct{ code, name, mod, action string }{
+		{rbac.PermTaskOverride, "Tasks override delivery", "tasks", "override"},
+	}
+	for _, p := range extra {
+		exists, err := client.LogisticsPermission.Query().
+			Where(logisticspermission.PermissionCode(p.code)).
+			Exist(ctx)
+		if err != nil {
+			return fmt.Errorf("check permission %s: %w", p.code, err)
+		}
+		if exists {
+			continue
+		}
+		if _, err := client.LogisticsPermission.Create().
+			SetPermissionCode(p.code).
+			SetName(p.name).
+			SetModule(p.mod).
+			SetAction(p.action).
+			SetResource(p.mod).
+			Save(ctx); err != nil {
+			return fmt.Errorf("create permission %s: %w", p.code, err)
+		}
+		count++
+	}
+
 	log.Printf("seeded %d new permissions (skipped existing)", count)
 	return nil
 }

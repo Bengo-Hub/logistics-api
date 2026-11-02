@@ -251,3 +251,35 @@ pickup); nothing else keeps its own copy.
   and billing events (migration `20261006090000_delivery_audit_indexes.sql`).
 - **Proof of delivery** photos are private uploads stored unsigned and signed on read; inline
   base64 photos are not stored.
+
+## Closing a delivery (2026-11-02)
+
+Logistics is the only path to "delivered" for a delivery order: the POS counter and ordering's
+admin status endpoint refuse it. Every way of closing a task goes through
+`tasks.completeDelivery` (`internal/modules/tasks/delivery.go`), which writes the proof of
+delivery, moves the task to `delivered` and ends the assignment in one transaction, then
+publishes the same `logistics.task.completed` event.
+
+| Path | Who | Endpoint | Rule |
+|---|---|---|---|
+| Code | Rider holding the job | `POST /{tenant}/tasks/{id}/pod` | Server checks the customer's 6-digit code (constant time, spaces and dashes ignored), recipient name required, full COD amount in cash or M-Pesa with its 10-character code |
+| Code for the rider | Dispatcher (rider's phone dead) | same endpoint | Same checks; recorded with `confirmed_by: dispatcher` |
+| Override | Admin with `logistics.tasks.override` | `POST /{tenant}/tasks/{id}/override-delivered` | Reason required, COD details required for pay on delivery; stamped `delivery_override*` on the task and proof |
+
+- Proof is accepted only after pickup (`picked_up`, `en_route`, `en_route_dropoff`,
+  `arrived_dropoff`). An override works from any in-progress status but needs a rider holding the
+  job, so cash taken still lands in that rider's cash to hand in.
+- Five wrong codes lock the task (`metadata.pod_code_failed_attempts`) and alert the dispatcher.
+  Each wrong code is a `delivery_code_rejected` history row.
+- The rider app has no way to finish without the code. When the customer cannot find it the rider
+  sends `POST /{tenant}/riders/me/tasks/{id}/confirmation-help`, which raises a
+  `delivery_confirmation_needed` dispatcher alert.
+- `task.completed` keeps the keys ordering and pos read (`cash_collected`, `amount_collected`,
+  `collection_method`, `collection_reference`) and adds `delivered_via` (code, recipient,
+  override), `code_verified`, `delivery_override`, `override_reason`, `confirmed_by`,
+  `recipient_name` and `proof_photo`.
+- Status rules: who holds a job changes only through assign, reassign, unassign and decline (a
+  bare status change to `assigned` or `pending` is refused); `accepted` can no longer jump to the
+  legacy `en_route`; a rider reports `failed` only after pickup and hands the job back before it.
+- `logistics.tasks.override` is seeded by `cmd/seed` outside the module and action grid. Tenant
+  admins and the admin role hold it; dispatchers and riders do not.

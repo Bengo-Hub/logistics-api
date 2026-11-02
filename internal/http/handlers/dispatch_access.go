@@ -116,11 +116,16 @@ func isRiderBlocked(err error) bool {
 
 func writeTaskError(w http.ResponseWriter, err error) {
 	switch {
-	case errors.Is(err, tasks.ErrNotYourTask), errors.Is(err, tasks.ErrRiderMayNotSetStatus):
+	case errors.Is(err, tasks.ErrNotYourTask), errors.Is(err, tasks.ErrRiderMayNotSetStatus),
+		errors.Is(err, tasks.ErrDeclineBeforePickup):
 		http.Error(w, strings.TrimPrefix(err.Error(), "tasks: "), http.StatusForbidden)
 	case errors.Is(err, tasks.ErrTaskChanged), errors.Is(err, tasks.ErrTaskTaken), errors.Is(err, tasks.ErrIntakeBusy):
 		http.Error(w, strings.TrimPrefix(err.Error(), "tasks: "), http.StatusConflict)
 	case errors.Is(err, tasks.ErrProofRequired):
+		http.Error(w, strings.TrimPrefix(err.Error(), "tasks: "), http.StatusUnprocessableEntity)
+	case errors.Is(err, tasks.ErrCodeLocked), errors.Is(err, tasks.ErrProofExists), errors.Is(err, tasks.ErrNoRider):
+		http.Error(w, strings.TrimPrefix(err.Error(), "tasks: "), http.StatusConflict)
+	case errors.Is(err, tasks.ErrCodeWrong), errors.Is(err, tasks.ErrCodeRequired), errors.Is(err, tasks.ErrRecipientRequired):
 		http.Error(w, strings.TrimPrefix(err.Error(), "tasks: "), http.StatusUnprocessableEntity)
 	case errors.Is(err, tasks.ErrTaskClosed), errors.Is(err, tasks.ErrAlreadyPickedUp):
 		http.Error(w, strings.TrimPrefix(err.Error(), "tasks: "), http.StatusConflict)
@@ -152,6 +157,50 @@ func (h *LogisticsHandler) DeclineJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	respondJSON(w, http.StatusOK, toTaskResponse(t))
+}
+
+// RequestConfirmationHelp handles POST /api/v1/{tenant}/riders/me/tasks/{taskId}/confirmation-help
+// {reason}. The rider is with the customer, who cannot find the delivery code; the dispatcher is
+// alerted to confirm with the customer's code or override. The rider never closes it without one.
+func (h *LogisticsHandler) RequestConfirmationHelp(w http.ResponseWriter, r *http.Request) {
+	tenantID, member, ok := h.currentRider(w, r)
+	if !ok {
+		return
+	}
+	taskID, err := uuid.Parse(chi.URLParam(r, "taskId"))
+	if err != nil {
+		http.Error(w, "invalid task id", http.StatusBadRequest)
+		return
+	}
+	if err := h.taskSvc.RequestDeliveryHelp(r.Context(), tenantID, taskID, member.ID, decodeReason(r)); err != nil {
+		writeTaskError(w, err)
+		return
+	}
+	respondJSON(w, http.StatusAccepted, map[string]any{"status": "dispatcher_alerted"})
+}
+
+// OverrideDelivered handles POST /api/v1/{tenant}/tasks/{taskId}/override-delivered
+// {reason, recipient_name, amount_collected, collection_method, collection_reference, notes}.
+// An admin with logistics.tasks.override marks the delivery done without the customer's code.
+// It emits the same task.completed event as a rider's proof of delivery, flagged as an override.
+func (h *LogisticsHandler) OverrideDelivered(w http.ResponseWriter, r *http.Request) {
+	tenantID := tenantIDFromClaims(r)
+	taskID, err := uuid.Parse(chi.URLParam(r, "taskId"))
+	if tenantID == uuid.Nil || err != nil {
+		http.Error(w, "invalid task", http.StatusBadRequest)
+		return
+	}
+	var req tasks.OverrideDeliveryRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	pod, err := h.taskSvc.OverrideDelivery(r.Context(), tenantID, taskID, req, h.actor(r, "dispatcher"))
+	if err != nil {
+		writeTaskError(w, err)
+		return
+	}
+	respondJSON(w, http.StatusCreated, signPoDMedia(pod))
 }
 
 // UnassignTask handles POST /api/v1/{tenant}/tasks/{taskId}/unassign {reason}

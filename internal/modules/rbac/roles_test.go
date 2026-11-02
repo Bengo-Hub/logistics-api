@@ -77,3 +77,35 @@ func TestSystemRoleDefinitions(t *testing.T) {
 		t.Fatalf("roles must be distinct: %v", got)
 	}
 }
+
+// Marking a delivery done without the customer's code is for admins only: dispatchers confirm
+// with the code and riders never close a job without it.
+func TestDeliveryOverrideIsAdminOnly(t *testing.T) {
+	for _, r := range SystemRoles() {
+		if r.Code == RoleAdmin {
+			if r.Permissions != nil {
+				t.Fatal("admin role must hold every permission, including the override")
+			}
+			continue
+		}
+		for _, p := range r.Permissions {
+			if p == PermTaskOverride {
+				t.Fatalf("%s must not hold %s", r.Code, PermTaskOverride)
+			}
+		}
+	}
+	repo := &stubRepo{byRole: map[string][]string{
+		RoleDispatcher: SystemRoles()[1].Permissions,
+		RoleDriver:     SystemRoles()[2].Permissions,
+	}}
+	svc := NewService(repo, zap.NewNop(), nil)
+	tenant, user := uuid.New(), uuid.New()
+	if ok, _ := svc.HasPermission(ctxWith("admin"), tenant, user, PermTaskOverride); !ok {
+		t.Fatal("tenant admin must be able to override")
+	}
+	for _, role := range []string{"dispatcher", "rider"} {
+		if ok, _ := svc.HasPermission(ctxWith(role), tenant, user, PermTaskOverride); ok {
+			t.Fatalf("%s must not be able to override", role)
+		}
+	}
+}

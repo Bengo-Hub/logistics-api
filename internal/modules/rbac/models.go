@@ -21,11 +21,14 @@ type LogisticsRole struct {
 // Permission code constants follow the logistics.<module>.<action> convention
 // seeded by cmd/seed/main.go.
 const (
-	PermTaskView     = "logistics.tasks.view"
-	PermTaskAdd      = "logistics.tasks.add"
-	PermTaskChange   = "logistics.tasks.change"
-	PermTaskDelete   = "logistics.tasks.delete"
-	PermTaskManage   = "logistics.tasks.manage"
+	PermTaskView   = "logistics.tasks.view"
+	PermTaskAdd    = "logistics.tasks.add"
+	PermTaskChange = "logistics.tasks.change"
+	PermTaskDelete = "logistics.tasks.delete"
+	PermTaskManage = "logistics.tasks.manage"
+	// PermTaskOverride marks a delivery done without the customer's code (admins only; a reason
+	// is required and recorded). Dispatchers confirm with the code instead.
+	PermTaskOverride = "logistics.tasks.override"
 	PermFleetView    = "logistics.fleet.view"
 	PermFleetManage  = "logistics.fleet.manage"
 	PermZoneView     = "logistics.zones.view"
