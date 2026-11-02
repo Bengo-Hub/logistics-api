@@ -35,3 +35,5 @@
 *-key.pem
 KubeSecrets/
 kubeSecrets/
+
+__pycache__/
