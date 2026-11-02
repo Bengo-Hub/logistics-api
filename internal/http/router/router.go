@@ -195,7 +195,8 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					ctx := r.Context()
 					claims, ok := authclient.ClaimsFromContext(ctx)
-					if ok && claims.Subject != "" {
+					// Only members whose token lets logistics keep them (user_services claim).
+					if ok && claims.Subject != "" && claims.AllowsUserService("logistics") {
 						subject, _ := uuid.Parse(claims.Subject)
 						slug := claims.GetTenantSlug()
 						if slug != "" {

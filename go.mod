@@ -9,7 +9,7 @@ require (
 	github.com/Bengo-Hub/httpware v0.16.0
 	github.com/Bengo-Hub/pagination v0.3.0
 	github.com/Bengo-Hub/shared-auth-client v0.0.0-00010101000000-000000000000
-	github.com/Bengo-Hub/shared-events v0.7.4
+	github.com/Bengo-Hub/shared-events v0.9.0
 	github.com/Bengo-Hub/shared-ratelimit v0.3.0
 	github.com/go-chi/chi/v5 v5.3.2
 	github.com/google/uuid v1.6.0
@@ -86,4 +86,4 @@ require (
 	google.golang.org/protobuf v1.36.11 // indirect
 )
 
-replace github.com/Bengo-Hub/shared-auth-client => github.com/Bengo-Hub/auth-client v0.15.1
+replace github.com/Bengo-Hub/shared-auth-client => github.com/Bengo-Hub/auth-client v0.17.1

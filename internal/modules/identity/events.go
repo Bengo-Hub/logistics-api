@@ -232,7 +232,16 @@ func (h *EventHandler) handleUserDeleted(ctx context.Context, evt *sharedevents.
 	if err != nil {
 		return fmt.Errorf("invalid user_id in deleted event: %w", err)
 	}
+	if err := h.removeLocalUser(ctx, authUserID); err != nil {
+		return err
+	}
+	log.Printf("[identity-event] hard-deleted user (auth=%s)", authUserID)
+	return nil
+}
 
+// removeLocalUser hard-deletes logistics' copy of a user, child rows first: task assignments and
+// rider ratings of their fleet memberships, the memberships, role assignments, the user.
+func (h *EventHandler) removeLocalUser(ctx context.Context, authUserID uuid.UUID) error {
 	tx, err := h.service.client.Tx(ctx)
 	if err != nil {
 		return fmt.Errorf("start tx: %w", err)
@@ -269,13 +278,47 @@ func (h *EventHandler) handleUserDeleted(ctx context.Context, evt *sharedevents.
 		_ = tx.Rollback()
 		return fmt.Errorf("delete user: %w", err)
 	}
-
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit: %w", err)
 	}
-
-	log.Printf("[identity-event] hard-deleted user (auth=%s)", authUserID)
 	return nil
+}
+
+// relevance is logistics' reading of an auth.user event: auth-api's services list when the event
+// has one, else admin roles, an outlet logistics mirrors, or a logistics role.
+func (h *EventHandler) relevance() sharedevents.UserRelevance {
+	return sharedevents.UserRelevance{
+		Service:      "logistics",
+		ServiceRoles: logisticsServiceRoles,
+		OutletKnown: func(ctx context.Context, tid, outletID uuid.UUID) bool {
+			ok, err := h.service.client.Outlet.Query().Where(entoutlet.ID(outletID), entoutlet.TenantID(tid)).Exist(ctx)
+			return err == nil && ok
+		},
+	}
+}
+
+// revoked removes the local copy of the user when the event's services list leaves logistics out
+// and the copy belongs to tenantID (this service's id for the event's tenant). Reports whether the
+// event was handled that way; events without the list never are.
+func (h *EventHandler) revoked(ctx context.Context, evt *sharedevents.Event, tenantID, authUserID uuid.UUID) (bool, error) {
+	if !h.relevance().Revoked(evt.Payload) {
+		return false, nil
+	}
+	existing, err := h.service.client.User.Query().Where(user.AuthServiceUserID(authUserID)).First(ctx)
+	if ent.IsNotFound(err) {
+		return true, nil
+	}
+	if err != nil {
+		return true, fmt.Errorf("query user: %w", err)
+	}
+	if existing.TenantID != tenantID {
+		return true, nil // the copy belongs to another tenant of this person
+	}
+	if err := h.removeLocalUser(ctx, authUserID); err != nil {
+		return true, fmt.Errorf("remove user outside logistics: %w", err)
+	}
+	log.Printf("[identity-event] removed user not in logistics (auth=%s)", authUserID)
+	return true, nil
 }
 
 // handleUserDeactivated sets a user's status to "inactive" and deactivates their fleet memberships.
@@ -346,6 +389,10 @@ func (h *EventHandler) handleUserCreated(ctx context.Context, evt *sharedevents.
 		return fmt.Errorf("sync tenant %s: %w", tenantSlug, err)
 	}
 
+	if handled, err := h.revoked(ctx, evt, tenantID, authUserID); handled {
+		return err
+	}
+
 	// Check if user already exists by auth_service_user_id
 	existing, _ := h.service.client.User.Query().
 		Where(user.AuthServiceUserID(authUserID)).
@@ -363,17 +410,8 @@ func (h *EventHandler) handleUserCreated(ctx context.Context, evt *sharedevents.
 	// An invited rider (stub) is always ours; anyone else must belong to logistics (shared
 	// UserRelevance): admin roles, an outlet logistics mirrors, or a logistics role. Without this
 	// every member of a mixed tenant was created here, and resolveRole made them drivers.
-	if stub == nil {
-		r := sharedevents.UserRelevance{
-			ServiceRoles: logisticsServiceRoles,
-			OutletKnown: func(ctx context.Context, tid, outletID uuid.UUID) bool {
-				ok, err := h.service.client.Outlet.Query().Where(entoutlet.ID(outletID), entoutlet.TenantID(tid)).Exist(ctx)
-				return err == nil && ok
-			},
-		}
-		if !r.Relevant(ctx, tenantID, evt.Payload) {
-			return nil
-		}
+	if stub == nil && !h.relevance().Relevant(ctx, tenantID, evt.Payload) {
+		return nil
 	}
 
 	role := resolveRole(roles, tenantSlug)
@@ -428,6 +466,9 @@ func (h *EventHandler) handleUserUpdated(ctx context.Context, evt *sharedevents.
 	if existing == nil {
 		// User not found locally, skip
 		return nil
+	}
+	if handled, err := h.revoked(ctx, evt, existing.TenantID, authUserID); handled {
+		return err
 	}
 
 	fullName, _ := evt.Payload["full_name"].(string)
