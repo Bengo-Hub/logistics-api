@@ -22,18 +22,14 @@ type NotificationsHandler struct {
 	wsOriginPatterns []string
 }
 
-// NewNotificationsHandler creates a new NotificationsHandler. originPatterns are the
-// allowed WebSocket handshake Origins; an empty list falls back to "*" (dev convenience).
-func NewNotificationsHandler(log *zap.Logger, svc *notifmod.Service, hub *notifmod.Hub, originPatterns []string) *NotificationsHandler {
-	patterns := originPatterns
-	if len(patterns) == 0 {
-		patterns = []string{"*"}
-	}
+// NewNotificationsHandler creates a new NotificationsHandler. allowedOrigins is the service's
+// CORS origin list; it is turned into the host patterns the WebSocket handshake checks.
+func NewNotificationsHandler(log *zap.Logger, svc *notifmod.Service, hub *notifmod.Hub, allowedOrigins []string) *NotificationsHandler {
 	return &NotificationsHandler{
 		log:              log.Named("notifications.handler"),
 		svc:              svc,
 		hub:              hub,
-		wsOriginPatterns: patterns,
+		wsOriginPatterns: wsOriginPatterns(allowedOrigins),
 	}
 }
 

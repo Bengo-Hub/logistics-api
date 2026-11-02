@@ -85,18 +85,13 @@ type FleetTrackingWSHandler struct {
 	wsOriginPatterns []string
 }
 
-// NewFleetTrackingWSHandler creates a new FleetTrackingWSHandler. originPatterns are the
-// allowed WebSocket handshake Origins (glob patterns) — pass the same list used for the
-// service's regular CORS config; an empty list falls back to "*" (dev convenience).
-func NewFleetTrackingWSHandler(log *zap.Logger, hub *FleetTrackingHub, originPatterns []string) *FleetTrackingWSHandler {
-	patterns := originPatterns
-	if len(patterns) == 0 {
-		patterns = []string{"*"}
-	}
+// NewFleetTrackingWSHandler creates a new FleetTrackingWSHandler. allowedOrigins is the
+// service's CORS origin list; it is turned into the host patterns the WebSocket handshake checks.
+func NewFleetTrackingWSHandler(log *zap.Logger, hub *FleetTrackingHub, allowedOrigins []string) *FleetTrackingWSHandler {
 	return &FleetTrackingWSHandler{
 		hub:              hub,
 		log:              log.Named("fleet-tracking.ws"),
-		wsOriginPatterns: patterns,
+		wsOriginPatterns: wsOriginPatterns(allowedOrigins),
 	}
 }
 
