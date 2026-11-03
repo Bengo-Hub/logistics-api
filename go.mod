@@ -9,7 +9,7 @@ require (
 	github.com/Bengo-Hub/httpware v0.16.0
 	github.com/Bengo-Hub/pagination v0.3.0
 	github.com/Bengo-Hub/shared-auth-client v0.0.0-00010101000000-000000000000
-	github.com/Bengo-Hub/shared-events v0.9.0
+	github.com/Bengo-Hub/shared-events v0.10.1
 	github.com/Bengo-Hub/shared-ratelimit v0.3.0
 	github.com/go-chi/chi/v5 v5.3.2
 	github.com/google/uuid v1.6.0

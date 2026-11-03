@@ -55,7 +55,7 @@ const (
 // only after a platform-owner /admin confirmation of an account the dormancy job already
 // suspended + queued (pending_purge). Because this destroys data, the handler applies
 // mandatory safety guards: a parseable tenant_id, payload.confirmed==true, and
-// payload.reason=="dormancy". Anything else is acknowledged and skipped — never retried,
+// payload.reason is a known purge reason (shared-events IsTenantPurgeReason). Anything else is acknowledged and skipped — never retried,
 // never acted on.
 type TenantPurgeConsumer struct {
 	log    *zap.Logger
@@ -138,7 +138,7 @@ func (c *TenantPurgeConsumer) handleMessage(msg *nats.Msg) {
 
 	// SAFETY GUARD 2: only act on an explicitly confirmed dormancy purge. Any other
 	// reason or an unconfirmed event is acknowledged and ignored — never acted on.
-	if !evt.Payload.Confirmed || evt.Payload.Reason != "dormancy" {
+	if !evt.Payload.Confirmed || !eventslib.IsTenantPurgeReason(evt.Payload.Reason) {
 		c.log.Warn("tenant purge: not a confirmed dormancy purge — skipping",
 			zap.String("tenant_id", tenantID.String()),
 			zap.Bool("confirmed", evt.Payload.Confirmed),
