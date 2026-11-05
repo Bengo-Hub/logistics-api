@@ -186,6 +186,7 @@ func New(ctx context.Context) (*App, error) {
 	// events carried them were never sent. One replica fleet-wide runs it every 6 hours.
 	outletResync := tenant.NewOutletResync(entClient, cfg.Auth.ServiceURL, log)
 	outletResync.OnChange(zoneSvc.Invalidate)
+	outletResync.SetEntitlementGate(logisticsEntitled)
 	outletResync.Start(ctx, 6*time.Hour)
 
 	// Subscribe to auth-service events for identity sync and outlet sync

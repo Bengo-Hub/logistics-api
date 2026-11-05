@@ -26,6 +26,13 @@ type OutletResync struct {
 	http     *http.Client
 	onChange func(ctx context.Context, tenantID uuid.UUID)
 	log      *zap.Logger
+	// entitled skips tenants whose plan has no logistics (SetEntitlementGate).
+	entitled func(ctx context.Context, tenantID string) bool
+}
+
+// SetEntitlementGate stops the resync pulling outlets for a tenant whose plan has no logistics.
+func (r *OutletResync) SetEntitlementGate(fn func(ctx context.Context, tenantID string) bool) {
+	r.entitled = fn
 }
 
 // NewOutletResync builds the resync. Fleet-wide coordination uses the shared lease client
@@ -113,6 +120,9 @@ func (r *OutletResync) SyncAll(ctx context.Context) {
 	}
 	total := 0
 	for _, t := range tenants {
+		if r.entitled != nil && !r.entitled(ctx, t.ID.String()) {
+			continue
+		}
 		n, serr := r.SyncTenant(ctx, t.ID, t.Slug)
 		if serr != nil {
 			r.log.Debug("outlet resync skipped tenant", zap.String("tenant", t.Slug), zap.Error(serr))
