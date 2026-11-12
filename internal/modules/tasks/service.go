@@ -80,14 +80,22 @@ type CreateTaskRequest struct {
 	CustomerName   string  `json:"customer_name,omitempty"`
 	CustomerPhone  string  `json:"customer_phone,omitempty"`
 	Instructions   string  `json:"instructions,omitempty"`
+	// CustomerEmail and CRMContactID identify the customer for delivery emails (optional). They
+	// are kept in the task metadata, never in a customer table (see customer.go).
+	CustomerEmail string `json:"customer_email,omitempty"`
+	CRMContactID  string `json:"crm_contact_id,omitempty"`
 }
 
-// CreateTaskFromOrderRequest carries delivery context from the ordering event.
+// CreateTaskFromOrderRequest carries delivery context from the ordering event. CustomerEmail is
+// the email ordering supplied for the order and CRMContactID the customer's CRM contact when
+// ordering sends one; with the name and phone they are kept in the task metadata (customer.go).
 type CreateTaskFromOrderRequest struct {
 	OrderID         string  `json:"order_id"`
 	OrderNumber     string  `json:"order_number"`
 	CustomerName    string  `json:"customer_name"`
 	CustomerPhone   string  `json:"customer_phone"`
+	CustomerEmail   string  `json:"customer_email,omitempty"`
+	CRMContactID    string  `json:"crm_contact_id,omitempty"`
 	Instructions    string  `json:"instructions"`
 	CashOnDelivery  float64 `json:"cash_on_delivery"`
 	FulfillmentType string  `json:"fulfillment_type"`
@@ -415,6 +423,18 @@ func (s *Service) createTask(ctx context.Context, tenantID uuid.UUID, req Create
 	if taskType == "" {
 		taskType = "delivery"
 	}
+	// Keep the customer the caller named in the metadata so task events can carry it to
+	// notifications-api (customer.go). The drop-off contact stands in for a missing name.
+	contactName := req.CustomerName
+	if contactName == "" {
+		contactName = req.DropoffContact
+	}
+	req.Metadata = withCustomerMetadata(req.Metadata, customerIdentity{
+		CRMContactID: req.CRMContactID,
+		Email:        req.CustomerEmail,
+		Name:         contactName,
+		Phone:        req.CustomerPhone,
+	})
 
 	trackingCode := generateTrackingCode()
 
@@ -529,14 +549,14 @@ func (s *Service) createTask(ctx context.Context, tenantID uuid.UUID, req Create
 	s.recordEvent(ctx, t.ID, "pending", Actor{Type: req.SourceService}, nil)
 
 	if s.publisher != nil {
-		if pubErr := s.publisher.PublishTaskCreated(ctx, tenantID, events.TaskEventData{
+		if pubErr := s.publisher.PublishTaskCreated(ctx, tenantID, withCustomer(events.TaskEventData{
 			TaskID:            t.ID.String(),
 			TrackingCode:      t.TrackingCode,
 			ExternalReference: req.ExternalReference,
 			Status:            t.Status,
 			SourceService:     req.SourceService,
 			CashOnDelivery:    t.CashOnDelivery,
-		}); pubErr != nil {
+		}, t)); pubErr != nil {
 			s.log.Warn("failed to publish task.created", zap.Error(pubErr), zap.String("task_id", t.ID.String()))
 		}
 	}
@@ -698,16 +718,11 @@ func (s *Service) UpdateStatusAs(ctx context.Context, tenantID, taskID uuid.UUID
 
 	// Publish task status change event
 	if s.publisher != nil {
-		_ = s.publisher.PublishTaskStatusChanged(ctx, tenantID, events.TaskEventData{
-			TaskID:            taskID.String(),
-			TrackingCode:      updated.TrackingCode,
-			ExternalReference: updated.ExternalReference,
-			Status:            newStatus,
-			PreviousStatus:    t.Status,
-			SourceService:     updated.SourceService,
-			OrderNumber:       metadataString(updated.Metadata, "order_number"),
-			Reason:            reason,
-		})
+		var rider riderContact
+		if riderShownOnStatus(newStatus) {
+			rider = s.activeRiderContact(ctx, updated)
+		}
+		_ = s.publisher.PublishTaskStatusChanged(ctx, tenantID, statusEventData(updated, t.Status, newStatus, reason, now, rider))
 	}
 
 	// Trigger ETA recalculation when rider accepts or goes en-route (either leg) --
@@ -831,26 +846,102 @@ func (s *Service) publishAssigned(ctx context.Context, tenantID, taskID uuid.UUI
 			break
 		}
 	}
-	riderEmail, riderName, riderPhone := "", "", ""
-	if ru, uerr := s.client.User.Query().Where(entuser.ID(member.UserID)).Only(ctx); uerr == nil && ru != nil {
-		riderEmail = ru.Email
-		riderName = ru.FullName
-		riderPhone = ru.Phone
-	}
-	_ = s.publisher.PublishTaskAssigned(ctx, tenantID, events.TaskEventData{
+	rider := s.riderContactForUser(ctx, member.UserID)
+	_ = s.publisher.PublishTaskAssigned(ctx, tenantID, withCustomer(events.TaskEventData{
 		TaskID:            taskID.String(),
 		TrackingCode:      t.TrackingCode,
 		ExternalReference: t.ExternalReference,
 		Status:            "assigned",
 		FleetMemberID:     member.ID.String(),
-		RiderEmail:        riderEmail,
-		RiderName:         riderName,
-		RiderPhone:        riderPhone,
+		RiderEmail:        rider.Email,
+		RiderName:         rider.Name,
+		RiderPhone:        rider.Phone,
 		SourceService:     t.SourceService,
 		OrderNumber:       metadataString(t.Metadata, "order_number"),
 		RiderUserID:       member.UserID.String(),
 		PickupName:        pickup,
-	})
+	}, t))
+}
+
+// riderContact is how the rider holding a task is reached, from the local user table synced from
+// auth. Empty fields mean unknown.
+type riderContact struct {
+	Email string
+	Name  string
+	Phone string
+}
+
+// riderContactForUser looks the rider's contact up in the local user table (empty when the user
+// is not synced).
+func (s *Service) riderContactForUser(ctx context.Context, userID uuid.UUID) riderContact {
+	if userID == uuid.Nil {
+		return riderContact{}
+	}
+	ru, err := s.client.User.Query().Where(entuser.ID(userID)).Only(ctx)
+	if err != nil || ru == nil {
+		return riderContact{}
+	}
+	return riderContact{Email: ru.Email, Name: ru.FullName, Phone: ru.Phone}
+}
+
+// activeRiderContact is the contact of the rider whose assignment on t is still active (assigned
+// or accepted), or empty when nobody holds the task. t must be loaded with its assignments.
+func (s *Service) activeRiderContact(ctx context.Context, t *ent.Task) riderContact {
+	if t == nil {
+		return riderContact{}
+	}
+	for _, a := range t.Edges.Assignments {
+		if a == nil || !isActiveAssignmentStatus(a.Status) {
+			continue
+		}
+		m, err := s.client.FleetMember.Get(ctx, a.FleetMemberID)
+		if err != nil || m == nil {
+			return riderContact{}
+		}
+		return s.riderContactForUser(ctx, m.UserID)
+	}
+	return riderContact{}
+}
+
+func isActiveAssignmentStatus(status string) bool {
+	for _, st := range activeAssignmentStatuses {
+		if st == status {
+			return true
+		}
+	}
+	return false
+}
+
+// riderShownOnStatus reports whether a status event tells the customer who is bringing the
+// order: the rider is on the way to them (en_route_dropoff, or en_route on the legacy flow).
+func riderShownOnStatus(status string) bool {
+	return status == "en_route" || status == "en_route_dropoff"
+}
+
+// statusEventData is the task event UpdateStatusAs publishes for a status change on t (loaded
+// with its steps). rider is set on the event only for the statuses riderShownOnStatus names.
+func statusEventData(t *ent.Task, previous, newStatus, reason string, now time.Time, rider riderContact) events.TaskEventData {
+	data := withCustomer(events.TaskEventData{
+		TaskID:            t.ID.String(),
+		TrackingCode:      t.TrackingCode,
+		ExternalReference: t.ExternalReference,
+		Status:            newStatus,
+		PreviousStatus:    previous,
+		SourceService:     t.SourceService,
+		OrderNumber:       metadataString(t.Metadata, "order_number"),
+		Reason:            reason,
+	}, t)
+	if riderShownOnStatus(newStatus) {
+		data.RiderName = rider.Name
+		data.RiderPhone = rider.Phone
+	}
+	if newStatus == "delivered" {
+		// Closed through the status endpoint (no proof of delivery record). statusChangeError
+		// refuses this change today (every close goes through completeDelivery and
+		// task.completed); the stamp keeps task.delivered complete should that path reopen.
+		data.DeliveredAt = now.UTC().Format(time.RFC3339)
+	}
+	return data
 }
 
 // CreateTaskFromOrder creates a delivery task from an ordering event, including
@@ -907,6 +998,13 @@ func (s *Service) CreateTaskFromOrder(ctx context.Context, tenantID uuid.UUID, e
 	if req.PickupPhone != "" {
 		metadata["pickup_phone"] = req.PickupPhone
 	}
+	// Who the order is for, so task events can carry it to notifications-api (customer.go).
+	metadata = withCustomerMetadata(metadata, customerIdentity{
+		CRMContactID: req.CRMContactID,
+		Email:        req.CustomerEmail,
+		Name:         req.CustomerName,
+		Phone:        req.CustomerPhone,
+	})
 	// What is in the bag, so the rider can check it at the counter.
 	if desc, count := describeItems(req.Items); count > 0 {
 		metadata["items_description"] = desc

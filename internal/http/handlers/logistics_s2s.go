@@ -96,7 +96,7 @@ func (h *LogisticsHandler) S2SCreateTask(w http.ResponseWriter, r *http.Request)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	respondJSON(w, http.StatusCreated, t)
+	respondJSON(w, http.StatusCreated, createdTaskResponse(t))
 }
 
 // S2SAssignTask handles POST /api/v1/s2s/dispatch/{tenant}/tasks/{taskId}/assign

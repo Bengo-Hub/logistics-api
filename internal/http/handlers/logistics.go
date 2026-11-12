@@ -76,7 +76,7 @@ func (h *LogisticsHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondJSON(w, http.StatusCreated, t)
+	respondJSON(w, http.StatusCreated, createdTaskResponse(t))
 }
 
 // ListTasks handles GET /api/v1/{tenant}/tasks

@@ -68,7 +68,8 @@ func (c *OrderReadyConsumer) Start(ctx context.Context, js nats.JetStreamContext
 
 // orderReadyEvent represents the full event envelope from ordering.order.ready.
 // ordering-backend now publishes the fleet-uniform shared-events envelope
-// (tenant_id/payload), so the wrapper is decoded with those field names.
+// (tenant_id/payload), so the wrapper is decoded with those field names. crm_contact_id is read
+// for when ordering adds it (order.ready does not send it yet); customer_email is sent today.
 type orderReadyEvent struct {
 	TenantID string `json:"tenant_id"`
 	Data     struct {
@@ -83,6 +84,8 @@ type orderReadyEvent struct {
 		GrandTotal      float64                  `json:"grand_total"`
 		CustomerName    string                   `json:"customer_name"`
 		CustomerPhone   string                   `json:"customer_phone"`
+		CustomerEmail   string                   `json:"customer_email"`
+		CRMContactID    string                   `json:"crm_contact_id"`
 		Instructions    string                   `json:"instructions"`
 		FulfillmentType string                   `json:"fulfillment_type"`
 		OutletLocation  map[string]interface{}   `json:"outlet_location"`
@@ -141,6 +144,8 @@ func (c *OrderReadyConsumer) handleMessage(msg *nats.Msg) {
 		OrderNumber:     envelope.Data.OrderNumber,
 		CustomerName:    envelope.Data.CustomerName,
 		CustomerPhone:   envelope.Data.CustomerPhone,
+		CustomerEmail:   envelope.Data.CustomerEmail,
+		CRMContactID:    envelope.Data.CRMContactID,
 		Instructions:    envelope.Data.Instructions,
 		CashOnDelivery:  envelope.Data.CashOnDelivery,
 		FulfillmentType: envelope.Data.FulfillmentType,

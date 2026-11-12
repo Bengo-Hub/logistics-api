@@ -463,7 +463,7 @@ func (s *Service) completeDelivery(ctx context.Context, t *ent.Task, c deliveryC
 		zap.String("by", c.actor.Type))
 
 	if s.publisher != nil {
-		_ = s.publisher.PublishTaskCompleted(ctx, t.TenantID, events.TaskEventData{
+		_ = s.publisher.PublishTaskCompleted(ctx, t.TenantID, withCustomer(events.TaskEventData{
 			TaskID:              t.ID.String(),
 			TrackingCode:        t.TrackingCode,
 			ExternalReference:   t.ExternalReference,
@@ -482,7 +482,8 @@ func (s *Service) completeDelivery(ctx context.Context, t *ent.Task, c deliveryC
 			RecipientName:       c.recipient,
 			ProofPhoto:          c.photo != "",
 			OverrideReason:      c.override,
-		})
+			DeliveredAt:         stamp,
+		}, t))
 	}
 	if s.sseBroadcaster != nil {
 		s.sseBroadcaster.Publish(t.TenantID, t.ID, "status_changed", map[string]any{

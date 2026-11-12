@@ -254,7 +254,22 @@ func priorityLabel(p int) string {
 
 // secretTaskMetadataKeys never leave the API: the customer's proof-of-delivery code must only be
 // checked server-side, otherwise the rider could read it off the task instead of asking at the door.
-var secretTaskMetadataKeys = []string{"pod_code"}
+// The customer's email and CRM contact id are kept only so task events can reach the customer
+// (tasks/customer.go); riders and dispatchers work from the drop-off step's name and phone.
+var secretTaskMetadataKeys = []string{"pod_code", "customer_email", "crm_contact_id", "customer_phone"}
+
+// createdTaskResponse is the task a create endpoint returns (POST .../tasks and the S2S
+// dispatch create): the stored task with its metadata passed through publicTaskMetadata, so the
+// caller never reads back pod_code, customer_email or crm_contact_id, the same keys the list and
+// get DTO (toTaskResponse) hides. The stored task is not changed.
+func createdTaskResponse(t *ent.Task) *ent.Task {
+	if t == nil {
+		return nil
+	}
+	out := *t
+	out.Metadata = publicTaskMetadata(t.Metadata)
+	return &out
+}
 
 // publicTaskMetadata returns a copy of the task metadata without secret keys.
 func publicTaskMetadata(m map[string]any) map[string]any {

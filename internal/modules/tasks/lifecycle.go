@@ -255,7 +255,7 @@ func (s *Service) releaseTask(ctx context.Context, tenantID, taskID uuid.UUID, a
 		"reason": reason, "previous_status": t.Status, "fleet_member_id": previous.String(),
 	})
 	if s.publisher != nil {
-		_ = s.publisher.PublishTaskUnassigned(ctx, tenantID, events.TaskEventData{
+		_ = s.publisher.PublishTaskUnassigned(ctx, tenantID, withCustomer(events.TaskEventData{
 			TaskID:            taskID.String(),
 			TrackingCode:      t.TrackingCode,
 			ExternalReference: t.ExternalReference,
@@ -272,7 +272,7 @@ func (s *Service) releaseTask(ctx context.Context, tenantID, taskID uuid.UUID, a
 				}
 				return s.memberUserID(ctx, previous)
 			}(),
-		})
+		}, t))
 	}
 	if assignmentStatus != "declined" {
 		s.notifyRider(ctx, tenantID, previous, taskID, "job_unassigned",
@@ -344,7 +344,7 @@ func (s *Service) CancelTask(ctx context.Context, tenantID, taskID uuid.UUID, re
 
 	s.recordEvent(ctx, taskID, "cancelled", actor, map[string]any{"reason": reason, "previous_status": t.Status})
 	if s.publisher != nil {
-		data := events.TaskEventData{
+		data := withCustomer(events.TaskEventData{
 			TaskID:            taskID.String(),
 			TrackingCode:      t.TrackingCode,
 			ExternalReference: t.ExternalReference,
@@ -353,7 +353,7 @@ func (s *Service) CancelTask(ctx context.Context, tenantID, taskID uuid.UUID, re
 			SourceService:     t.SourceService,
 			OrderNumber:       metadataString(t.Metadata, "order_number"),
 			Reason:            reason,
-		}
+		}, t)
 		if rider != uuid.Nil {
 			data.FleetMemberID = rider.String()
 			// The rider holding the job is told it was cancelled.

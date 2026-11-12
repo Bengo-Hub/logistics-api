@@ -208,6 +208,22 @@ type TaskEventData struct {
 	// /{tenant}/tasks/{id}/pod).
 	ProofPhoto     bool   `json:"proof_photo,omitempty"`
 	OverrideReason string `json:"override_reason,omitempty"`
+	// DeliveredAt is when the order was handed over (RFC3339, UTC), on task.completed and
+	// task.delivered.
+	DeliveredAt string `json:"delivered_at,omitempty"`
+	// EstimatedArrival is when the order is due at the customer (RFC3339, UTC): the task's
+	// requested drop-off time, else its SLA due time. Omitted when neither is set.
+	EstimatedArrival string `json:"estimated_arrival,omitempty"`
+
+	// Customer identity, so notifications-api can write to the customer. Ordering owns the order
+	// and its customer and the CRM (marketflow) owns customer identity; logistics keeps only what
+	// the source order supplied, in the task metadata. A CRM-linked customer goes out as
+	// CRMContactID alone (notifications looks the contact up in the CRM); an unlinked one as the
+	// email, name and phone the order supplied. See toMap.
+	CRMContactID  string `json:"crm_contact_id,omitempty"`
+	CustomerEmail string `json:"customer_email,omitempty"`
+	CustomerName  string `json:"customer_name,omitempty"`
+	CustomerPhone string `json:"customer_phone,omitempty"`
 }
 
 func (d TaskEventData) toMap() map[string]interface{} {
@@ -280,6 +296,28 @@ func (d TaskEventData) toMap() map[string]interface{} {
 	}
 	if d.OverrideReason != "" {
 		m["override_reason"] = d.OverrideReason
+	}
+	if d.DeliveredAt != "" {
+		m["delivered_at"] = d.DeliveredAt
+	}
+	if d.EstimatedArrival != "" {
+		m["estimated_arrival"] = d.EstimatedArrival
+	}
+	// The CRM is the source of truth for a linked customer, so their contact details are not
+	// copied onto the event; producers send name, email and phone only for unlinked customers
+	// (the same rule pos-api and library-api follow).
+	if d.CRMContactID != "" {
+		m["crm_contact_id"] = d.CRMContactID
+	} else {
+		if d.CustomerEmail != "" {
+			m["customer_email"] = d.CustomerEmail
+		}
+		if d.CustomerName != "" {
+			m["customer_name"] = d.CustomerName
+		}
+		if d.CustomerPhone != "" {
+			m["customer_phone"] = d.CustomerPhone
+		}
 	}
 	return m
 }

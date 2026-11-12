@@ -84,6 +84,40 @@ Plan features alone are not used (every PowerSuite tier carries `basic_logistics
 | `logistics.task.cancelled` | Task cancelled | Ordering-backend |
 | `logistics.route.updated` | ETA/route updated | Ordering-backend, notifications |
 
+These task events carry the customer keys below (`withCustomer` in
+`internal/modules/tasks/customer.go`, serialised by `TaskEventData.toMap` in
+`internal/platform/events/publisher.go`), each only when known:
+
+- `logistics.task.created` (`createTask`)
+- `logistics.task.assigned` (`publishAssigned`)
+- `logistics.task.unassigned` (`releaseTask`)
+- `logistics.task.cancelled` (`CancelTask`)
+- `logistics.task.completed` (`completeDelivery`)
+- every status event `UpdateStatusAs` publishes as `logistics.task.<status>`: `accepted`,
+  `en_route_pickup`, `arrived_pickup`, `picked_up`, `en_route_dropoff`, `en_route`,
+  `arrived_dropoff`, `failed`, `delivered`
+
+`logistics.task.sla_breached` (`sla_monitor.go`) and `logistics.task.eta_updated`
+(`dispatch/eta.go`) do not carry them.
+
+| Key | Meaning |
+|-----|---------|
+| `crm_contact_id` | The customer's CRM (marketflow) contact. Sent alone for a CRM-linked customer; notifications-api looks the contact up. Only a valid UUID is kept on the task. |
+| `customer_email`, `customer_name`, `customer_phone` | What the source order supplied, sent only when there is no `crm_contact_id`. |
+| `estimated_arrival` | When the order is due at the customer (RFC3339, UTC): the requested drop-off time, else the SLA due time. Sent only while that time is still in the future. |
+| `rider_name`, `rider_phone` | The rider holding the task, on `task.assigned` and on `task.en_route_dropoff` / `task.en_route`. |
+| `delivered_at` | When the order was handed over (RFC3339, UTC), on `task.completed` and `task.delivered`. |
+| `failure_reason` (and `reason`) | Why a delivery failed or was cancelled. |
+| `proof_photo`, `delivered_via`, `recipient_name`, `code_verified` | How the delivery was proven, on `task.completed`. |
+
+Logistics keeps no customer table. Ordering owns the order and its customer and the CRM owns
+customer identity, so the customer's `crm_contact_id`, `customer_email`, `customer_name` and
+`customer_phone` are kept in the task's existing `metadata` (from `ordering.order.ready`, or from
+the `customer_*` / `crm_contact_id` fields of `POST .../tasks`). The task API never returns
+`customer_email` or `crm_contact_id` (`secretTaskMetadataKeys` in `internal/http/handlers/task_dto.go`);
+riders work from the drop-off step's name and phone. `ordering.order.ready` does not send
+`crm_contact_id` yet, so ordering tasks carry the order's email, name and phone.
+
 **Consumed by logistics-api:**
 
 | Event | Action |
