@@ -29,7 +29,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/modules/rbac"
 )
 
-func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authclient.AuthMiddleware, idSvc *identity.Service, lh *handlers.LogisticsHandler, rh *handlers.RoutingHandler, th *handlers.TrackingHandler, zh *handlers.ZonesHandler, rbacH *handlers.RBACHandler, rdb *redis.Client, cfg *config.Config, allowedOrigins []string, serviceConfigH *handlers.ServiceConfigHandler, earningsH *handlers.EarningsHandler, sseH *handlers.SSEHandler, rbacSvc *rbac.Service, telH *handlers.TelemetryHandler, shipmentH *handlers.ShipmentHandler, shiftH *handlers.ShiftHandler, analyticsH *handlers.AnalyticsHandler, validator *authclient.Validator, fleetWSH *handlers.FleetTrackingWSHandler, notifH *handlers.NotificationsHandler, tenantExport http.Handler) http.Handler {
+func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authclient.AuthMiddleware, idSvc *identity.Service, lh *handlers.LogisticsHandler, rh *handlers.RoutingHandler, th *handlers.TrackingHandler, zh *handlers.ZonesHandler, rbacH *handlers.RBACHandler, rdb *redis.Client, cfg *config.Config, allowedOrigins []string, serviceConfigH *handlers.ServiceConfigHandler, earningsH *handlers.EarningsHandler, sseH *handlers.SSEHandler, rbacSvc *rbac.Service, telH *handlers.TelemetryHandler, shipmentH *handlers.ShipmentHandler, shiftH *handlers.ShiftHandler, analyticsH *handlers.AnalyticsHandler, validator *authclient.Validator, fleetWSH *handlers.FleetTrackingWSHandler, notifH *handlers.NotificationsHandler, tenantExport http.Handler, crmLinks http.Handler) http.Handler {
 	// Plan limits for routing and live tracking are monthly (*_per_month in the subscriptions
 	// catalog), so they count on the calendar-month window.
 	quota := ratelimit.NewMonthlyQuota(rdb)
@@ -242,6 +242,11 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 		// route and service key as the dispatch routes below.
 		if tenantExport != nil && cfg != nil && cfg.Treasury.InternalServiceKey != "" {
 			api.With(requireServiceKey(cfg.Treasury.InternalServiceKey)).Get("/s2s/tenant-export", tenantExport.ServeHTTP)
+		}
+		// marketflow's "does logistics still link this CRM contact" check before it deletes an
+		// erased person's contact (delivery tasks keep crm_contact_id in their metadata).
+		if crmLinks != nil && cfg != nil && cfg.Treasury.InternalServiceKey != "" {
+			api.With(requireServiceKey(cfg.Treasury.InternalServiceKey)).Get("/s2s/{tenant}/crm-links/{contactID}", crmLinks.ServeHTTP)
 		}
 		if lh != nil && cfg != nil && cfg.Treasury.InternalServiceKey != "" {
 			s2sKey := requireServiceKey(cfg.Treasury.InternalServiceKey)

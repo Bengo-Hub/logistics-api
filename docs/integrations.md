@@ -126,6 +126,7 @@ riders work from the drop-off step's name and phone. `ordering.order.ready` does
 | `auth.user.created` | Optionally create fleet member if rider role |
 | `auth.tenant.created` / `auth.tenant.updated` | Initialize/update tenant metadata |
 | `auth.outlet.created` | Register outlet for task steps |
+| `crm.contact.deleted` / `crm.contact.updated` | I remove `crm_contact_id` and the customer name, phone and email copies from every task naming a deleted contact; on an update I read the contact back from marketflow (`MARKETFLOW_API_URL`) and either drop those copies when it is erased or refresh the ones a task holds; on a delete or an erasure I also clear the drop-off step's contact name and phone, but only on finished tasks (delivered, completed, cancelled, failed, returned) so a rider mid-delivery can still call the customer; and marketflow's erasure check asks `GET /api/v1/s2s/{tenant}/crm-links/{contactID}` (service key, unknown tenant 404) whether any task still holds the contact. |
 
 ---
 

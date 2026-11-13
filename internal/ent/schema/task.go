@@ -125,6 +125,9 @@ func (Task) Indexes() []ent.Index {
 		// written in the canonical form Postgres stores (pg_get_expr), so migration diffs do not
 		// keep proposing to drop and recreate the index; it means: due date set and status not
 		// delivered, completed, cancelled, failed or returned.
+		// Not declared here: "task_metadata_crm_contact" on (lower(metadata ->> 'crm_contact_id')),
+		// an expression index ent cannot express, is created by cmd/migrate after Schema.Create.
+		// A generated diff that drops it is wrong.
 		index.Fields("sla_due_at").
 			StorageKey("task_sla_open").
 			Annotations(entsql.IndexWhere("((sla_due_at IS NOT NULL) AND ((status)::text <> ALL ((ARRAY['delivered'::character varying, 'completed'::character varying, 'cancelled'::character varying, 'failed'::character varying, 'returned'::character varying])::text[])))")),

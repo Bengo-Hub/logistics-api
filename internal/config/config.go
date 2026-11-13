@@ -24,6 +24,14 @@ type Config struct {
 	Treasury      TreasuryConfig
 	ERP           ERPConfig
 	Notifications NotificationsConfig
+	Marketflow    MarketflowConfig
+}
+
+// MarketflowConfig is the marketflow-api (CRM) client. Logistics reads a contact back when the CRM
+// says it changed, to keep the customer copy on delivery tasks in step (crm.contact.updated).
+type MarketflowConfig struct {
+	ServiceURL string `envconfig:"MARKETFLOW_API_URL" default:"http://marketflow-api.marketflow.svc.cluster.local:4000"`
+	APIKey     string `envconfig:"INTERNAL_SERVICE_KEY"`
 }
 
 // NotificationsConfig is the notifications-api client used for direct messages that must not

@@ -44,6 +44,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/platform/database"
 	"github.com/bengobox/logistics-service/internal/platform/erp"
 	"github.com/bengobox/logistics-service/internal/platform/events"
+	"github.com/bengobox/logistics-service/internal/platform/marketflow"
 	"github.com/bengobox/logistics-service/internal/platform/notify"
 	"github.com/bengobox/logistics-service/internal/platform/subscriptions"
 	"github.com/bengobox/logistics-service/internal/shared/logger"
@@ -61,6 +62,7 @@ type App struct {
 	orderCancelled      *consumers.OrderCancelledConsumer
 	transferConsumer    *consumers.TransferReadyConsumer
 	tenantPurgeConsumer *consumers.TenantPurgeConsumer
+	crmContactConsumer  *consumers.CRMContactConsumer
 	outboxPublisher     *eventslib.Publisher
 	etaUpdater          *dispatch.ETAUpdater
 	batchScheduler      *dispatch.BatchScheduler
@@ -300,6 +302,11 @@ func New(ctx context.Context) (*App, error) {
 	// is destructive and unconditional once its safety guards pass.
 	tenantPurgeConsumer := consumers.NewTenantPurgeConsumer(log, entClient)
 
+	// The customer copy on delivery tasks follows the CRM: cleared when the contact is deleted or
+	// erased, refreshed when it changes (crm.contact.deleted / crm.contact.updated).
+	crmContactConsumer := consumers.NewCRMContactConsumer(log, entClient,
+		marketflow.NewClient(cfg.Marketflow.ServiceURL, cfg.Marketflow.APIKey))
+
 	// Initialize routing engine (Valhalla primary, no fallback initially)
 	valhallaProvider := routing.NewValhallaProvider(cfg.Routing.PrimaryURL, cfg.Routing.RequestTimeout)
 	routingSvc := routing.NewService(valhallaProvider, nil, redisClient, cfg.Routing.CacheTTL, log)
@@ -389,7 +396,9 @@ func New(ctx context.Context) (*App, error) {
 	// /api/v1/s2s/tenant-export); the platform pg_dumpall covers disaster recovery.
 
 	chiRouter := router.New(log, healthHandler, authMiddleware, identitySvc, logisticsHandler, routingHandler, trackingHandler, zonesHandler, rbacHandler, redisClient, cfg, cfg.HTTP.AllowedOrigins, serviceConfigHandler, earningsHandler, sseHandler, rbacSvc, telemetryHandler, shipmentHandler, shiftHandler, analyticsHandler, validator, fleetTrackingWSHandler, notificationsHandler,
-		tenantexport.Handler(sqlDB, tenantexport.Options{Service: "logistics", InternalKey: cfg.Treasury.InternalServiceKey}))
+		tenantexport.Handler(sqlDB, tenantexport.Options{Service: "logistics", InternalKey: cfg.Treasury.InternalServiceKey}),
+		// marketflow's CRM erasure check (X-API-Key = INTERNAL_SERVICE_KEY, checked on the route).
+		http.HandlerFunc(handlers.NewCRMLinksHandler(entClient, log).Referenced))
 
 	httpServer := &http.Server{
 		Addr:              fmt.Sprintf("%s:%d", cfg.HTTP.Host, cfg.HTTP.Port),
@@ -412,6 +421,7 @@ func New(ctx context.Context) (*App, error) {
 		orderCancelled:      orderCancelledConsumer,
 		transferConsumer:    transferConsumer,
 		tenantPurgeConsumer: tenantPurgeConsumer,
+		crmContactConsumer:  crmContactConsumer,
 		outboxPublisher:     outboxPub,
 		etaUpdater:          etaUpdater,
 		batchScheduler:      batchScheduler,
@@ -482,6 +492,17 @@ func (a *App) Run(ctx context.Context) error {
 				}
 			}()
 			a.log.Info("tenant purge consumer started (tenant.purge)")
+		}
+	}
+
+	// Keep the customer copy on delivery tasks in step with the CRM.
+	if a.crmContactConsumer != nil && a.events != nil {
+		if js, err := a.events.JetStream(); err == nil {
+			go func() {
+				if err := a.crmContactConsumer.Start(ctx, js); err != nil {
+					a.log.Error("crm contact consumer stopped", zap.Error(err))
+				}
+			}()
 		}
 	}
 

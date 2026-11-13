@@ -108,6 +108,14 @@ func main() {
 		log.Fatalf("failed to run migrations: %v", err)
 	}
 
+	// CRM contact lookups (contact updated/deleted events, the CRM links endpoint) match tasks on
+	// metadata->>'crm_contact_id'. ent cannot declare an expression index, so it is created here,
+	// idempotently, after the tasks table exists. Schema.Create does not drop it on later runs.
+	if _, err := db.ExecContext(ctx,
+		`CREATE INDEX IF NOT EXISTS task_metadata_crm_contact ON tasks ((lower(metadata ->> 'crm_contact_id')))`); err != nil {
+		log.Fatalf("failed to create the task CRM contact index: %v", err)
+	}
+
 	log.Println("database migrations applied successfully")
 }
 
