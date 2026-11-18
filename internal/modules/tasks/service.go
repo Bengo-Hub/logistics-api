@@ -695,11 +695,7 @@ func (s *Service) UpdateStatusAs(ctx context.Context, tenantID, taskID uuid.UUID
 		s.alertDispatcher(ctx, tenantID, taskID, "delivery_failed", "Delivery failed",
 			fmt.Sprintf("Order %s could not be delivered: %s", orderLabel(t), reason))
 	}
-	payload := map[string]any{"previous_status": t.Status}
-	if reason != "" {
-		payload["reason"] = reason
-	}
-	s.recordEvent(ctx, taskID, newStatus, actor, payload)
+	s.recordEvent(ctx, taskID, newStatus, actor, statusEventPayload(t.Status, reason, actor))
 
 	updated, err := s.client.Task.Query().
 		Where(task.ID(taskID)).

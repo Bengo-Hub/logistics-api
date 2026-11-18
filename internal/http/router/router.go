@@ -295,22 +295,10 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 			// Optional outlet context — extracts X-Outlet-ID if present
 			tenant.Use(appmw.OutletContext)
 
-			// Resolve tenant slug → UUID after TenantV2 when only slug is available (fresh DB).
+			// Resolve the URL tenant slug to its UUID after TenantV2: when only the slug is known
+			// (fresh DB) and when a platform owner opens another tenant (see resolveURLTenant).
 			if idSvc != nil {
-				tenant.Use(func(next http.Handler) http.Handler {
-					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-						ctx := r.Context()
-						if httpware.GetTenantID(ctx) == "" {
-							if slug := httpware.GetTenantSlug(ctx); slug != "" {
-								if tid, err := idSvc.ResolveTenantSlug(ctx, slug); err == nil {
-									ctx = httpware.WithTenantID(ctx, tid.String())
-									r = r.WithContext(ctx)
-								}
-							}
-						}
-						next.ServeHTTP(w, r)
-					})
-				})
+				tenant.Use(resolveURLTenant(idSvc.ResolveTenantSlug))
 			}
 
 			if idSvc != nil {

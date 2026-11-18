@@ -84,6 +84,23 @@ func (s *Service) recordEvent(ctx context.Context, taskID uuid.UUID, eventType s
 	}
 }
 
+// statusEventPayload is the history payload for a status change. A dispatcher moving a rider's
+// job on their behalf is named in it as well as in the event's actor columns, so the audit view
+// shows who pressed the button and in what role.
+func statusEventPayload(previous, reason string, actor Actor) map[string]any {
+	payload := map[string]any{"previous_status": previous}
+	if reason != "" {
+		payload["reason"] = reason
+	}
+	if actor.Type == "dispatcher" {
+		payload["actor_role"] = "dispatcher"
+		if actor.ID != uuid.Nil {
+			payload["actor_id"] = actor.ID.String()
+		}
+	}
+	return payload
+}
+
 // statusChangeError checks a requested status change before anything is written. byRider is
 // true when the caller is the rider holding the task (not a dispatcher or a service).
 func statusChangeError(from, to string, byRider bool, reason string) error {

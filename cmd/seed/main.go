@@ -19,6 +19,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/ratelimitconfig"
 	"github.com/bengobox/logistics-service/internal/ent/rolepermission"
 	"github.com/bengobox/logistics-service/internal/ent/serviceconfig"
+	fleetmod "github.com/bengobox/logistics-service/internal/modules/fleet"
 	"github.com/bengobox/logistics-service/internal/modules/tenant"
 )
 
@@ -70,6 +71,12 @@ func main() {
 		log.Printf("  [WARN] system roles: %v", err)
 	} else {
 		log.Printf("  system roles ensured")
+		// Active riders that never got their driver grant (activated before it existed).
+		if n, err := fleetmod.BackfillDriverRoles(ctx, client); err != nil {
+			log.Printf("  [WARN] driver role backfill: %v", err)
+		} else if n > 0 {
+			log.Printf("  driver role granted to %d active riders", n)
+		}
 	}
 
 	log.Println("database seed completed successfully")

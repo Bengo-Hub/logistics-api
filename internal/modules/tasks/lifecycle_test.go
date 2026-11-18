@@ -4,6 +4,8 @@ import (
 	"errors"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 func TestStatusChange_RiderCannotCancelCustomersDelivery(t *testing.T) {
@@ -114,6 +116,31 @@ func TestPodPhotoURL_InlineDataNotStored(t *testing.T) {
 	}
 	if url, inline := podPhotoURL("https://logisticsapi.example/media/uploads/pod/a.jpg"); url == "" || inline {
 		t.Fatalf("uploaded url dropped: %q", url)
+	}
+}
+
+// A dispatcher can walk a rider's job forward one step at a time, but never to delivered.
+func TestStatusChange_DispatcherAdvancesOnBehalf(t *testing.T) {
+	steps := []string{"assigned", "accepted", "en_route_pickup", "arrived_pickup", "picked_up", "en_route_dropoff", "arrived_dropoff"}
+	for i := 0; i+1 < len(steps); i++ {
+		if err := statusChangeError(steps[i], steps[i+1], false, ""); err != nil {
+			t.Fatalf("dispatcher %s to %s: %v", steps[i], steps[i+1], err)
+		}
+	}
+	if err := statusChangeError("arrived_dropoff", "delivered", false, ""); err == nil {
+		t.Fatal("dispatcher PATCH to delivered must go through proof or override")
+	}
+	if err := statusChangeError("accepted", "picked_up", false, ""); err == nil {
+		t.Fatal("dispatcher skipping steps should be refused")
+	}
+
+	id := uuid.MustParse("33333333-3333-4333-8333-333333333333")
+	p := statusEventPayload("accepted", "", Actor{ID: id, Type: "dispatcher"})
+	if p["actor_role"] != "dispatcher" || p["actor_id"] != id.String() || p["previous_status"] != "accepted" {
+		t.Fatalf("dispatcher payload: %v", p)
+	}
+	if p := statusEventPayload("accepted", "", Actor{ID: id, Type: "rider"}); p["actor_role"] != nil {
+		t.Fatalf("rider payload should not carry a dispatcher role: %v", p)
 	}
 }
 
