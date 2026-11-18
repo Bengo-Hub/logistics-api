@@ -44,7 +44,6 @@ type NotificationsConfig struct {
 	RiderAppURL    string        `envconfig:"RIDER_APP_URL" default:"https://riderapp.codevertexafrica.com"`
 }
 
-
 // TreasuryConfig holds configuration for the treasury-api S2S client.
 type TreasuryConfig struct {
 	ServiceURL         string        `envconfig:"TREASURY_SERVICE_URL" default:"http://treasury-api.treasury.svc.cluster.local:4000"`
@@ -144,6 +143,8 @@ type AuthConfig struct {
 	EnableAPIKeyAuth bool `envconfig:"AUTH_ENABLE_API_KEY_AUTH" default:"true"`
 	// InternalServiceKey signs logistics' own S2S calls to auth-api (rider accounts).
 	InternalServiceKey string `envconfig:"INTERNAL_SERVICE_KEY"`
+	// StreamTicketTTL is how long a WebSocket/SSE stream ticket stays valid before first use.
+	StreamTicketTTL time.Duration `envconfig:"STREAM_TICKET_TTL" default:"30s"`
 }
 
 // Load gathers configuration from environment variables and optional .env files.

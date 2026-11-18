@@ -34,6 +34,14 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 	// catalog), so they count on the calendar-month window.
 	quota := ratelimit.NewMonthlyQuota(rdb)
 	limiter := ratelimit.NewLimiter(rdb, log, "logistics")
+	var tickets *appmw.StreamTickets
+	if rdb != nil {
+		ttl := appmw.DefaultStreamTicketTTL
+		if cfg != nil {
+			ttl = cfg.Auth.StreamTicketTTL
+		}
+		tickets = appmw.NewStreamTickets(appmw.NewRedisTicketStore(rdb), ttl)
+	}
 	r := chi.NewRouter()
 
 	r.Use(chimw.RequestID)
@@ -123,19 +131,14 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 						next.ServeHTTP(w, r)
 						return
 					}
-					// WebSocket handshakes: a browser's native WebSocket API cannot set an
-					// Authorization header, so these routes authenticate via a "?token="
-					// query param fallback instead (still fully verified, see AuthenticateWS's
-					// own doc comment) rather than through the standard RequireAuth below. Sets
+					// WebSocket and SSE handshakes: a browser cannot set an Authorization header
+					// on them, so these routes take a single-use "?ticket=" from POST
+					// /{tenant}/stream-ticket (or a Bearer header) instead of the standard
+					// RequireAuth below. An access token in the URL is never accepted. Sets
 					// claims in context on success so TenantV2/RequireFeature/RequireRateLimit
 					// downstream behave exactly as they do for a normal authenticated request.
-					if r.Method == http.MethodGet && (strings.Contains(path, "/tracking/fleet/ws") ||
-						strings.Contains(path, "/notifications/stream")) {
-						if validator == nil {
-							http.Error(w, `{"error":"auth not configured"}`, http.StatusInternalServerError)
-							return
-						}
-						authedR, ok := appmw.AuthenticateWS(validator, w, r)
+					if r.Method == http.MethodGet && appmw.IsStreamPath(path) {
+						authedR, ok := appmw.AuthenticateWS(validator, tickets, w, r)
 						if !ok {
 							return
 						}
@@ -149,8 +152,9 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 					}
 					// All other requests require authentication
 					authMiddleware.RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-						// GET/HEAD/OPTIONS always pass through (read-only)
-						if r.Method == http.MethodGet || r.Method == http.MethodHead || r.Method == http.MethodOptions {
+						// GET/HEAD/OPTIONS always pass through (read-only). A stream ticket only
+						// opens the read-only live streams, so it is treated as a read too.
+						if r.Method == http.MethodGet || r.Method == http.MethodHead || r.Method == http.MethodOptions || isStreamTicketPath(path) {
 							next.ServeHTTP(w, r)
 							return
 						}
@@ -187,7 +191,18 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 			// logistics from Tier 1) whose support fee has gone unpaid past its 7-day grace
 			// window — independent axis from the subscription gate above. No-ops for every
 			// tenant without a support-fee obligation at all.
-			api.Use(authclient.RequireSupportFeeCurrentForMutations(7))
+			// The stream ticket is a read (it only opens the live streams), so it skips this gate.
+			supportFee := authclient.RequireSupportFeeCurrentForMutations(7)
+			api.Use(func(next http.Handler) http.Handler {
+				gated := supportFee(next)
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					if isStreamTicketPath(r.URL.Path) {
+						next.ServeHTTP(w, r)
+						return
+					}
+					gated.ServeHTTP(w, r)
+				})
+			})
 		}
 
 		if idSvc != nil {
@@ -407,6 +422,11 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 				})
 			}
 
+			// Single-use ticket for the WebSocket and SSE streams (see appmw.StreamTickets).
+			if tickets != nil {
+				tenant.Post("/stream-ticket", tickets.IssueHandler)
+			}
+
 			// Media upload (tenant-scoped so the rider-app path /{slug}/media/upload works)
 			tenant.Post("/media/upload", mediaHandler.Upload)
 
@@ -586,6 +606,11 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 	})
 
 	return r
+}
+
+// isStreamTicketPath matches POST /api/v1/{tenant}/stream-ticket.
+func isStreamTicketPath(path string) bool {
+	return strings.HasSuffix(path, "/stream-ticket")
 }
 
 // requireServiceKey guards S2S routes with the shared INTERNAL_SERVICE_KEY: one constant-time

@@ -171,6 +171,16 @@ PostGIS columns (`GEOGRAPHY(Point, 4326)`) planned for `telemetry_points.geo_poi
 
 **Roles/permissions source of truth:** auth-service (auth-api). Frontend (logistics-ui) loads user and RBAC from auth-api `GET /me` with TanStack Query and TTL for nav visibility and route protection. Logistics-api has local RBAC in `internal/modules/rbac`: platform-wide roles (`logistics_roles`, defined once in `rbac.SystemRoles` and reset by the seed), the permission catalogue, and tenant-scoped `user_role_assignments`. `rbac.Service.HasPermission` is the one rule: tenant admins hold everything, SSO roles map to system roles, plus assigned roles in the tenant.
 
+### Stream authentication (WebSocket and SSE)
+
+A browser cannot set an Authorization header on a WebSocket or EventSource request, and an access token in the URL lands in the ingress and proxy access logs. The live streams therefore use a short-lived ticket:
+
+1. The client calls `POST /api/v1/{tenant}/stream-ticket` with its normal bearer token. The route runs behind the usual auth and tenant middleware and answers `{"ticket": "...", "expires_in": 30}`.
+2. The client opens the stream with `?ticket=<ticket>`: `GET /{tenant}/notifications/stream`, `GET /{tenant}/riders/me/notifications/stream`, `GET /{tenant}/tasks/{taskId}/stream` and `GET /{tenant}/tracking/fleet/ws`.
+3. `AuthenticateWS` (`internal/middleware/ws_auth.go`) redeems the ticket with a Redis `GETDEL`, so each ticket works once. The stored value is the verified token claims, which go into the request context exactly as a bearer request would, so tenant, feature, quota and permission checks behave the same.
+
+Tickets are 32 random bytes, stored only as a SHA-256 hash under `logistics:stream-ticket:*`, and expire after `STREAM_TICKET_TTL` (default 30s) or when the access token expires, whichever comes first. Clients fetch a fresh ticket for every connect and reconnect. A client that can set headers may still send `Authorization: Bearer`. A token in `?token=` is never accepted.
+
 ---
 
 ## Location tracking (Redis)

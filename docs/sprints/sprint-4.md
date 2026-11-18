@@ -16,7 +16,7 @@
 ### 5.1 Real-Time Location Ingestion
 - [ ] WebSocket endpoint:
   - `WS /v1/{tenant}/telemetry/stream` → accepts location updates from mobile app
-  - Authentication: JWT token in query param or header
+  - Authentication: Bearer header, or a single-use `?ticket=` from `POST /{tenant}/stream-ticket` (never a JWT in the URL; see architecture.md, "Stream authentication")
   - Message format: `{"fleet_member_id": "...", "lat": 0.0, "lng": 0.0, "speed_kph": 0.0, "bearing_deg": 0.0, "accuracy_m": 0.0, "timestamp": "..."}`
 - [ ] gRPC streaming (optional):
   - `rpc StreamTelemetry(stream TelemetryPoint) returns (stream TelemetryAck)` → bidirectional stream
