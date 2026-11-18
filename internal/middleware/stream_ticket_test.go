@@ -209,8 +209,8 @@ func TestAuthenticateWSTicket(t *testing.T) {
 
 func TestAuthenticateWSRejectsTokenInQuery(t *testing.T) {
 	tickets, _, _ := newTickets(0)
-	// A JWT-shaped value in ?token= is not looked at at all.
-	code, _ := runWS(tickets, "/api/v1/acme/notifications/stream?token=eyJhbGciOiJSUzI1NiJ9.e30.sig")
+	// A value in ?token= is not looked at at all.
+	code, _ := runWS(tickets, "/api/v1/acme/notifications/stream?token=EXAMPLE_DO_NOT_USE")
 	if code != http.StatusUnauthorized {
 		t.Fatalf("?token= must be rejected, got %d", code)
 	}
