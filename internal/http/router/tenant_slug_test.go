@@ -87,6 +87,18 @@ func TestURLTenantWinsForPlatformOwner(t *testing.T) {
 	}
 }
 
+// A platform owner signed in through the tenant's own app has a token issued for that tenant. The URL
+// names the same tenant, and the handler must get it, not "all tenants" (uuid.Nil answered 401 on
+// tasks, riders and tracking for urban-loft, 18 November 2026).
+func TestPlatformOwnerTokenForURLTenant(t *testing.T) {
+	owner := &authclient.Claims{TenantID: urbanLoft.String(), TenantSlug: "urban-loft", IsPlatformOwner: true}
+	h := tenantChain(owner, slugs(map[string]uuid.UUID{"codevertex": homeTenant, "urban-loft": urbanLoft}))
+	rec := probe(h, "/urban-loft/probe")
+	if rec.Code != http.StatusOK || rec.Body.String() != urbanLoft.String() {
+		t.Fatalf("owner with an urban-loft token got %d %q, want %s", rec.Code, rec.Body.String(), urbanLoft)
+	}
+}
+
 func TestTenantUserStaysPinnedToToken(t *testing.T) {
 	user := &authclient.Claims{TenantID: urbanLoft.String(), TenantSlug: "urban-loft"}
 	h := tenantChain(user, slugs(map[string]uuid.UUID{"urban-loft": urbanLoft, "codevertex": homeTenant}))

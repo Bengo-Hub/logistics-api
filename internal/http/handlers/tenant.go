@@ -33,10 +33,16 @@ func ResolveTenantForRequest(r *http.Request) (uuid.UUID, bool) {
 		}
 	}
 
+	// A URL that names a tenant (/api/v1/{tenant}/...) is always that tenant, for a platform owner
+	// too: "all tenants" is only for routes with no tenant in them. Before this, a platform owner
+	// whose token was issued for the same tenant as the URL got uuid.Nil, and tasks, riders and
+	// tracking answered 401 (urban-loft, 18 November 2026).
+	urlNamesTenant := httpware.GetTenantSlug(ctx) != "" || chi.URLParam(r, "tenant") != ""
+
 	// 2. httpware context (from TenantV2 middleware)
 	if tenantIDStr := httpware.GetTenantID(ctx); tenantIDStr != "" {
 		if id, err := uuid.Parse(tenantIDStr); err == nil {
-			if isPO {
+			if isPO && !urlNamesTenant {
 				claims, ok := authclient.ClaimsFromContext(ctx)
 				if ok && claims.TenantID == tenantIDStr {
 					return uuid.Nil, true
