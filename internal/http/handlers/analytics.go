@@ -78,7 +78,7 @@ func (h *AnalyticsHandler) GetKPIs(w http.ResponseWriter, r *http.Request) {
 	scope, scopeArgs := outletFilter(outlet, []any{tenantID, since})
 	counts := h.client.Task.Query().Where(task.TenantID(tenantID), task.CreatedAtGTE(since))
 	if outlet != uuid.Nil {
-		counts = counts.Where(task.OutletID(outlet))
+		counts = counts.Where(task.Or(task.OutletID(outlet), task.OutletIDIsNil()))
 	}
 	if err := counts.
 		GroupBy(task.FieldStatus).
@@ -89,6 +89,27 @@ func (h *AnalyticsHandler) GetKPIs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	k := kpiFromCounts(byStatus)
+
+	// Open work is a backlog, not a period figure: a job created before the period and still
+	// waiting or on the road is counted as pending or active today (a stuck 11 November task
+	// showed 0 active on the 7 day view). Outcomes (completed, failed, cancelled) stay per period,
+	// and the total is the period's outcomes plus the open work.
+	var openByStatus []struct {
+		Status string `json:"status"`
+		Count  int    `json:"count"`
+	}
+	open := h.client.Task.Query().Where(task.TenantID(tenantID),
+		task.StatusNotIn("delivered", "completed", "failed", "cancelled"))
+	if outlet != uuid.Nil {
+		open = open.Where(task.Or(task.OutletID(outlet), task.OutletIDIsNil()))
+	}
+	if err := open.GroupBy(task.FieldStatus).Aggregate(ent.Count()).Scan(ctx, &openByStatus); err != nil {
+		h.log.Warn("analytics: open tasks", zap.Error(err))
+	} else {
+		o := kpiFromCounts(openByStatus)
+		k.pending, k.active = o.pending, o.active
+		k.total = k.completed + k.failed + k.cancelled + o.pending + o.active
+	}
 
 	var onTimePct, avgDeliveryMins float64
 	if h.db != nil {

@@ -595,7 +595,9 @@ func (s *Service) ListTasks(ctx context.Context, tenantID uuid.UUID, f ListTasks
 	}
 
 	if f.OutletID != nil {
-		q = q.Where(task.OutletIDEQ(*f.OutletID))
+		// A task with no outlet (an online order whose source sent none) belongs to the whole
+		// tenant, so it shows at every outlet instead of at none (urban-loft #000014 sat unseen).
+		q = q.Where(task.Or(task.OutletIDEQ(*f.OutletID), task.OutletIDIsNil()))
 	}
 
 	if f.MemberID != uuid.Nil {
