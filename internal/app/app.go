@@ -265,7 +265,15 @@ func New(ctx context.Context) (*App, error) {
 		cfg.Notifications.RiderAppURL,
 	)
 	identitySvc.SetRiderApplications(fleetSvc.Apply)
-	fleetSvc.OnStatusChange(taskSvc.InvalidateFleetGate)
+	fleetSvc.OnStatusChange(func(ctx context.Context, tenantID uuid.UUID) {
+		taskSvc.InvalidateFleetGate(ctx, tenantID)
+		// A tenant's shop outlets are mirrored only once it runs a fleet; pull them now.
+		go func() {
+			sctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
+			defer cancel()
+			outletResync.SyncTenantByID(sctx, tenantID)
+		}()
+	})
 	go fleetSvc.StartStaleRiderCleanup(ctx)
 	// Vehicle insurance: reminders before expiry, deactivation on expiry (one replica per hour).
 	go fleetSvc.StartInsuranceMonitor(ctx)

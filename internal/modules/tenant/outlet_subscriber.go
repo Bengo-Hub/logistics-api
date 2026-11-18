@@ -12,6 +12,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/bengobox/logistics-service/internal/ent"
+	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
 	entoutlet "github.com/bengobox/logistics-service/internal/ent/outlet"
 	enttenant "github.com/bengobox/logistics-service/internal/ent/tenant"
 )
@@ -214,8 +215,16 @@ func UpsertOutlet(ctx context.Context, client *ent.Client, r OutletRecord) (bool
 		return false, nil
 	}
 	if !logisticsUseCases[r.UseCase] && r.UseCase != "" {
-		// A shop or kitchen outlet is mirrored for tenants that use logistics, as their pickup point.
+		// A shop or kitchen outlet is mirrored only for a tenant that delivers through logistics:
+		// it exists here and runs at least one active rider (owner, 19 November 2026). A business
+		// without riders settles transfers in inventory and keeps no data in logistics; its
+		// outlets arrive by the resync run when its first rider is activated.
 		if ok, terr := client.Tenant.Query().Where(enttenant.ID(r.TenantID)).Exist(ctx); terr != nil || !ok {
+			return false, nil
+		}
+		active, ferr := client.FleetMember.Query().
+			Where(fleetmember.TenantID(r.TenantID), fleetmember.Status("active")).Exist(ctx)
+		if ferr != nil || !active {
 			return false, nil
 		}
 	}

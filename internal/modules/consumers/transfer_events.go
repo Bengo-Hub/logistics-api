@@ -72,6 +72,8 @@ type warehouseRef struct {
 	Address   string   `json:"address"`
 	Latitude  *float64 `json:"latitude"`
 	Longitude *float64 `json:"longitude"`
+	// OutletID is the warehouse's outlet ("" when it has none); the task takes the sender's.
+	OutletID string `json:"outlet_id"`
 }
 
 // transferPayload mirrors the payload of inventory.transfer.created.
@@ -146,6 +148,10 @@ func (c *TransferReadyConsumer) handleMessage(msg *nats.Msg) {
 		"to_warehouse_id":   p.ToWarehouse.ID,
 		"item_count":        itemCount,
 		"notes":             p.Notes,
+	}
+	// The sending outlet owns the transfer task, so it shows on that outlet's dispatch board.
+	if p.FromWarehouse.OutletID != "" {
+		metadata["outlet_id"] = p.FromWarehouse.OutletID
 	}
 	if fromLat != 0 {
 		metadata["pickup_lat"] = fromLat

@@ -65,6 +65,21 @@ type authOutlet struct {
 	Longitude *float64 `json:"longitude"`
 }
 
+// SyncTenantByID mirrors one tenant's outlets by its id (used when a rider is activated: until a
+// tenant runs a fleet its shop outlets are not mirrored, so the first active rider pulls them).
+func (r *OutletResync) SyncTenantByID(ctx context.Context, tenantID uuid.UUID) {
+	t, err := r.client.Tenant.Get(ctx, tenantID)
+	if err != nil {
+		return
+	}
+	if r.entitled != nil && !r.entitled(ctx, tenantID.String()) {
+		return
+	}
+	if _, err := r.SyncTenant(ctx, tenantID, t.Slug); err != nil {
+		r.log.Warn("outlet sync after rider change failed", zap.String("tenant", t.Slug), zap.Error(err))
+	}
+}
+
 // SyncTenant mirrors one tenant's outlets. Returns how many rows were written.
 func (r *OutletResync) SyncTenant(ctx context.Context, tenantID uuid.UUID, slug string) (int, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, r.authURL+"/api/v1/tenants/"+slug+"/outlets", nil)
