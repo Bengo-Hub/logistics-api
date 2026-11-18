@@ -101,6 +101,39 @@ func (h *LogisticsHandler) S2SCreateTask(w http.ResponseWriter, r *http.Request)
 
 // S2SAssignTask handles POST /api/v1/s2s/dispatch/{tenant}/tasks/{taskId}/assign
 // {tenant} is the tenant UUID. Body is tasks.AssignTaskRequest ({fleet_member_id}).
+type s2sTaskOutletRequest struct {
+	ExternalReference string `json:"external_reference"`
+	OutletID          string `json:"outlet_id"`
+}
+
+// S2SSetTaskOutlet handles POST /api/v1/s2s/dispatch/{tenant}/tasks/outlet: the source service
+// (ordering) names the outlet of its tasks; only tasks with no outlet are changed. Used by
+// ordering's startup backfill so outlet-scoped lists and analytics include every task.
+func (h *LogisticsHandler) S2SSetTaskOutlet(w http.ResponseWriter, r *http.Request) {
+	tenantID, err := uuid.Parse(chi.URLParam(r, "tenant"))
+	if err != nil {
+		http.Error(w, "invalid tenant", http.StatusBadRequest)
+		return
+	}
+	var req s2sTaskOutletRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	outletID, err := uuid.Parse(req.OutletID)
+	if err != nil || req.ExternalReference == "" {
+		http.Error(w, "external_reference and outlet_id are required", http.StatusBadRequest)
+		return
+	}
+	n, err := h.taskSvc.SetOutletIfMissing(r.Context(), tenantID, req.ExternalReference, outletID)
+	if err != nil {
+		h.log.Error("s2s set task outlet", zap.Error(err))
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]int{"updated": n})
+}
+
 func (h *LogisticsHandler) S2SAssignTask(w http.ResponseWriter, r *http.Request) {
 	tenantID, err := uuid.Parse(chi.URLParam(r, "tenant"))
 	if err != nil {

@@ -268,6 +268,7 @@ func New(log *zap.Logger, health *handlers.HealthHandler, authMiddleware *authcl
 			api.With(s2sKey).Post("/s2s/dispatch/{tenant}/tasks", lh.S2SCreateTask)
 			api.With(s2sKey).Get("/s2s/dispatch/{tenant}/riders", lh.S2SListRiders)
 			api.With(s2sKey).Post("/s2s/dispatch/{tenant}/tasks/{taskId}/assign", lh.S2SAssignTask)
+			api.With(s2sKey).Post("/s2s/dispatch/{tenant}/tasks/outlet", lh.S2SSetTaskOutlet)
 			// Live rider position and ETA for ordering's customer order tracker.
 			api.With(s2sKey).Get("/s2s/dispatch/{tenant}/tasks/{taskId}/tracking", lh.S2SGetTaskTracking)
 			api.With(s2sKey).Post("/s2s/dispatch/{tenant}/tasks/{taskId}/rate", lh.S2SRateRider)

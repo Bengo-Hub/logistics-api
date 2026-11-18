@@ -45,16 +45,16 @@ func analyticsOutlet(r *http.Request) uuid.UUID {
 	return id
 }
 
-// outletFilter adds the outlet drill-down to a tasks query: the outlet's own tasks plus the
-// tenant-wide ones with no outlet (they show at every outlet, as on the task list). The clause is
-// only present for a drill-down, so the plain dashboard keeps the (tenant_id, created_at) index.
-// args are the query's arguments so far.
+// outletFilter adds "AND t.outlet_id = $n" to a tasks query when a drill-down is set. The
+// clause is only present then, so the planner never sees an optional-parameter OR and keeps
+// choosing the (tenant_id, outlet_id, created_at) index for a drill-down and
+// (tenant_id, created_at) otherwise. args are the query's arguments so far.
 func outletFilter(outlet uuid.UUID, args []any) (string, []any) {
 	if outlet == uuid.Nil {
 		return "", args
 	}
 	args = append(args, outlet)
-	return fmt.Sprintf(" AND (t.outlet_id = $%d OR t.outlet_id IS NULL)", len(args)), args
+	return fmt.Sprintf(" AND t.outlet_id = $%d", len(args)), args
 }
 
 // SeriesPoint is one hour (today) or day of task outcomes, by when the task was created.

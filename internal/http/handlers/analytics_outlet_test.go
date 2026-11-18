@@ -16,7 +16,7 @@ func TestOutletFilterOnlyAddsAClauseForADrillDown(t *testing.T) {
 	}
 	outlet := uuid.New()
 	clause, args = outletFilter(outlet, []any{tenant, "since", "day", "Africa/Nairobi"})
-	if clause != " AND (t.outlet_id = $5 OR t.outlet_id IS NULL)" || len(args) != 5 || args[4] != outlet {
+	if clause != " AND t.outlet_id = $5" || len(args) != 5 || args[4] != outlet {
 		t.Fatalf("the outlet parameter must follow the existing ones, got %q %v", clause, args)
 	}
 }

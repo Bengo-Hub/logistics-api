@@ -455,7 +455,9 @@ func (h *LogisticsHandler) ListMembers(w http.ResponseWriter, r *http.Request) {
 	status := r.URL.Query().Get("status")
 	search := r.URL.Query().Get("search")
 
-	members, total, err := h.fleetSvc.ListMembers(r.Context(), tenantID, status, search, p.Limit, p.Offset)
+	// The selected outlet (X-Outlet-ID) keeps the riders serving it; none means every rider.
+	outlet, _ := uuid.Parse(httpware.GetOutletID(r.Context()))
+	members, total, err := h.fleetSvc.ListMembers(r.Context(), tenantID, status, search, p.Limit, p.Offset, outlet)
 	if err != nil {
 		h.log.Error("list fleet members", zap.Error(err))
 		http.Error(w, "internal server error", http.StatusInternalServerError)

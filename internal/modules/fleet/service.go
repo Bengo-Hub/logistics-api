@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	entsql "entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
@@ -13,6 +14,7 @@ import (
 	entfleet "github.com/bengobox/logistics-service/internal/ent/fleet"
 	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
 	"github.com/bengobox/logistics-service/internal/ent/logisticsrole"
+	"github.com/bengobox/logistics-service/internal/ent/predicate"
 	entuser "github.com/bengobox/logistics-service/internal/ent/user"
 	"github.com/bengobox/logistics-service/internal/ent/userroleassignment"
 	entvehicle "github.com/bengobox/logistics-service/internal/ent/vehicle"
@@ -116,8 +118,26 @@ func (s *Service) GetOrCreateFleet(ctx context.Context, tenantID uuid.UUID, tena
 }
 
 // ListMembers returns fleet members for a tenant.
-func (s *Service) ListMembers(ctx context.Context, tenantID uuid.UUID, status, search string, limit, offset int) ([]*ent.FleetMember, int, error) {
+// ServesOutlet keeps riders who deliver for outlet: those whose metadata.outlet_ids names it, and
+// those with no outlets set (they serve the whole tenant until a manager assigns them).
+func ServesOutlet(outlet uuid.UUID) predicate.FleetMember {
+	return predicate.FleetMember(func(s *entsql.Selector) {
+		col := s.C(fleetmember.FieldMetadata)
+		s.Where(entsql.P(func(b *entsql.Builder) {
+			b.WriteString("(coalesce(" + col + "->'" + MetaOutletIDs + "', '[]'::jsonb) = '[]'::jsonb OR " +
+				col + "->'" + MetaOutletIDs + "' @> jsonb_build_array(")
+			b.Arg(outlet.String())
+			b.WriteString("::text))")
+		}))
+	})
+}
+
+// ListMembers lists the tenant's riders; outlet (uuid.Nil for all) keeps those serving it.
+func (s *Service) ListMembers(ctx context.Context, tenantID uuid.UUID, status, search string, limit, offset int, outlet uuid.UUID) ([]*ent.FleetMember, int, error) {
 	q := s.client.FleetMember.Query().Where(fleetmember.TenantID(tenantID))
+	if outlet != uuid.Nil {
+		q = q.Where(ServesOutlet(outlet))
+	}
 
 	// status is one value or several comma-separated ("pending,pending_review" lists everyone
 	// waiting for approval).

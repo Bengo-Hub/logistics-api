@@ -3,6 +3,7 @@ package tenant
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	sharedevents "github.com/Bengo-Hub/shared-events"
@@ -124,6 +125,28 @@ var logisticsUseCases = map[string]bool{
 	"fleet":        true,
 }
 
+// subUseCaseOf maps an auth outlet use_case to the logistics sub use case the outlet works under
+// (owner, 18 November 2026): food businesses (hospitality, quick_service and their aliases)
+// deliver their own orders, so their outlets are "delivery" pickup points; shops and stores that
+// move goods between branches are "distribution". Logistics' own codes stay. ok is false for a use
+// case that never ships goods (services, isp, property, weighing, gift registry...), whose
+// outlets are not mirrored.
+func subUseCaseOf(useCase string) (string, bool) {
+	switch strings.ToLower(strings.TrimSpace(useCase)) {
+	case "", "logistics":
+		return "logistics", true
+	case "courier", "delivery", "distribution", "fleet":
+		return strings.ToLower(strings.TrimSpace(useCase)), true
+	case "hospitality", "quick_service", "food_delivery", "restaurant", "cafe", "bar", "hotel":
+		return "delivery", true
+	case "retail", "grocery", "e_commerce", "ecommerce", "hardware", "agrovet",
+		"pharmacy", "chemist", "warehouse", "warehousing", "manufacturing", "hospital":
+		return "distribution", true
+	default:
+		return "", false
+	}
+}
+
 // handleUpsert creates or updates a local outlet mirror from auth.outlet.created/updated.
 // Accepts any logistics-adjacent use_case; skips POS/retail/hospitality outlets.
 func (s *OutletSubscriber) handleUpsert(ctx context.Context, evt *sharedevents.Event) error {
@@ -186,14 +209,17 @@ func UpsertOutlet(ctx context.Context, client *ent.Client, r OutletRecord) (bool
 	if r.ID == uuid.Nil || r.TenantID == uuid.Nil {
 		return false, fmt.Errorf("outlet upsert: missing outlet or tenant id")
 	}
-	if r.UseCase != "" && !logisticsUseCases[r.UseCase] {
+	sub, delivers := subUseCaseOf(r.UseCase)
+	if !delivers {
+		return false, nil
+	}
+	if !logisticsUseCases[r.UseCase] && r.UseCase != "" {
+		// A shop or kitchen outlet is mirrored for tenants that use logistics, as their pickup point.
 		if ok, terr := client.Tenant.Query().Where(enttenant.ID(r.TenantID)).Exist(ctx); terr != nil || !ok {
 			return false, nil
 		}
 	}
-	if r.UseCase == "" {
-		r.UseCase = "logistics"
-	}
+	r.UseCase = sub
 	if r.Status == "" {
 		r.Status = "active"
 	}

@@ -11,6 +11,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent"
 	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
 	"github.com/bengobox/logistics-service/internal/ent/task"
+	"github.com/bengobox/logistics-service/internal/modules/fleet"
 	"github.com/bengobox/logistics-service/internal/modules/tasks"
 )
 
@@ -78,7 +79,7 @@ func (h *AnalyticsHandler) GetKPIs(w http.ResponseWriter, r *http.Request) {
 	scope, scopeArgs := outletFilter(outlet, []any{tenantID, since})
 	counts := h.client.Task.Query().Where(task.TenantID(tenantID), task.CreatedAtGTE(since))
 	if outlet != uuid.Nil {
-		counts = counts.Where(task.Or(task.OutletID(outlet), task.OutletIDIsNil()))
+		counts = counts.Where(task.OutletID(outlet))
 	}
 	if err := counts.
 		GroupBy(task.FieldStatus).
@@ -101,7 +102,7 @@ func (h *AnalyticsHandler) GetKPIs(w http.ResponseWriter, r *http.Request) {
 	open := h.client.Task.Query().Where(task.TenantID(tenantID),
 		task.StatusNotIn("delivered", "completed", "failed", "cancelled"))
 	if outlet != uuid.Nil {
-		open = open.Where(task.Or(task.OutletID(outlet), task.OutletIDIsNil()))
+		open = open.Where(task.OutletID(outlet))
 	}
 	if err := open.GroupBy(task.FieldStatus).Aggregate(ent.Count()).Scan(ctx, &openByStatus); err != nil {
 		h.log.Warn("analytics: open tasks", zap.Error(err))
@@ -132,13 +133,13 @@ func (h *AnalyticsHandler) GetKPIs(w http.ResponseWriter, r *http.Request) {
 		avgDeliveryMins = avg.Float64
 	}
 	// Fleet metrics
-	totalRiders, _ := h.client.FleetMember.Query().
-		Where(fleetmember.TenantID(tenantID)).
-		Count(ctx)
-
-	activeRiders, _ := h.client.FleetMember.Query().
-		Where(fleetmember.TenantID(tenantID), fleetmember.Status("active")).
-		Count(ctx)
+	// Riders follow the same outlet drill-down as the tasks (fleet.ServesOutlet).
+	riders := h.client.FleetMember.Query().Where(fleetmember.TenantID(tenantID))
+	if outlet != uuid.Nil {
+		riders = riders.Where(fleet.ServesOutlet(outlet))
+	}
+	totalRiders, _ := riders.Clone().Count(ctx)
+	activeRiders, _ := riders.Where(fleetmember.Status("active")).Count(ctx)
 
 	var ridersWorking int
 	if h.db != nil {

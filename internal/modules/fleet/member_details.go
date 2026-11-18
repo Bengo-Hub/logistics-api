@@ -22,7 +22,13 @@ type MemberDetails struct {
 	Phone     *string `json:"phone,omitempty"`
 	IDNumber  *string `json:"id_number,omitempty"`
 	LicenseNo *string `json:"license_no,omitempty"`
+	// OutletIDs are the outlets the rider delivers for (metadata.outlet_ids). An empty list means
+	// every outlet of the tenant; nil leaves it unchanged.
+	OutletIDs *[]string `json:"outlet_ids,omitempty"`
 }
+
+// MetaOutletIDs is the fleet member metadata key holding the rider's outlets.
+const MetaOutletIDs = "outlet_ids"
 
 // normalize checks the details and returns the phone in E.164 (Kenyan local numbers allowed).
 func (d MemberDetails) normalize() (MemberDetails, error) {
@@ -48,6 +54,21 @@ func (d MemberDetails) normalize() (MemberDetails, error) {
 	if d.LicenseNo != nil {
 		v := strings.TrimSpace(*d.LicenseNo)
 		out.LicenseNo = &v
+	}
+	if d.OutletIDs != nil {
+		ids := make([]string, 0, len(*d.OutletIDs))
+		seen := map[string]bool{}
+		for _, raw := range *d.OutletIDs {
+			id, err := uuid.Parse(strings.TrimSpace(raw))
+			if err != nil {
+				return d, errors.Join(ErrInvalidMemberDetails, errors.New("an outlet id is not valid"))
+			}
+			if !seen[id.String()] {
+				seen[id.String()] = true
+				ids = append(ids, id.String())
+			}
+		}
+		out.OutletIDs = &ids
 	}
 	return out, nil
 }
@@ -80,6 +101,14 @@ func (s *Service) UpdateMemberDetails(ctx context.Context, tenantID, memberID uu
 	}
 	if d.LicenseNo != nil {
 		upd.SetLicenseNo(*d.LicenseNo)
+	}
+	if d.OutletIDs != nil {
+		meta := map[string]any{}
+		for k, v := range m.Metadata {
+			meta[k] = v
+		}
+		meta[MetaOutletIDs] = *d.OutletIDs
+		upd.SetMetadata(meta)
 	}
 	saved, err := upd.Save(ctx)
 	if err != nil {
