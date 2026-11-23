@@ -11,7 +11,6 @@ import (
 	sharedcache "github.com/Bengo-Hub/cache"
 
 	"github.com/bengobox/logistics-service/internal/ent"
-	entfleet "github.com/bengobox/logistics-service/internal/ent/fleet"
 	"github.com/bengobox/logistics-service/internal/ent/fleetmember"
 	entuser "github.com/bengobox/logistics-service/internal/ent/user"
 	"github.com/bengobox/logistics-service/internal/platform/authapi"
@@ -95,7 +94,10 @@ func (s *Service) linkRiderAccount(ctx context.Context, m *ent.FleetMember) erro
 
 	emailed := false
 	if account.TempPassword != "" && s.mail != nil {
-		slug, _ := s.client.Fleet.Query().Where(entfleet.ID(m.FleetID)).Select(entfleet.FieldTenantSlug).String(ctx)
+		slug := s.tenantSlugFor(ctx, m.TenantID, "")
+		if fl, ferr := s.client.Fleet.Get(ctx, m.FleetID); ferr == nil {
+			slug = s.healFleetSlug(ctx, fl, slug).TenantSlug
+		}
 		first := strings.Fields(u.FullName)
 		name := u.FullName
 		if len(first) > 0 {

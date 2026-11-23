@@ -92,16 +92,13 @@ func (s *Service) GetOrCreateFleet(ctx context.Context, tenantID uuid.UUID, tena
 		}).
 		First(ctx)
 	if err == nil {
-		return fl, nil
+		return s.healFleetSlug(ctx, fl, tenantSlug), nil
 	}
 	if !ent.IsNotFound(err) {
 		return nil, fmt.Errorf("fleet: query: %w", err)
 	}
 
-	slug := tenantSlug
-	if slug == "" {
-		slug = tenantID.String()
-	}
+	slug := s.tenantSlugFor(ctx, tenantID, tenantSlug)
 
 	fl, err = s.client.Fleet.Create().
 		SetTenantID(tenantID).
@@ -870,4 +867,42 @@ func (s *Service) DeleteVehicle(ctx context.Context, tenantID, vehicleID uuid.UU
 		return fmt.Errorf("fleet: delete vehicle: %w", err)
 	}
 	return nil
+}
+
+// tenantSlugFor is the tenant's real slug: the one the caller has, else the synced tenant row,
+// else the tenant id as a last resort (never a usable slug; healed later by healFleetSlug).
+func (s *Service) tenantSlugFor(ctx context.Context, tenantID uuid.UUID, given string) string {
+	if given = strings.TrimSpace(given); given != "" && !isUUIDString(given) {
+		return given
+	}
+	if t, err := s.client.Tenant.Get(ctx, tenantID); err == nil && strings.TrimSpace(t.Slug) != "" {
+		return t.Slug
+	}
+	return tenantID.String()
+}
+
+// healFleetSlug replaces a fleet's placeholder slug (the tenant id, stored when the fleet was
+// created without a slug) with the real one. Every slug-routed call made with the placeholder
+// failed: notifications answered 404, so riders never got their sign-in email (Urban Loft,
+// 2026-11-23), and rider app links pointed nowhere.
+func (s *Service) healFleetSlug(ctx context.Context, fl *ent.Fleet, given string) *ent.Fleet {
+	if fl == nil || (fl.TenantSlug != "" && !isUUIDString(fl.TenantSlug)) {
+		return fl
+	}
+	slug := s.tenantSlugFor(ctx, fl.TenantID, given)
+	if slug == "" || isUUIDString(slug) {
+		return fl
+	}
+	upd, err := fl.Update().SetTenantSlug(slug).Save(ctx)
+	if err != nil {
+		s.log.Warn("fleet: slug not healed", zap.String("fleet_id", fl.ID.String()), zap.Error(err))
+		return fl
+	}
+	upd.Edges = fl.Edges
+	return upd
+}
+
+func isUUIDString(s string) bool {
+	_, err := uuid.Parse(strings.TrimSpace(s))
+	return err == nil
 }
