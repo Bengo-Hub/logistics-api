@@ -3,7 +3,7 @@ package routing
 import (
 	"context"
 
-	"github.com/bengobox/logistics-service/internal/modules/zones/geo"
+	"github.com/Bengo-Hub/httpware/geo"
 )
 
 // ZoneDistance adapts the routing service to the zones package so delivery quotes use

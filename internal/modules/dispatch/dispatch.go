@@ -16,7 +16,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/modules/fleet"
 	notifmod "github.com/bengobox/logistics-service/internal/modules/notifications"
 	"github.com/bengobox/logistics-service/internal/modules/tasks"
-	"github.com/bengobox/logistics-service/internal/modules/zones/geo"
+	"github.com/Bengo-Hub/httpware/geo"
 )
 
 const (

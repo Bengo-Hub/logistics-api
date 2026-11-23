@@ -13,7 +13,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent"
 	"github.com/bengobox/logistics-service/internal/ent/task"
 	"github.com/bengobox/logistics-service/internal/modules/tasks"
-	"github.com/bengobox/logistics-service/internal/modules/zones/geo"
+	"github.com/Bengo-Hub/httpware/geo"
 )
 
 const (

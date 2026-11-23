@@ -15,7 +15,7 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	"github.com/bengobox/logistics-service/internal/modules/zones/geo"
+	"github.com/Bengo-Hub/httpware/geo"
 )
 
 // Place is one geocoding result, labelled with the tenant's delivery area when known.

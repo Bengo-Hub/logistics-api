@@ -9,7 +9,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/bengobox/logistics-service/internal/modules/zones/geo"
+	"github.com/Bengo-Hub/httpware/geo"
 )
 
 // Quote methods and not-serviceable reasons returned to every consumer.

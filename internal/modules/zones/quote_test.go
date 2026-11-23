@@ -11,7 +11,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/bengobox/logistics-service/internal/ent"
-	"github.com/bengobox/logistics-service/internal/modules/zones/geo"
+	"github.com/Bengo-Hub/httpware/geo"
 )
 
 // Urban Loft Busia fixtures: outlet, free 3 km town circle, and a few named areas.

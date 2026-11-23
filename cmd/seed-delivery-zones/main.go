@@ -29,7 +29,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/geofence"
 	enttenant "github.com/bengobox/logistics-service/internal/ent/tenant"
 	"github.com/bengobox/logistics-service/internal/modules/zones"
-	"github.com/bengobox/logistics-service/internal/modules/zones/geo"
+	"github.com/Bengo-Hub/httpware/geo"
 )
 
 type area struct {

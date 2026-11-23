@@ -12,7 +12,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/bengobox/logistics-service/internal/modules/zones"
-	"github.com/bengobox/logistics-service/internal/modules/zones/geo"
+	"github.com/Bengo-Hub/httpware/geo"
 )
 
 // ZonesHandler serves service areas, the delivery quote policy, delivery quotes and the

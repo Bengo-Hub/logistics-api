@@ -3,10 +3,9 @@ package zones
 import (
 	"context"
 
+	"github.com/Bengo-Hub/httpware/geo"
 	"github.com/Bengo-Hub/httpware/money"
 	"github.com/google/uuid"
-
-	"github.com/bengobox/logistics-service/internal/modules/zones/geo"
 )
 
 // FeeSuggestion is the delivery fee the tenant's own rules give for a new area, measured

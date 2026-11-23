@@ -18,7 +18,7 @@ import (
 	"github.com/bengobox/logistics-service/internal/ent/geofence"
 	"github.com/bengobox/logistics-service/internal/ent/outlet"
 	"github.com/bengobox/logistics-service/internal/ent/serviceconfig"
-	"github.com/bengobox/logistics-service/internal/modules/zones/geo"
+	"github.com/Bengo-Hub/httpware/geo"
 )
 
 // Errors the HTTP layer maps to status codes.
