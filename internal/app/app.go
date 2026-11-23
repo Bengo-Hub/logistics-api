@@ -275,6 +275,8 @@ func New(ctx context.Context) (*App, error) {
 		}()
 	})
 	go fleetSvc.StartStaleRiderCleanup(ctx)
+	// Riders saved without an SSO account (pre-2026-10-18 onboarding stubs) get one.
+	go fleetSvc.StartRiderAccountBackfill(ctx)
 	// Vehicle insurance: reminders before expiry, deactivation on expiry (one replica per hour).
 	go fleetSvc.StartInsuranceMonitor(ctx)
 
